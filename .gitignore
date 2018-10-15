@@ -1,0 +1,17 @@
+CMakeCache.txt
+CMakeFiles/*
+Makefile
+OECAgent
+OECCoordinator
+OECClient
+cmake/*
+cmake_install.cmake
+conf/
+hadoop-3.0-helper/*.jar
+hadoop-3.0-helper/oec/protocol/*.class
+script/sysSetting.xml*
+src/CMakeFiles/*
+src/common/CMakeFiles/*
+src/common/*.a
+src/util/CMakeFiles/*
+src/util/*.a
