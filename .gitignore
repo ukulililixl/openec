@@ -21,3 +21,8 @@ src/common/CMakeFiles/*
 src/common/*.a
 src/util/CMakeFiles/*
 src/util/*.a
+src/ec/CMakeFiles/*
+src/*/*.a
+
+src/*.swp
+src/*/*.swp

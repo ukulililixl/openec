@@ -120,32 +120,34 @@ for node in cluster:
 
     line="<attribute><name>ec.policy</name>\n"
     attr.append(line)
-    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><cps>1</cps><locality>false</locality></value>\n"
+    line="<value><id>rs_4_2</id><class>RSCONV</class><n>4</n><k>2</k><cps>1</cps><locality>false</locality></value>\n"
     attr.append(line)
-    line="<value><id>rs_12_8</id><class>RSCONV</class><n>12</n><k>8</k><cps>1</cps><locality>false</locality></value>\n"
-    attr.append(line)
-    line="<value><id>waslrc_6_2_2</id><class>WASLRC</class><n>10</n><k>6</k><cps>1</cps><locality>false</locality><param>2,2</param></value>\n"
-    attr.append(line)
-    line="<value><id>drc963</id><class>DRC963</class><n>9</n><k>6</k><cps>3</cps><locality>true</locality><param>3</param></value>\n"
-    attr.append(line)
-    line="<value><id>rsppr_9_6</id><class>RSPPR</class><n>9</n><k>6</k><cps>1</cps><locality>true</locality></value>\n"
-    attr.append(line)
-    line="<value><id>rspipe_9_6</id><class>RSPIPE</class><n>9</n><k>6</k><cps>1</cps><locality>false</locality></value>\n"
-    attr.append(line)
-    line="<value><id>rs_6_4</id><class>RSCONV</class><n>6</n><k>4</k><cps>1</cps><locality>false</locality></value>\n"
-    attr.append(line)
-    line="<value><id>ia_8_4</id><class>IA</class><n>8</n><k>4</k><cps>4</cps><locality>false</locality></value>\n"
-    attr.append(line)
-    line="<value><id>drc643</id><class>DRC643</class><n>6</n><k>4</k><cps>2</cps><locality>true</locality><param>3</param></value>\n"
-    attr.append(line)
-    line="<value><id>rsppr_6_4</id><class>RSPPR</class><n>6</n><k>4</k><cps>1</cps><locality>true</locality></value>\n"
-    attr.append(line)
-    line="<value><id>rspipe_6_4</id><class>RSPIPE</class><n>6</n><k>4</k><cps>1</cps><locality>false</locality></value>\n"
-    attr.append(line)
-    line="<value><id>rawrs</id><class>RAWRS</class><n>10</n><k>8</k><cps>1</cps><locality>false</locality><opt>2</opt></value>\n"
-    attr.append(line)
-    line="<value><id>clay_6_4</id><class>CLAY</class><n>6</n><k>4</k><cps>8</cps><locality>false</locality></value>\n"
-    attr.append(line)
+#    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><cps>1</cps><locality>false</locality></value>\n"
+#    attr.append(line)
+#    line="<value><id>rs_12_8</id><class>RSCONV</class><n>12</n><k>8</k><cps>1</cps><locality>false</locality></value>\n"
+#    attr.append(line)
+#    line="<value><id>waslrc_6_2_2</id><class>WASLRC</class><n>10</n><k>6</k><cps>1</cps><locality>false</locality><param>2,2</param></value>\n"
+#    attr.append(line)
+#    line="<value><id>drc963</id><class>DRC963</class><n>9</n><k>6</k><cps>3</cps><locality>true</locality><param>3</param></value>\n"
+#    attr.append(line)
+#    line="<value><id>rsppr_9_6</id><class>RSPPR</class><n>9</n><k>6</k><cps>1</cps><locality>true</locality></value>\n"
+#    attr.append(line)
+#    line="<value><id>rspipe_9_6</id><class>RSPIPE</class><n>9</n><k>6</k><cps>1</cps><locality>false</locality></value>\n"
+#    attr.append(line)
+#    line="<value><id>rs_6_4</id><class>RSCONV</class><n>6</n><k>4</k><cps>1</cps><locality>false</locality></value>\n"
+#    attr.append(line)
+#    line="<value><id>ia_8_4</id><class>IA</class><n>8</n><k>4</k><cps>4</cps><locality>false</locality></value>\n"
+#    attr.append(line)
+#    line="<value><id>drc643</id><class>DRC643</class><n>6</n><k>4</k><cps>2</cps><locality>true</locality><param>3</param></value>\n"
+#    attr.append(line)
+#    line="<value><id>rsppr_6_4</id><class>RSPPR</class><n>6</n><k>4</k><cps>1</cps><locality>true</locality></value>\n"
+#    attr.append(line)
+#    line="<value><id>rspipe_6_4</id><class>RSPIPE</class><n>6</n><k>4</k><cps>1</cps><locality>false</locality></value>\n"
+#    attr.append(line)
+#    line="<value><id>rawrs</id><class>RAWRS</class><n>10</n><k>8</k><cps>1</cps><locality>false</locality><opt>2</opt></value>\n"
+#    attr.append(line)
+#    line="<value><id>clay_6_4</id><class>CLAY</class><n>6</n><k>4</k><cps>8</cps><locality>false</locality></value>\n"
+#    attr.append(line)
 
     line="</attribute>\n"
     attr.append(line)

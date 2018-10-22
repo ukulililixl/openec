@@ -6,12 +6,15 @@ project (openec_exe)
 
 add_subdirectory(util)
 add_subdirectory(common)
+add_subdirectory(ec)
 
 aux_source_directory(. DIR_SRCS)
 add_executable(OECCoordinator OECCoordinator.cc)
 add_executable(OECAgent OECAgent.cc)
 add_executable(OECClient OECClient.cc)
+add_executable(ECDAGTest ECDAGTest.cc)
 
 target_link_libraries(OECCoordinator common pthread)
 target_link_libraries(OECAgent common pthread)
 target_link_libraries(OECClient common pthread)
+target_link_libraries(ECDAGTest common ec)
