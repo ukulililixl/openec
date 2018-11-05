@@ -30,7 +30,10 @@ cluster=[
 "192.168.0.13",
 "192.168.0.14",
 "192.168.0.15",
-"192.168.0.16"
+"192.168.0.16",
+"192.168.0.17",
+"192.168.0.18",
+"192.168.0.19"
 ]
 
 networkMap={
@@ -38,7 +41,10 @@ networkMap={
 "192.168.0.13":"/rack1",
 "192.168.0.14":"/rack1",
 "192.168.0.15":"/rack1",
-"192.168.0.16":"/rack1"
+"192.168.0.16":"/rack1",
+"192.168.0.17":"/rack1",
+"192.168.0.18":"/rack1",
+"192.168.0.19":"/rack1"
 }
 
 for node in cluster:
@@ -120,7 +126,7 @@ for node in cluster:
 
     line="<attribute><name>ec.policy</name>\n"
     attr.append(line)
-    line="<value><id>rs_4_2</id><class>RSCONV</class><n>4</n><k>2</k><cps>1</cps><locality>false</locality></value>\n"
+    line="<value><id>rs_6_4</id><class>RSCONV</class><n>6</n><k>4</k><w>1</w><locality>false</locality></value>\n"
     attr.append(line)
 #    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><cps>1</cps><locality>false</locality></value>\n"
 #    attr.append(line)

@@ -26,3 +26,5 @@ src/*/*.a
 
 src/*.swp
 src/*/*.swp
+
+src/protocol/CMakeFiles/*
