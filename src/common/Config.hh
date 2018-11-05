@@ -1,9 +1,8 @@
 #ifndef _CONFIG_HH_
 #define _CONFIG_HH_
 
+#include "../ec/ECPolicy.hh"
 #include "../inc/include.hh"
-//#include "ECPolicy.hh"
-
 #include "../util/tinyxml2.h"
 
 using namespace tinyxml2;
@@ -15,11 +14,11 @@ class Config {
  
     //ip
     unsigned int _localIp;
-//    std::vector<unsigned int> _agentsIPs;
+    std::vector<unsigned int> _agentsIPs;
     unsigned int _coorIp;
-//    std::unordered_map<unsigned int, std::string> _ip2Rack;
-//    std::unordered_map<string, std::vector<unsigned int>> _rack2Ips;
-//
+    std::unordered_map<unsigned int, std::string> _ip2Rack;
+    std::unordered_map<string, std::vector<unsigned int>> _rack2Ips;
+
 //    unsigned int _repairIp;
 //
     //worker thread num
@@ -30,9 +29,9 @@ class Config {
 
     //cmddistributor thread num
     int _distThreadNum;
-//
-//    // size
-//    int _pktSize;
+
+    // size
+    int _pktSize;
 //
 //    // fstype
 //    std::string _fsType;
@@ -40,15 +39,15 @@ class Config {
 //    std::string _fsIp;
 //    int _fsPort;
 //    std::unordered_map<string, std::vector<string>> _fsFactory;
-//
-//    // placepolicy
-//    std::string _control_policy;
-//    std::string _data_policy;
-//    bool _avoid_local;
-//
-//    // ecpolicymap
-//    std::unordered_map<string, ECPolicy*> _ecPolicyMap;
-//
+
+    // placepolicy
+    std::string _control_policy;
+    std::string _data_policy;
+    bool _avoid_local;
+
+    // ecpolicymap
+    std::unordered_map<std::string, ECPolicy*> _ecPolicyMap;
+
 //    // offline pool
 //    std::unordered_map<string, string> _offlineECMap;
 //

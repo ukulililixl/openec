@@ -1,19 +1,21 @@
 #ifndef _OECWORKER_HH_
 #define _OECWORKER_HH_
 
-//#include "AGCommand.hh"
+#include "BlockingQueue.hh"
 #include "Config.hh"
-//#include "CoorCommand.hh"
+#include "OECDataPacket.hh"
 //#include "ECBase.hh"
 //#include "FSObjInputStream.hh"
 //#include "FSObjOutputStream.hh"
 //#include "FSUtil.hh"
-//#include "OECDataPacket.hh"
 //#include "RSCONV.hh"
 //#include "UnderFS.hh"
 //#include "Util/hdfs.h"
 
+#include "../ec/ECTask.hh"
 #include "../inc/include.hh"
+#include "../protocol/AGCommand.hh"
+#include "../protocol/CoorCommand.hh"
 #include "../util/RedisUtil.hh"
 
 class OECWorker {
@@ -29,8 +31,17 @@ class OECWorker {
     OECWorker(Config* conf);
     ~OECWorker();
     void doProcess();
+    // deal with client request
+    void clientWrite(AGCommand* agCmd);
+    void onlineWrite(string filename, string ecid, int filesizeMB);
+
+    void loadWorker(BlockingQueue<OECDataPacket*>* readQueue,
+                    string keybase,
+                    int startid,
+                    int step,
+                    int round,
+                    bool zeropadding);
 //    void offlineWrite(AGCommand* agCmd);
-//    void clientWrite(AGCommand* agCmd);
 //    void clientRead(AGCommand* agCmd);
 //    void readDisk(AGCommand* agCmd);
 //    void readDiskList(AGCommand* agCmd);

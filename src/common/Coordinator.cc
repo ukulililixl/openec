@@ -1,39 +1,40 @@
 #include "Coordinator.hh"
 
 Coordinator::Coordinator(Config* conf, StripeStore* ss) : _conf(conf) {
-//  // create local context
-//  try {
-//    _localCtx = RedisUtil::createContext(_conf -> _localIp);
-//  } catch (int e) {
-//    // TODO: error handling
-//    cerr << "initializing redis context to " << " error" << endl;
-//  }
-//  _stripeStore = ss;
+  // create local context
+  try {
+    _localCtx = RedisUtil::createContext(_conf -> _localIp);
+  } catch (int e) {
+    // TODO: error handling
+    cerr << "initializing redis context to " << " error" << endl;
+  }
+  _stripeStore = ss;
 //  _underfs = FSUtil::createFS(_conf->_fsType, _conf->_fsFactory[_conf->_fsType], _conf);
-//  srand((unsigned)time(0));
+  srand((unsigned)time(0));
 }
 
 Coordinator::~Coordinator() {
-//  redisFree(_localCtx);
+  redisFree(_localCtx);
 }
 
 void Coordinator::doProcess() {
-//  redisReply* rReply;
+  redisReply* rReply;
   while (true) {
-//    cout << "Coordinator::doProcess" << endl;
-//    // will never stop looping
-//    rReply = (redisReply*)redisCommand(_localCtx, "blpop coor_request 0");
-//    if (rReply -> type == REDIS_REPLY_NIL) {
-//      cerr << "Coordinator::doProcess() get feed back empty queue " << endl;
-//      freeReplyObject(rReply);
-//    } else if (rReply -> type == REDIS_REPLY_ERROR) {
-//      cerr << "Coordinator::doProcess() get feed back ERROR happens " << endl;
-//    } else {
-//      cout << "Coordinator::doProcess() receive a request!" << endl;
-//      char* reqStr = rReply -> element[1] -> str;
-//      CoorCommand* coorCmd = new CoorCommand(reqStr);
-//      switch (coorCmd->_type) {
-//        case 0: updateMeta(coorCmd); break;
+    cout << "Coordinator::doProcess" << endl;
+    // will never stop looping
+    rReply = (redisReply*)redisCommand(_localCtx, "blpop coor_request 0");
+    if (rReply -> type == REDIS_REPLY_NIL) {
+      cerr << "Coordinator::doProcess() get feed back empty queue " << endl;
+    } else if (rReply -> type == REDIS_REPLY_ERROR) {
+      cerr << "Coordinator::doProcess() get feed back ERROR happens " << endl;
+    } else {
+      cout << "Coordinator::doProcess() receive a request!" << endl;
+      char* reqStr = rReply -> element[1] -> str;
+      CoorCommand* coorCmd = new CoorCommand(reqStr);
+      coorCmd->dump();
+      int type = coorCmd->getType();
+      switch (type) {
+        case 0: registerFile(coorCmd); break;
 //        case 1: getLocation(coorCmd); break;
 //        case 2: updateFileSize(coorCmd); break;
 //        case 3: getFileMeta(coorCmd); break;
@@ -46,13 +47,211 @@ void Coordinator::doProcess() {
 //        case 10: onlineDegradedUpdate(coorCmd); break;
 //        case 11: reportRepaired(coorCmd); break;
 //        default: break;
-//      }
-//
+      }
+
 //      // delete coorCmd
 //      delete coorCmd;
-//    }
-//    // free reply object
-//    freeReplyObject(rReply);
+    }
+    // free reply object
+    freeReplyObject(rReply);
+  }
+}
+
+void Coordinator::registerFile(CoorCommand* coorCmd) {
+  unsigned int clientIp = coorCmd->getClientip();
+  string filename = coorCmd->getFilename();
+  string ecid = coorCmd->getEcid();
+  int mode = coorCmd->getMode();
+  int filesizeMB = coorCmd->getFilesizeMB();
+
+  if (mode == 0) registerOnlineEC(clientIp, filename, ecid, filesizeMB);
+}
+
+void Coordinator::registerOnlineEC(unsigned int clientIp, string filename, string ecid, int filesizeMB) {
+  // 0. make sure that there is no existing ssentry
+  assert (!_stripeStore->existEntry(filename));
+  // 1. get ec instance 
+  ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];
+  ECBase* ec = ecpolicy->createECClass();
+  int ecn = ecpolicy->getN();
+  int eck = ecpolicy->getK();
+  int ecw = ecpolicy->getW();
+  // 2. call ec Place method to get the group
+  vector<vector<int>> group;
+  ec->Place(group);
+  // 3. sort group to a map, such that we can find corresponding group based on idx
+  unordered_map<int, vector<int>> idx2group;
+  for (auto item: group) {
+    for (auto idx: item) {
+      idx2group.insert(make_pair(idx, item));
+    }
+  }
+  // 4. preassign location for each index
+  vector<unsigned int> ips;
+  vector<int> placed;
+  vector<string> objnames;
+  for (int i=0; i<ecn; i++) {
+    string obj = filename+"_oecobj_"+to_string(i);
+    objnames.push_back(obj);
+    vector<int> colocWith;
+    if (idx2group.find(i) != idx2group.end()) colocWith = idx2group[i];
+    vector<unsigned int> candidates = getCandidates(ips, placed, colocWith);
+    unsigned int curIp; // choose from candidates
+    if (_conf->_avoid_local) {
+      vector<unsigned int>::iterator position = find(candidates.begin(), candidates.end(), clientIp);
+      if (position != candidates.end()) candidates.erase(position);
+      curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
+    } else {
+      if (find(candidates.begin(), candidates.end(), clientIp) != candidates.end()) curIp = clientIp;
+      else curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
+    }
+    placed.push_back(i);
+    ips.push_back(curIp);
+  }
+  // 5. update ssentry and stripestore
+  SSEntry* ssentry = new SSEntry(filename, 0, filesizeMB, ecid, objnames, ips);
+  _stripeStore->insertEntry(ssentry);
+  ssentry->dump();
+  // 6. parse ECDAG and create commands for online encoding
+  ECDAG* ecdag = ec->Encode();  
+  vector<int> toposeq = ecdag->toposort();
+
+  // for online encoding, we assume k load tasks for original data
+  // n persist tasks for encoded-obj 
+  // we only need to tell OECAgent how to calculate parity
+  vector<ECTask*> computetasks;
+  for (int i=0; i<toposeq.size(); i++) {
+    ECNode* curnode = ecdag->getNode(toposeq[i]);
+    curnode->parseForClient(computetasks);
+  }
+  for (int i=0; i<computetasks.size(); i++) computetasks[i]->dump();
+  
+  // 9. send to agent instructions
+  AGCommand* agCmd = new AGCommand();
+  agCmd->buildType10(10, ecn, eck, ecw, computetasks.size());
+  agCmd->setRkey("registerFile:"+filename);
+  agCmd->sendTo(clientIp);
+  delete agCmd;
+  
+  // 10. send compute tasks
+  for (int i=0; i<computetasks.size(); i++) {
+    ECTask* curcompute = computetasks[i];
+    curcompute->buildType2();
+    string key = "compute:"+filename+":"+to_string(i);
+    curcompute->sendTo(key, clientIp);
+  }
+   
+//  // 11. send compute tasks
+//  int round;
+//  if (p > 0) round = r+1;
+//  else round = r;
+//  for (int i=0; i<computetasks.size(); i++) {
+//    ECTask* curcompute = computetasks[i];
+//    curcompute->buildType2(2, round);
+//    string key = "compute:"+filename+":"+to_string(i);
+//    curcompute->sendTo(key, clientIp);
+//    curcompute->dump();
+//  }
+//
+//  // 12. send persist tasks
+//  for (int i=0; i<ecn; i++) {
+//    ECTask* curpersist = persisttasks[i];
+//    curpersist->buildType4()
+//  }
+}
+
+vector<unsigned int> Coordinator::getCandidates(vector<unsigned int> placedIp, vector<int> placedIdx, vector<int> colocWith) {
+  vector<unsigned int> toret;
+  // 0. check colocWith
+  // candidate should be within the same rack
+  for (int i=0; i<colocWith.size(); i++) {
+    int curIdx = colocWith[i];
+    // check whether this idx has been placed
+    // if this idx has been placed
+    if (placedIp.size() > curIdx) {
+      // then figure out 
+      unsigned int curIp = placedIp[curIdx];
+      // find corresponding rack for this ip
+      string rack = _conf->_ip2Rack[curIp];
+      // for all the ip in this rack, if :
+      // 1> this ip is not in toret
+      // 2> this ip is not in placedId
+      for (auto item:_conf->_rack2Ips[rack]) {
+        if (find(toret.begin(), toret.end(), item) == toret.end() && 
+            find(placedIp.begin(), placedIp.end(), item) == placedIp.end()) toret.push_back(item);
+      }
+    }
+  }
+  // if there is no constraints in colocWith, we add all ips into toret except for placedIp
+  if (toret.size() == 0) {
+    for (auto item:_conf->_agentsIPs) {
+      if (find(placedIp.begin(), placedIp.end(), item) == placedIp.end()) toret.push_back(item);
+    }
+  }
+  return toret; 
+}
+
+unsigned int Coordinator::chooseFromCandidates(vector<unsigned int> candidates, string policy, string type) {
+  if (policy == "random") {
+    int randomidx = rand() % candidates.size();
+    return candidates[randomidx];
+  }
+  assert (candidates.size() > 0);
+  if (type == "control") {
+    int minload = _stripeStore->getControlLoad(candidates[0]);
+    unsigned int minip = candidates[0];
+    for (int i=1; i<candidates.size(); i++) {
+      unsigned int ip = candidates[i];
+      int load = _stripeStore->getControlLoad(ip);
+      if (load < minload) {
+        minload = load;
+        minip = ip;
+      }
+    }
+    _stripeStore->increaseControlLoadMap(minip, 1);
+    return minip;
+  } else if (type == "data") {
+    int minload = _stripeStore->getDataLoad(candidates[0]);
+    unsigned int minip = candidates[0];
+    for (int i=1; i<candidates.size(); i++) {
+      unsigned int ip = candidates[i];
+      int load = _stripeStore->getDataLoad(ip);
+      if (load < minload) {
+        minload = load;
+        minip = ip;
+      }
+    }
+    _stripeStore->increaseDataLoadMap(minip, 1);
+    return minip;
+  } else if (type == "repair") {
+    int minload = _stripeStore->getRepairLoad(candidates[0]);
+    unsigned int minip = candidates[0];
+    for (int i=1; i<candidates.size(); i++) {
+      unsigned int ip = candidates[i];
+      int load = _stripeStore->getRepairLoad(ip);
+      if (load < minload) {
+        minload = load;
+        minip = ip;
+      }
+    }
+    _stripeStore->increaseRepairLoadMap(minip, 1);
+    return minip;
+  } else if (type == "encode") {
+    int minload = _stripeStore->getEncodeLoad(candidates[0]);
+    unsigned int minip = candidates[0];
+    for (int i=1; i<candidates.size(); i++) {
+      unsigned int ip = candidates[i];
+      int load = _stripeStore->getEncodeLoad(ip);
+      if (load < minload) {
+        minload = load;
+        minip = ip;
+      }
+    }
+    _stripeStore->increaseEncodeLoadMap(minip, 1);
+    return minip;
+  } else {
+    int randomidx = rand() % candidates.size();
+    return candidates[randomidx];
   }
 }
 

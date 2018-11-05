@@ -30,6 +30,7 @@ class ECDAG {
 
     // topological sorting
     vector<int> toposort();
+    ECNode* getNode(int cidx);
 
     // for debug
     void dump();

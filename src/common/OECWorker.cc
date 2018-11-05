@@ -24,23 +24,24 @@ OECWorker::~OECWorker() {
 void OECWorker::doProcess() {
   redisReply* rReply;
   while (true) {
-//    cout << "OECWorker::doProcess" << endl;  
-//    // will never stop looping
-//    rReply = (redisReply*)redisCommand(_processCtx, "blpop ag_request 0");
-//    if (rReply -> type == REDIS_REPLY_NIL) {
-//      cerr << "OECWorker::doProcess() get feed back empty queue " << endl;
-//      freeReplyObject(rReply);
-//    } else if (rReply -> type == REDIS_REPLY_ERROR) {
-//      cerr << "OECWorker::doProcess() get feed back ERROR happens " << endl;
-//    } else {
-//      struct timeval time1, time2;
-//      gettimeofday(&time1, NULL);
-//      char* reqStr = rReply -> element[1] -> str;
-//      AGCommand* agCmd = new AGCommand(reqStr);
-//      cout << "OECWorker::doProcess() receive a request of type " << agCmd->_type << endl;
-//      agCmd->dumpCmd();
-//      switch (agCmd->_type) {
-//        case 0: clientWrite(agCmd); break;
+    cout << "OECWorker::doProcess" << endl;  
+    // will never stop looping
+    rReply = (redisReply*)redisCommand(_processCtx, "blpop ag_request 0");
+    if (rReply -> type == REDIS_REPLY_NIL) {
+      cerr << "OECWorker::doProcess() get feed back empty queue " << endl;
+      //freeReplyObject(rReply);
+    } else if (rReply -> type == REDIS_REPLY_ERROR) {
+      cerr << "OECWorker::doProcess() get feed back ERROR happens " << endl;
+    } else {
+      struct timeval time1, time2;
+      gettimeofday(&time1, NULL);
+      char* reqStr = rReply -> element[1] -> str;
+      AGCommand* agCmd = new AGCommand(reqStr);
+      int type = agCmd->getType();
+      cout << "OECWorker::doProcess() receive a request of type " << type << endl;
+      agCmd->dump();
+      switch (type) {
+        case 0: clientWrite(agCmd); break;
 //        case 1: clientRead(agCmd); break;
 //        case 2: readDisk(agCmd); break;
 //        case 3: fetchCompute(agCmd); break;
@@ -48,15 +49,137 @@ void OECWorker::doProcess() {
 //        case 6: readDiskList(agCmd); break;
 //        case 7: readFetchCompute(agCmd); break;
 //        default:break;
-//      }
+      }
 //      gettimeofday(&time2, NULL);
 //      cout << "OECWorker::doProcess().duration = " << RedisUtil::duration(time1, time2) << endl;
-//      // delete agCmd
-//      delete agCmd;
-//    }
-//    // free reply object
-//    freeReplyObject(rReply); 
+      // delete agCmd
+      delete agCmd;
+    }
+    // free reply object
+    freeReplyObject(rReply); 
   }
+}
+
+void OECWorker::clientWrite(AGCommand* agcmd) {
+  cout << "OECWorker::clientWrite" << endl;
+  string filename = agcmd->getFilename();
+  string ecid = agcmd->getEcid();
+  string mode = agcmd->getMode();
+  int filesizeMB = agcmd->getFilesizeMB();
+  if (mode == "online") onlineWrite(filename, ecid, filesizeMB);
+}
+
+void OECWorker::onlineWrite(string filename, string ecid, int filesizeMB) {
+  struct timeval time1, time2, time3, time4;
+  
+  // 0. send request to coordinator that I want to write a file with online erasure coding
+  //    wait for responses from coordinator with a set of tasks
+  gettimeofday(&time1, NULL);
+  CoorCommand* coorCmd = new CoorCommand();
+  coorCmd->buildType0(0, _conf->_localIp, filename, ecid, 0, filesizeMB);
+  coorCmd->sendTo(_coorCtx);
+  delete coorCmd;
+
+  // 1. wait for coordinator's instructions
+  redisReply* rReply;
+  redisContext* waitCtx = RedisUtil::createContext(_conf->_localIp);
+  string wkey = "registerFile:" + filename;
+  rReply = (redisReply*)redisCommand(waitCtx, "blpop %s 0", wkey.c_str());
+  char* reqStr = rReply -> element[1] -> str;
+  AGCommand* agCmd = new AGCommand(reqStr);
+  freeReplyObject(rReply);
+ 
+  int ecn = agCmd->getN();
+  int eck = agCmd->getK();
+  int ecw = agCmd->getW();
+  int computen = agCmd->getComputen();
+  delete agCmd;
+
+  int totalNumPkt = 1048576/_conf->_pktSize * filesizeMB;
+  int totalNumRounds = totalNumPkt / eck;
+  int lastNum = totalNumPkt % eck;
+  bool zeropadding = false;
+  if (lastNum > 0) zeropadding = true;
+
+  vector<ECTask*> computeTasks;
+  for (int i=0; i<computen; i++) {
+    string wkey = "compute:" + filename+":"+to_string(i);
+    rReply = (redisReply*)redisCommand(waitCtx, "blpop %s 0", wkey.c_str());
+    char* reqStr = rReply -> element[1] -> str;
+    ECTask* compute = new ECTask(reqStr);
+    compute->dump();
+    freeReplyObject(rReply);
+  }
+  redisFree(waitCtx);
+  gettimeofday(&time2, NULL);
+  cout << "OECWorker::onlineWrite.registerFile.duraiton = " << RedisUtil::duration(time1, time2) << endl;
+
+  // 2. create threads for Load tasks to load data from local redis
+  BlockingQueue<OECDataPacket*>** loadQueue = (BlockingQueue<OECDataPacket*>**)calloc(eck, sizeof(BlockingQueue<OECDataPacket*>*));
+  for (int i=0; i<eck; i++) {
+    loadQueue[i] = new BlockingQueue<OECDataPacket*>();
+  }
+  vector<thread> loadThreads = vector<thread>(eck);
+  for (int i=0; i<eck; i++) {
+    int curnum = totalNumRounds;
+    bool curzero = false;
+    if (lastNum > 0 && i < lastNum) curnum = curnum + 1;
+    if (lastNum > 0 && i >= lastNum) curzero = true;
+    loadThreads[i] = thread([=]{loadWorker(loadQueue[i], filename, i, eck, curnum, curzero);});
+  }
+
+  // 3. create threads for Persist tasks to persist data to DSS
+   
+
+//
+//  // 4. create persist threads to persist data into DSS
+//
+//  // join
+//  for (int i=0; i<loadn; i++) loadThreads[i].join();
+//
+//  // free
+//  for (int i=0; i<loadn; i++) delete loadQueue[i];
+//  free(loadQueue);
+}
+
+void OECWorker::loadWorker(BlockingQueue<OECDataPacket*>* readQueue,
+                    string keybase,
+                    int startid,
+                    int step,
+                    int round,
+                    bool zeropadding) {
+  struct timeval time1, time2, time3;
+  gettimeofday(&time1, NULL);
+  // read from redis
+  redisContext* readCtx = RedisUtil::createContext(_conf->_localIp);
+  int startidx = startid;
+  for (int i=0; i<round; i++) {
+    int curidx = startidx + i * step;
+    string key = keybase + ":" + to_string(curidx);
+    redisAppendCommand(readCtx, "blpop %s 1", key.c_str());
+  }
+  redisReply* rReply;
+  for (int i=0; i<round; i++) {
+    redisGetReply(readCtx, (void**)&rReply);
+    char* content = rReply->element[1]->str;
+    OECDataPacket* pkt = new OECDataPacket(content);
+    int curDataLen = pkt->getDatalen();
+    readQueue->push(pkt);
+    freeReplyObject(rReply);
+  }
+  if (zeropadding) {
+    // create a packet that contains all zero
+    char* content = (char*)calloc(_conf->_pktSize + 4, sizeof(char));
+    memset(content, 0, _conf->_pktSize + 4);
+    int tmplen = htonl(_conf->_pktSize);
+    memcpy(content, (char*)&tmplen, 4);
+    OECDataPacket* pkt = new OECDataPacket(content);
+    readQueue->push(pkt);
+    free(content);
+  }
+  redisFree(readCtx);
+  gettimeofday(&time2, NULL);
+  cout << "OECWorker::loadWorker.from client.duration = " << RedisUtil::duration(time1, time2) << endl;
 }
 
 //void OECWorker::readDisk(AGCommand* agcmd) {

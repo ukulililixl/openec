@@ -10,6 +10,108 @@ StripeStore::StripeStore(Config* conf) {
 //   else _enableRepair = true;
 }
 
+bool StripeStore::existEntry(string filename) {
+  unordered_map<string, SSEntry*>::iterator it = _ssEntryMap.find(filename);
+  return it == _ssEntryMap.end() ? false:true;
+}
+
+void StripeStore::insertEntry(SSEntry* entry) {
+  unordered_map<string, SSEntry*>::iterator it = _ssEntryMap.find(entry->getFilename());
+  if (it == _ssEntryMap.end()) {
+    // the entry does not exist, insert this entry
+    _lockSSEntryMap.lock();
+    _ssEntryMap.insert(make_pair(entry->getFilename(), entry));
+    _lockSSEntryMap.unlock();
+
+    for (auto obj: entry->getObjlist()) {
+      _lockObjEntryMap.lock();
+      _objEntryMap.insert(make_pair(obj, entry));
+      _lockObjEntryMap.unlock();
+    }
+  } else {
+//     // the entry exist, only need to update the entry
+//     _lockSSEntryMap.lock();
+//     SSEntry* oldEntry = _ssEntryMap[entry->_filename];
+//     _ssEntryMap[entry->_filename] = entry;
+//     _lockSSEntryMap.unlock();
+//     // need to delete the old entry?
+//     delete oldEntry;
+  }
+}
+
+int StripeStore::getControlLoad(unsigned int ip) {
+  int toret;
+  _lockCLMap.lock();
+  unordered_map<unsigned int, int>::iterator it = _controlLoadMap.find(ip);
+  if (it == _controlLoadMap.end()) toret = 0;
+  else toret = _controlLoadMap[ip];
+  _lockCLMap.unlock();
+  return toret;
+}
+
+void StripeStore::increaseControlLoadMap(unsigned int ip, int load) {
+  _lockCLMap.lock();
+  unordered_map<unsigned int, int>::iterator it = _controlLoadMap.find(ip);
+  if (it == _controlLoadMap.end()) _controlLoadMap.insert(make_pair(ip, load));
+  else _controlLoadMap[ip] += load;
+  _lockCLMap.unlock();
+}
+
+int StripeStore::getDataLoad(unsigned int ip) {
+  int toret;
+  _lockDLMap.lock();
+  unordered_map<unsigned int, int>::iterator it = _dataLoadMap.find(ip);
+  if (it == _dataLoadMap.end()) toret = 0;
+  else toret = _dataLoadMap[ip];
+  _lockDLMap.unlock();
+  return toret;
+}
+
+void StripeStore::increaseDataLoadMap(unsigned int ip, int load) {
+  _lockDLMap.lock();
+  unordered_map<unsigned int, int>::iterator it = _dataLoadMap.find(ip);
+  if (it == _dataLoadMap.end()) _dataLoadMap.insert(make_pair(ip, load));
+  else _dataLoadMap[ip] += load;
+  _lockDLMap.unlock();
+}
+
+int StripeStore::getRepairLoad(unsigned int ip) {
+  int toret;
+  _lockRLMap.lock();
+  unordered_map<unsigned int, int>::iterator it = _repairLoadMap.find(ip);
+  if (it == _repairLoadMap.end()) toret = 0;
+  else toret = _repairLoadMap[ip];
+  _lockRLMap.unlock();
+  return toret;
+}
+
+void StripeStore::increaseRepairLoadMap(unsigned int ip, int load) {
+  _lockRLMap.lock();
+  unordered_map<unsigned int, int>::iterator it = _repairLoadMap.find(ip);
+  if (it == _repairLoadMap.end()) _repairLoadMap.insert(make_pair(ip, load));
+  else _repairLoadMap[ip] += load;
+  _lockRLMap.unlock();
+}
+
+
+int StripeStore::getEncodeLoad(unsigned int ip) {
+  int toret;
+  _lockELMap.lock();
+  unordered_map<unsigned int, int>::iterator it = _encodeLoadMap.find(ip);
+  if (it == _encodeLoadMap.end()) toret = 0;
+  else toret = _encodeLoadMap[ip];
+  _lockELMap.unlock();
+  return toret;
+}
+
+void StripeStore::increaseEncodeLoadMap(unsigned int ip, int load) {
+  _lockELMap.lock();
+  unordered_map<unsigned int, int>::iterator it = _encodeLoadMap.find(ip);
+  if (it == _encodeLoadMap.end()) _encodeLoadMap.insert(make_pair(ip, load));
+  else _encodeLoadMap[ip] += load;
+  _lockELMap.unlock();
+}
+
 // void StripeStore::insertEntry(SSEntry* entry) {
 //   unordered_map<string, SSEntry*>::iterator it = _ssEntryMap.find(entry->_filename);
 //   if (it == _ssEntryMap.end()) {
@@ -40,78 +142,6 @@ StripeStore::StripeStore(Config* conf) {
 // 
 // int StripeStore::getSize() {
 //   return _ssEntryMap.size();
-// }
-// 
-// void StripeStore::increaseDataLoadMap(unsigned int ip, int load) {
-//   _lockDLMap.lock();
-//   unordered_map<unsigned int, int>::iterator it = _dataLoadMap.find(ip);
-//   if (it == _dataLoadMap.end()) _dataLoadMap.insert(make_pair(ip, load));
-//   else _dataLoadMap[ip] += load;
-//   _lockDLMap.unlock();
-// }
-// 
-// void StripeStore::increaseControlLoadMap(unsigned int ip, int load) {
-//   _lockCLMap.lock();
-//   unordered_map<unsigned int, int>::iterator it = _controlLoadMap.find(ip);
-//   if (it == _controlLoadMap.end()) _controlLoadMap.insert(make_pair(ip, load));
-//   else _controlLoadMap[ip] += load;
-//   _lockCLMap.unlock();
-// }
-// 
-// void StripeStore::increaseRepairLoadMap(unsigned int ip, int load) {
-//   _lockRLMap.lock();
-//   unordered_map<unsigned int, int>::iterator it = _repairLoadMap.find(ip);
-//   if (it == _repairLoadMap.end()) _repairLoadMap.insert(make_pair(ip, load));
-//   else _repairLoadMap[ip] += load;
-//   _lockRLMap.unlock();
-// }
-// 
-// void StripeStore::increaseEncodeLoadMap(unsigned int ip, int load) {
-//   _lockELMap.lock();
-//   unordered_map<unsigned int, int>::iterator it = _encodeLoadMap.find(ip);
-//   if (it == _encodeLoadMap.end()) _encodeLoadMap.insert(make_pair(ip, load));
-//   else _encodeLoadMap[ip] += load;
-//   _lockELMap.unlock();
-// }
-// 
-// int StripeStore::getDataLoad(unsigned int ip) {
-//   int toret;
-//   _lockDLMap.lock();
-//   unordered_map<unsigned int, int>::iterator it = _dataLoadMap.find(ip);
-//   if (it == _dataLoadMap.end()) toret = 0;
-//   else toret = _dataLoadMap[ip];
-//   _lockDLMap.unlock();
-//   return toret;
-// }
-// 
-// int StripeStore::getControlLoad(unsigned int ip) {
-//   int toret;
-//   _lockCLMap.lock();
-//   unordered_map<unsigned int, int>::iterator it = _controlLoadMap.find(ip);
-//   if (it == _controlLoadMap.end()) toret = 0;
-//   else toret = _controlLoadMap[ip];
-//   _lockCLMap.unlock();
-//   return toret;
-// }
-// 
-// int StripeStore::getRepairLoad(unsigned int ip) {
-//   int toret;
-//   _lockRLMap.lock();
-//   unordered_map<unsigned int, int>::iterator it = _repairLoadMap.find(ip);
-//   if (it == _repairLoadMap.end()) toret = 0;
-//   else toret = _repairLoadMap[ip];
-//   _lockRLMap.unlock();
-//   return toret;
-// }
-// 
-// int StripeStore::getEncodeLoad(unsigned int ip) {
-//   int toret;
-//   _lockELMap.lock();
-//   unordered_map<unsigned int, int>::iterator it = _encodeLoadMap.find(ip);
-//   if (it == _encodeLoadMap.end()) toret = 0;
-//   else toret = _encodeLoadMap[ip];
-//   _lockELMap.unlock();
-//   return toret;
 // }
 // 
 // bool StripeStore::poolExists(string poolname) {

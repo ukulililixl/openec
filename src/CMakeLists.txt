@@ -4,9 +4,10 @@ cmake_minimum_required (VERSION 3.1)
 # project name
 project (openec_exe)
 
-add_subdirectory(util)
 add_subdirectory(common)
 add_subdirectory(ec)
+add_subdirectory(protocol)
+add_subdirectory(util)
 
 aux_source_directory(. DIR_SRCS)
 add_executable(OECCoordinator OECCoordinator.cc)

@@ -1,6 +1,7 @@
 #ifndef _ECNODE_HH_
 #define _ECNODE_HH_
 
+#include "ECTask.hh"
 #include "../inc/include.hh"
 
 #define ECNODE_DEBUG false
@@ -27,17 +28,21 @@ class ECNode {
     ECNode(int id);
     ~ECNode();
 
-    void addCoefs(int calfor, vector<int> coefs);
+    int getNodeId();
 
     void cleanChilds();
     void setChilds(vector<ECNode*> childs);
     int getChildNum();
     vector<ECNode*> getChildren();
 
+    void addCoefs(int calfor, vector<int> coefs);
+    unordered_map<int, vector<int>> getCoefmap();
+
     void incRefNumFor(int id); // increase refnum for id
     int getRefNumFor(int id);
 
-    int getNodeId();
+    // parseForClient compute tasks
+    void parseForClient(vector<ECTask*>& tasks);
 
     // for debug
     void dump(int parent);
