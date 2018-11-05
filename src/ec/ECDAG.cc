@@ -177,6 +177,11 @@ vector<int> ECDAG::toposort() {
   return toret;
 }
 
+ECNode* ECDAG::getNode(int cidx) {
+  assert (_ecNodeMap.find(cidx) != _ecNodeMap.end());
+  return _ecNodeMap[cidx];
+}
+
 void ECDAG::dump() {
   for (auto id : _ecHeaders) {
     _ecNodeMap[id] ->dump(-1);
