@@ -45,13 +45,13 @@ Config::Config(std::string& filepath) {
       _localIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "packet.size") {
       _pktSize = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-//     } else if (attName == "underline.fs.type") {
-// //      if (ele -> NextSiblingElement("value") -> GetText() == std::string("HDFS3")) {
-// //        _fsType = HDFS3;
-// //      } else if (ele -> NextSiblingElement("value") -> GetText() == std::string("HDFS2")) {
-// //        _fsType = HDFS2;
-// //      }
-//       _fsType = ele->NextSiblingElement("value")->GetText();
+    } else if (attName == "underline.fs.type") {
+//      if (ele -> NextSiblingElement("value") -> GetText() == std::string("HDFS3")) {
+//        _fsType = HDFS3;
+//      } else if (ele -> NextSiblingElement("value") -> GetText() == std::string("HDFS2")) {
+//        _fsType = HDFS2;
+//      }
+      _fsType = ele->NextSiblingElement("value")->GetText();
 //     } else if (attName == "underline.fs.address") {
 //       std::string addr = ele -> NextSiblingElement("value") -> GetText();
 //       int pos = addr.find(':');
@@ -75,40 +75,40 @@ Config::Config(std::string& filepath) {
        std::string avoidlocal = ele->NextSiblingElement("value")->GetText();
        if (avoidlocal == "true") _avoid_local = true;
        else _avoid_local = false;
-//     } else if (attName == "fs.factory") {
-//       for (XMLElement* curval = ele->NextSiblingElement("value");
-//            curval!=NULL;
-//            curval = curval->NextSiblingElement("value")) {
-//         XMLElement* curele = curval;
-//         // fstype
-//         curele = curele->FirstChildElement("fstype");
-//         if (!curele) {
-//           cout << "wrong configuration for fs.factory!" << endl;
-//           exit(1);
-//         }
-//         std::string fstype = curele->GetText();
-//         // params
-//         std::vector<std::string> param;
-//         curele = curele->NextSiblingElement("param");
-//         if (!curele) {
-//           cout << "wrong configuration for fs.factory!";
-//           exit(1);
-//         }
-//         std::string paramtext = curele->GetText();
-//         int start = 0;
-//         int end = 0;
-//         
-//         while ((end = paramtext.find(",", start)) != -1) {
-//           std::string curparam = paramtext.substr(start, end);
-//           param.push_back(curparam);
-//           start = end + 1;
-//         }
-//         param.push_back(paramtext.substr(start));
-//         _fsFactory.insert(make_pair(fstype, param));
-// //        cout << "fstype: " << fstype << ", param: ";
-//         for (int i=0; i<param.size(); i++) cout << param[i] << " ";
-//         cout << endl;
-//       }
+    } else if (attName == "fs.factory") {
+      for (XMLElement* curval = ele->NextSiblingElement("value");
+           curval!=NULL;
+           curval = curval->NextSiblingElement("value")) {
+        XMLElement* curele = curval;
+        // fstype
+        curele = curele->FirstChildElement("fstype");
+        if (!curele) {
+          cout << "wrong configuration for fs.factory!" << endl;
+          exit(1);
+        }
+        std::string fstype = curele->GetText();
+        // params
+        std::vector<std::string> param;
+        curele = curele->NextSiblingElement("param");
+        if (!curele) {
+          cout << "wrong configuration for fs.factory!";
+          exit(1);
+        }
+        std::string paramtext = curele->GetText();
+        int start = 0;
+        int end = 0;
+        
+        while ((end = paramtext.find(",", start)) != -1) {
+          std::string curparam = paramtext.substr(start, end);
+          param.push_back(curparam);
+          start = end + 1;
+        }
+        param.push_back(paramtext.substr(start));
+        _fsFactory.insert(make_pair(fstype, param));
+//        cout << "fstype: " << fstype << ", param: ";
+        for (int i=0; i<param.size(); i++) cout << param[i] << " ";
+        cout << endl;
+      }
      } else if (attName == "ec.policy") {
        for (XMLElement* curval = ele->NextSiblingElement("value");
             curval!=NULL;
@@ -182,40 +182,49 @@ Config::Config(std::string& filepath) {
          ECPolicy* ecpolicy = new ECPolicy(id, classname, n, k, w, locality, optlevel, param);
          _ecPolicyMap.insert(make_pair(id, ecpolicy));
        }
-//     } else if (attName == "offline.pool") {
-//       for (XMLElement* curval = ele->NextSiblingElement("value");
-//            curval!=NULL;
-//            curval = curval->NextSiblingElement("value")) {
-//         XMLElement* curele = curval;
-//         // poolid
-//         curele = curele->FirstChildElement("poolid");
-//         if (!curele) {
-//           cout << "wrong configuration for offline.pool!" << endl;
-//           exit(1);
-//         }
-//         std::string poolid = curele->GetText(); 
-//         // ecid
-//         curele = curele->NextSiblingElement("ecid");
-//         if (!curele) {
-//           cout << "wrong configuration for offline.pool!" << endl;
-//           exit(1);
-//         }
-//         std::string ecid = curele->GetText();
-//         _offlineECMap.insert(make_pair(poolid, ecid));
-//       }
-// //      XMLElement* curele = ele -> NextSiblingElement("value") -> FirstChildElement("poolid");
-// //      std::string poolname = curele -> GetText();
-// //      curele = curele -> NextSiblingElement("ecid");
-// //      std::string ecid = curele -> GetText();
-// //      _offlineECMap.insert(make_pair(poolname, ecid));
+    } else if (attName == "offline.pool") {
+      for (XMLElement* curval = ele->NextSiblingElement("value");
+           curval!=NULL;
+           curval = curval->NextSiblingElement("value")) {
+        XMLElement* curele = curval;
+        // poolid
+        curele = curele->FirstChildElement("poolid");
+        if (!curele) {
+          cout << "wrong configuration for offline.pool!" << endl;
+          exit(1);
+        }
+        std::string poolid = curele->GetText(); 
+        // ecid
+        curele = curele->NextSiblingElement("ecid");
+        if (!curele) {
+          cout << "wrong configuration for offline.pool!" << endl;
+          exit(1);
+        }
+        std::string ecid = curele->GetText();
+        // base obj size
+        curele = curele->NextSiblingElement("base");
+        int basesize;
+        if (!curele) {
+          basesize = 1048576;
+        } else {
+          basesize = std::stoi(curele -> GetText());
+        }
+        _offlineECMap.insert(make_pair(poolid, ecid));
+        _offlineECBase.insert(make_pair(poolid, basesize));
+      }
+//      XMLElement* curele = ele -> NextSiblingElement("value") -> FirstChildElement("poolid");
+//      std::string poolname = curele -> GetText();
+//      curele = curele -> NextSiblingElement("ecid");
+//      std::string ecid = curele -> GetText();
+//      _offlineECMap.insert(make_pair(poolname, ecid));
      }
    }
 }
 
 Config::~Config() {
-//  for (auto it = _ecPolicyMap.begin(); it != _ecPolicyMap.end(); it++) {
-//    ECPolicy* ecpolicy = it->second;
-//    delete ecpolicy;
-//  }
+  for (auto it = _ecPolicyMap.begin(); it != _ecPolicyMap.end(); it++) {
+    ECPolicy* ecpolicy = it->second;
+    delete ecpolicy;
+  }
 }
 

@@ -38,6 +38,9 @@ class CoorCommand {
     int _mode;
     int _filesizeMB;
 
+    // type 1
+    int _numOfReplicas;
+
   public:
     CoorCommand();
     ~CoorCommand();
@@ -55,6 +58,7 @@ class CoorCommand {
     string getEcid();
     int getMode();
     int getFilesizeMB();
+    int getNumOfReplicas();
 
     // send method
     void sendTo(unsigned int ip);
@@ -69,6 +73,7 @@ class CoorCommand {
                     int filesizeMB);
     // resolve CoorCommand
     void resolveType0();
+    void resolveType1();
 
     // for debug
     void dump();

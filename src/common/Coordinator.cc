@@ -35,7 +35,7 @@ void Coordinator::doProcess() {
       int type = coorCmd->getType();
       switch (type) {
         case 0: registerFile(coorCmd); break;
-//        case 1: getLocation(coorCmd); break;
+        case 1: getLocation(coorCmd); break;
 //        case 2: updateFileSize(coorCmd); break;
 //        case 3: getFileMeta(coorCmd); break;
 //        case 4: offlineEnc(coorCmd); break;
@@ -65,6 +65,7 @@ void Coordinator::registerFile(CoorCommand* coorCmd) {
   int filesizeMB = coorCmd->getFilesizeMB();
 
   if (mode == 0) registerOnlineEC(clientIp, filename, ecid, filesizeMB);
+  else if (mode == 1) registerOfflineEC(clientIp, filename, ecid, filesizeMB);
 }
 
 void Coordinator::registerOnlineEC(unsigned int clientIp, string filename, string ecid, int filesizeMB) {
@@ -115,6 +116,9 @@ void Coordinator::registerOnlineEC(unsigned int clientIp, string filename, strin
   // 6. parse ECDAG and create commands for online encoding
   ECDAG* ecdag = ec->Encode();  
   vector<int> toposeq = ecdag->toposort();
+  cout << "toposeq: ";
+  for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
+  cout << endl;
 
   // for online encoding, we assume k load tasks for original data
   // n persist tasks for encoded-obj 
@@ -140,24 +144,107 @@ void Coordinator::registerOnlineEC(unsigned int clientIp, string filename, strin
     string key = "compute:"+filename+":"+to_string(i);
     curcompute->sendTo(key, clientIp);
   }
-   
-//  // 11. send compute tasks
-//  int round;
-//  if (p > 0) round = r+1;
-//  else round = r;
-//  for (int i=0; i<computetasks.size(); i++) {
-//    ECTask* curcompute = computetasks[i];
-//    curcompute->buildType2(2, round);
-//    string key = "compute:"+filename+":"+to_string(i);
-//    curcompute->sendTo(key, clientIp);
-//    curcompute->dump();
-//  }
-//
-//  // 12. send persist tasks
-//  for (int i=0; i<ecn; i++) {
-//    ECTask* curpersist = persisttasks[i];
-//    curpersist->buildType4()
-//  }
+}
+
+void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB) {
+  // 0. make sure that there is no existing ssentry
+  assert (!_stripeStore->existEntry(filename));
+  // 1. given ecpoolid, figure out whether there is offline pool created in stripe store
+  assert(_conf->_offlineECMap.find(ecpoolid) != _conf->_offlineECMap.end());
+  assert(_conf->_offlineECBase.find(ecpoolid) != _conf->_offlineECBase.end());
+  string ecid = _conf->_offlineECMap[ecpoolid];
+  int basesizeMB = _conf->_offlineECBase[ecpoolid];
+  assert(_conf->_ecPolicyMap.find(ecid) != _conf->_ecPolicyMap.end());
+  ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];
+  OfflineECPool* ecpool = _stripeStore->getECPool(ecid, ecpolicy, basesizeMB);
+  ecpool->lock();
+  // 2. get placement group 
+  ECBase* ec = ecpolicy->createECClass();
+  vector<vector<int>> group;
+  ec->Place(group);
+  unordered_map<int, vector<int>> idx2group;
+  for (auto item: group) {
+    for (auto idx: item) {
+      idx2group.insert(make_pair(idx, item));
+    }
+  }
+  // 3. check number of object that is going to be created for this file
+  int objnum = filesizeMB/basesizeMB;
+  // 4. for each object, add into a stripe an preassign location
+  if (filesizeMB%basesizeMB) objnum += 1;
+  vector<string> fileobjnames;
+  vector<unsigned int> fileobjlocs;
+  for (int objidx=0; objidx<objnum; objidx++) {
+    string objname = filename+"_oecobj_"+to_string(objidx);
+    fileobjnames.push_back(objname);
+
+    // 1.1 get a stripe for obj 
+    string stripename = ecpool->getStripeForObj(objname); 
+
+    vector<string> stripeobjlist = ecpool->getStripeObjList(stripename);
+    vector<unsigned int> stripeips;
+    vector<int> stripeplaced;
+
+    for (int i=0; i<stripeobjlist.size(); i++) {
+      string curobjname = stripeobjlist[i];
+      // given curobjname, find ssentry of the original file for this curobjname
+      SSEntry* ssentry = _stripeStore->getEntryFromObj(curobjname);
+      // given curobjname, find location recorded in ssentry
+      unsigned int curip;
+      bool find = false;
+      if (ssentry != NULL) {
+        curip = ssentry->getLocOfObj(curobjname);
+        find = true;
+      } else {
+        // curobjname is in the same file
+        for (int j=0; j<fileobjnames.size(); j++) {
+          if (curobjname == fileobjnames[j]) {
+            curip = fileobjlocs[j];
+            find = true;
+            break;
+          }
+        }
+      }
+      assert (find);
+      // add this ip to stripeips
+      stripeips.push_back(curip);
+      // add stripeidx to stripeplaced
+      stripeplaced.push_back(i);
+    }
+
+    // 1.2 given stripeips and stripeplaced, also group information from erasure code, preassign location for $objname
+    int stripeidx = stripeplaced.size();
+    vector<int> colocWith;
+    if (idx2group.find(stripeidx) != idx2group.end()) colocWith = idx2group[stripeidx];
+    vector<unsigned int> candidates = getCandidates(stripeips, stripeplaced, colocWith);
+    unsigned int curIp; // choose from candidates
+    if (_conf->_avoid_local) {
+      vector<unsigned int>::iterator position = find(candidates.begin(), candidates.end(), clientIp);
+      if (position != candidates.end()) candidates.erase(position);
+      curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
+    } else {
+      if (find(candidates.begin(), candidates.end(), clientIp) != candidates.end()) curIp = clientIp;
+      else curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
+    }
+
+    // 1.3 now we have preassigned a location for this objname, add to fileobjlocs
+    fileobjlocs.push_back(curIp);
+
+    // 1.4 add objname to ecpool
+    ecpool->addObj(objname, stripename);
+  }
+  
+  // 2. update ssentry
+  SSEntry* ssentry = new SSEntry(filename, 1, filesizeMB, ecpoolid, fileobjnames, fileobjlocs);
+  _stripeStore->insertEntry(ssentry);
+  ssentry->dump();
+
+  // 3. send to agent instructions
+  AGCommand* agCmd = new AGCommand();
+  agCmd->buildType11(11, objnum, basesizeMB);
+  agCmd->setRkey("registerFile:"+filename);
+  agCmd->sendTo(clientIp);
+  delete agCmd;
 }
 
 vector<unsigned int> Coordinator::getCandidates(vector<unsigned int> placedIp, vector<int> placedIdx, vector<int> colocWith) {
@@ -253,6 +340,48 @@ unsigned int Coordinator::chooseFromCandidates(vector<unsigned int> candidates, 
     int randomidx = rand() % candidates.size();
     return candidates[randomidx];
   }
+}
+
+void Coordinator::getLocation(CoorCommand* coorCmd) {
+  unsigned int clientIp = coorCmd->getClientip();
+  string objname = coorCmd->getFilename();
+  int numOfReplicas = coorCmd->getNumOfReplicas();
+  unsigned int* toret = (unsigned int*)calloc(numOfReplicas, sizeof(unsigned int));
+  // 0. figure out the objtype
+  if (objname.find("oecobj") != string::npos) {
+    // placement request for an oecobj file, which is a part of online-encoded file
+    // 1. figure out the original file name
+    string oecobj("_oecobj_");
+    size_t cpos = objname.find(oecobj);
+    string filename = objname.substr(0, cpos);
+    // 2. figure out the objidx
+    size_t idxpos = cpos + oecobj.size();  
+    string idxstr = objname.substr(idxpos, objname.size() - idxpos);
+    int idx = atoi(idxstr.c_str());
+    // 3. get the ssentry given the filename
+    if (_stripeStore->existEntry(filename)) {
+      SSEntry* ssentry = _stripeStore->getEntry(filename);
+      assert (ssentry != NULL);
+      vector<unsigned int> ips = ssentry->getObjloc();
+      toret[0] = ips[idx];
+    } else {
+      cout << "Coordinator::getLocation.ssentry for " << filename << " does not exist!!!" << endl;
+    }
+  }
+
+  cout << "Coordinator::getLocation.return: ";
+  for (int i=0; i<numOfReplicas; i++) {
+    cout << RedisUtil::ip2Str(toret[i]) << " ";
+  }
+  cout << endl;
+  // last. return ip
+  redisReply* rReply;
+  redisContext* clientCtx = RedisUtil::createContext(_conf->_coorIp);
+  string wkey = "loc:"+objname;
+  rReply = (redisReply*)redisCommand(clientCtx, "rpush %s %b", wkey.c_str(), toret, numOfReplicas*sizeof(unsigned int));
+  freeReplyObject(rReply);
+  redisFree(clientCtx);
+  if (toret) free(toret);
 }
 
 //void Coordinator::updateMeta(CoorCommand* coorCmd) {

@@ -9,6 +9,7 @@
 #	  7. encode scheduling(delay/normal)
 #	  8. encode policy (random/balance)
 #	  9. repair scheduling (delay/normal)
+#	  10. offline base (1048576)
 
 
 import os
@@ -24,6 +25,9 @@ FSTYPE=sys.argv[6]
 ENCODES=sys.argv[7]
 ENCODEP=sys.argv[8]
 REPAIRS=sys.argv[9]
+BASE=sys.argv[10]
+BASEMB=int(BASE)/1048576
+BASEMB=str(BASEMB)
 
 cluster=[
 "192.168.0.12",
@@ -160,29 +164,29 @@ for node in cluster:
 
     line="<attribute><name>offline.pool</name>\n"
     attr.append(line)
-    line="<value><poolid>rs_9_6_pool</poolid><ecid>rs_9_6</ecid></value>\n"
+    line="<value><poolid>rs_9_6_pool</poolid><ecid>rs_9_6</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>rs_12_8_pool</poolid><ecid>rs_12_8</ecid></value>\n"
+    line="<value><poolid>rs_12_8_pool</poolid><ecid>rs_12_8</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>waslrc_6_2_2_pool</poolid><ecid>waslrc_6_2_2</ecid></value>\n"
+    line="<value><poolid>waslrc_6_2_2_pool</poolid><ecid>waslrc_6_2_2</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>drc963_pool</poolid><ecid>drc963</ecid></value>\n"
+    line="<value><poolid>drc963_pool</poolid><ecid>drc963</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>rsppr_9_6_pool</poolid><ecid>rsppr_9_6</ecid></value>\n"
+    line="<value><poolid>rsppr_9_6_pool</poolid><ecid>rsppr_9_6</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>rspipe_9_6_pool</poolid><ecid>rspipe_9_6</ecid></value>\n"
+    line="<value><poolid>rspipe_9_6_pool</poolid><ecid>rspipe_9_6</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>rs_6_4_pool</poolid><ecid>rs_6_4</ecid></value>\n"
+    line="<value><poolid>rs_6_4_pool</poolid><ecid>rs_6_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>ia_8_4_pool</poolid><ecid>ia_8_4</ecid></value>\n"
+    line="<value><poolid>ia_8_4_pool</poolid><ecid>ia_8_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>drc643_pool</poolid><ecid>drc643</ecid></value>\n"
+    line="<value><poolid>drc643_pool</poolid><ecid>drc643</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>rsppr_6_4_pool</poolid><ecid>rsppr_6_4</ecid></value>\n"
+    line="<value><poolid>rsppr_6_4_pool</poolid><ecid>rsppr_6_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>rspipe_6_4_pool</poolid><ecid>rspipe_6_4</ecid></value>\n"
+    line="<value><poolid>rspipe_6_4_pool</poolid><ecid>rspipe_6_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
-    line="<value><poolid>clay_6_4_pool</poolid><ecid>clay_6_4</ecid></value>\n"
+    line="<value><poolid>clay_6_4_pool</poolid><ecid>clay_6_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
     line="</attribute>\n"
     attr.append(line)

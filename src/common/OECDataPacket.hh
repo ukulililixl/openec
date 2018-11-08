@@ -15,11 +15,12 @@ class OECDataPacket {
   public:
     OECDataPacket();
     OECDataPacket(char* raw);
-//    OECDataPacket(int len);
-//    ~OECDataPacket();
-//    void setRaw(char* raw);
+    OECDataPacket(int len);
+    ~OECDataPacket();
+    void setRaw(char* raw);
 
     int getDatalen();
+    char* getData();
 };
 
 #endif

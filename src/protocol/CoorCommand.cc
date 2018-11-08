@@ -23,6 +23,7 @@ CoorCommand::CoorCommand(char* reqStr) {
 
   switch(_type) {
     case 0: resolveType0(); break;
+    case 1: resolveType1(); break;
     default: break;
   }
 }
@@ -81,6 +82,10 @@ int CoorCommand::getFilesizeMB() {
   return _filesizeMB;
 }
 
+int CoorCommand::getNumOfReplicas() {
+  return _numOfReplicas;
+}
+
 void CoorCommand::sendTo(unsigned int ip) {
   redisContext* sendCtx = RedisUtil::createContext(ip);
   redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", _rKey.c_str(), _coorCmd, _cmLen);
@@ -130,10 +135,19 @@ void CoorCommand::resolveType0() {
   _filesizeMB = readInt();
 }
 
+void CoorCommand::resolveType1() {
+  _clientIp = readInt();
+  _filename = readString();
+  _numOfReplicas = readInt();
+}
+
 void CoorCommand::dump() {
   if (_type == 0) {
     cout << "CoorCommand::type: " << _type << ", client: " << RedisUtil::ip2Str(_clientIp) 
          << ", filename: " << _filename << ", ecid: " << _ecid << ", mode: " << _mode 
          << ", filesizeMB: " << _filesizeMB << endl;
+  } else if (_type == 1) {
+    cout << "CoorCommand::type: " << _type << ", client: " <<  RedisUtil::ip2Str(_clientIp)
+         << ", filename: " << _filename << ", numOfReplicas: " << _numOfReplicas << endl;
   }
 }

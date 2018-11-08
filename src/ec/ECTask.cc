@@ -6,6 +6,11 @@ ECTask::ECTask() {
 }
 
 ECTask::~ECTask() {
+  if (_taskCmd) {
+    free(_taskCmd);
+    _taskCmd = 0;
+  }
+  _cmLen = 0;
 }
 
 ECTask::ECTask(char* reqStr) {
@@ -33,6 +38,14 @@ void ECTask::setChildren(vector<int> children) {
 
 void ECTask::setCoefmap(unordered_map<int, vector<int>> map) {
   _coefMap = map;
+}
+
+vector<int> ECTask::getChildren() {
+  return _children;
+}
+
+unordered_map<int, vector<int>> ECTask::getCoefMap() {
+  return _coefMap;
 }
 
 void ECTask::writeInt(int value) {

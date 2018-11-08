@@ -32,13 +32,13 @@ class Config {
 
     // size
     int _pktSize;
-//
-//    // fstype
-//    std::string _fsType;
-//
+
+    // fstype
+    std::string _fsType;
+    std::unordered_map<string, std::vector<string>> _fsFactory;
+
 //    std::string _fsIp;
 //    int _fsPort;
-//    std::unordered_map<string, std::vector<string>> _fsFactory;
 
     // placepolicy
     std::string _control_policy;
@@ -48,9 +48,10 @@ class Config {
     // ecpolicymap
     std::unordered_map<std::string, ECPolicy*> _ecPolicyMap;
 
-//    // offline pool
-//    std::unordered_map<string, string> _offlineECMap;
-//
+    // offline pool
+    std::unordered_map<string, string> _offlineECMap;
+    std::unordered_map<string, int> _offlineECBase;
+
 //    // ec scheduling
 //    std::string _encode_scheduling;  // normal, delay
 //    std::string _encode_policy;      // random, balance

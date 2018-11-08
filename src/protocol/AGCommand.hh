@@ -17,7 +17,8 @@ using namespace std;
  *   ? type=5 (persis)
  *   ? type=6 (read disk of a list)
  *   ? type=7 (read disk, fetch remote and compute)
- *    type=10: (coor return cmd summary for client)| |
+ *    type=10: (coor return cmd summary for client to online encoding)| |
+ *    type=11: (coor return cmd summary for client to write obj of offline encoding)
  */
 
 
@@ -32,7 +33,7 @@ class AGCommand {
 
     // type 0
     string _filename;
-    string _ecid;
+    string _ecid;  // for writing with online encoding, it refers to ecid. Other wise, it refers to ecpoolid
     string _mode;
     int _filesizeMB;
 
@@ -41,6 +42,10 @@ class AGCommand {
     int _eck;
     int _ecw;
     int _computen;
+
+    // type 11
+    int _objnum;
+    int _basesizeMB;
     
   public:
     AGCommand();
@@ -62,6 +67,8 @@ class AGCommand {
     int getK();
     int getW();
     int getComputen();
+    int getObjnum();
+    int getBasesizeMB();
 
     // send method
     void setRkey(string key);
@@ -78,9 +85,13 @@ class AGCommand {
                      int eck,
                      int ecw,
                      int computen);
+    void buildType11(int type,
+                     int objnum,
+                     int basesize);
     // resolve AGCommand
     void resolveType0();
     void resolveType10();
+    void resolveType11();
 
     // for debug
     void dump();

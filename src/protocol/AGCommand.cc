@@ -24,6 +24,7 @@ AGCommand::AGCommand(char* reqStr) {
   switch(_type) {
     case 0: resolveType0(); break;
     case 10: resolveType10(); break;
+    case 11: resolveType11(); break;
     default: break;
   }
   _agCmd = nullptr;
@@ -96,6 +97,14 @@ int AGCommand::getComputen() {
   return _computen;
 }
 
+int AGCommand::getObjnum() {
+  return _objnum;
+}
+
+int AGCommand::getBasesizeMB() {
+  return _basesizeMB;
+}
+
 void AGCommand::setRkey(string key) {
   _rKey = key;
 } 
@@ -166,6 +175,23 @@ void AGCommand::resolveType10() {
   _eck = readInt();
   _ecw = readInt();
   _computen = readInt();
+}
+
+void AGCommand::buildType11(int type,
+                            int objnum,
+                            int basesizeMB) {
+  _type = type;
+  _objnum = objnum;
+  _basesizeMB = basesizeMB;
+
+  writeInt(_type);
+  writeInt(_objnum);
+  writeInt(_basesizeMB);
+}
+
+void AGCommand::resolveType11() {
+  _objnum = readInt();
+  _basesizeMB = readInt();
 }
 
 void AGCommand::dump() {

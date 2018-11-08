@@ -39,6 +39,28 @@ void StripeStore::insertEntry(SSEntry* entry) {
   }
 }
 
+SSEntry* StripeStore::getEntry(string filename) {
+  if (existEntry(filename)) return _ssEntryMap[filename];
+  else return NULL;
+}
+
+SSEntry* StripeStore::getEntryFromObj(string objname) {
+  if (_objEntryMap.find(objname) != _objEntryMap.end()) return _objEntryMap[objname];
+  else return NULL;
+}
+
+OfflineECPool* StripeStore::getECPool(string ecpoolid, ECPolicy* ecpolicy, int basesize) {
+  OfflineECPool* toret;
+  _lockECPoolMap.lock();
+  if (_offlineECPoolMap.find(ecpoolid) != _offlineECPoolMap.end()) toret = _offlineECPoolMap[ecpoolid];
+  else {
+    toret = new OfflineECPool(ecpoolid, ecpolicy, basesize);
+    _offlineECPoolMap.insert(make_pair(ecpoolid, toret));
+  }
+  _lockECPoolMap.unlock();
+  return toret;
+}
+
 int StripeStore::getControlLoad(unsigned int ip) {
   int toret;
   _lockCLMap.lock();
@@ -134,12 +156,7 @@ void StripeStore::increaseEncodeLoadMap(unsigned int ip, int load) {
 //   unordered_map<string, SSEntry*>::iterator it = _ssEntryMap.find(filename);
 //   return it == _ssEntryMap.end() ? false:true;
 // }
-// 
-// SSEntry* StripeStore::getEntry(string filename) {
-//   if (existEntry(filename)) return _ssEntryMap[filename];
-//   else return NULL;
-// }
-// 
+ 
 // int StripeStore::getSize() {
 //   return _ssEntryMap.size();
 // }

@@ -82,14 +82,18 @@ void ECNode::dump(int parent) {
 void ECNode::parseForClient(vector<ECTask*>& tasks) {
   // we parse compute task for client
   bool computebool = false;
+  // if the number of children is larger than 1, there must be calculation
   if (_childNodes.size() > 1) computebool = true;
-  if (_childNodes.size() == 1 && _coefMap.size() == 1) {
-    // check whether coef is 1
-    for (auto item: _coefMap) {
-      if (item.second.size() == 1 && item.second[0] != 1) computebool = true;
-      break;
-    }
+  else if (_childNodes.size() == 0) computebool = false;
+  else {
+    // if the number of children equals to 1, 
+    ECNode* childNode = _childNodes[0];
+    // 1> this node is linked to a bind node, there is no calculation
+    if (childNode->getCoefmap().size() > 1) computebool = false;
+    // 2> this node is not linked to a bind node, there is calculation of res = coef * value
+    else if (childNode->getCoefmap().size() == 1) computebool = true;
   }
+
   if (computebool) {
     ECTask* compute = new ECTask();
     compute->setType(2);

@@ -24,6 +24,8 @@ class SSEntry {
     string getEcidpool();
     vector<string> getObjlist();
     vector<unsigned int> getObjloc();
+    int getIdxOfObj(string objname);
+    unsigned int getLocOfObj(string objname);
 
     // for debug
     void dump();

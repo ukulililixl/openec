@@ -9,6 +9,7 @@
 //#include "OfflineECPool.hh"
 
 #include "../inc/include.hh"
+#include "../ec/OfflineECPool.hh"
 
 using namespace std;
 
@@ -36,8 +37,8 @@ class StripeStore {
     unordered_map<unsigned int, int> _encodeLoadMap;
     mutex _lockELMap;
 
-//    unordered_map<string, OfflineECPool*> _offlineECPoolMap;
-//    mutex _lockECPoolMap;
+    unordered_map<string, OfflineECPool*> _offlineECPoolMap;
+    mutex _lockECPoolMap;
 //    BlockingQueue<pair<string, string>> _pendingECQueue;
 //    mutex _lockPECQueue;
 //    unordered_map<string, int> _lostMap;
@@ -58,8 +59,11 @@ class StripeStore {
 
     bool existEntry(string filename);
     void insertEntry(SSEntry* entry);
-//    SSEntry* getEntry(string filename);
-//
+    SSEntry* getEntry(string filename);
+    SSEntry* getEntryFromObj(string objname);
+
+    OfflineECPool* getECPool(string ecpoolid, ECPolicy* ecpolicy, int basesize);
+
 //    int getSize();
     void increaseDataLoadMap(unsigned int ip, int load);
     void increaseControlLoadMap(unsigned int ip, int load);

@@ -3,6 +3,7 @@
 
 #include "BlockingQueue.hh"
 #include "Config.hh"
+#include "FSObjOutputStream.hh"
 #include "OECDataPacket.hh"
 //#include "ECBase.hh"
 //#include "FSObjInputStream.hh"
@@ -12,7 +13,10 @@
 //#include "UnderFS.hh"
 //#include "Util/hdfs.h"
 
+#include "../ec/Computation.hh"
 #include "../ec/ECTask.hh"
+#include "../fs/UnderFS.hh"
+#include "../fs/FSUtil.hh"
 #include "../inc/include.hh"
 #include "../protocol/AGCommand.hh"
 #include "../protocol/CoorCommand.hh"
@@ -26,7 +30,7 @@ class OECWorker {
     redisContext* _localCtx;
     redisContext* _coorCtx;
 
-//    UnderFS* _underfs;
+    UnderFS* _underfs;
   public:
     OECWorker(Config* conf);
     ~OECWorker();
@@ -34,13 +38,23 @@ class OECWorker {
     // deal with client request
     void clientWrite(AGCommand* agCmd);
     void onlineWrite(string filename, string ecid, int filesizeMB);
+    void offlineWrite(string filename, string ecpoolid, int filesizeMB);
 
+    // load data from redis
     void loadWorker(BlockingQueue<OECDataPacket*>* readQueue,
                     string keybase,
                     int startid,
                     int step,
                     int round,
                     bool zeropadding);
+    // compute
+    void computeWorker(vector<ECTask*> compute, 
+                       BlockingQueue<OECDataPacket*>** readQueue,
+                       FSObjOutputStream** objstreams,
+                       int stripenum,
+                       int ecn,
+                       int eck,
+                       int ecw);
 //    void offlineWrite(AGCommand* agCmd);
 //    void clientRead(AGCommand* agCmd);
 //    void readDisk(AGCommand* agCmd);

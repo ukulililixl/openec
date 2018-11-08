@@ -42,6 +42,9 @@ class ECTask {
     void setChildren(vector<int> children);
     void setCoefmap(unordered_map<int, vector<int>> map);
 
+    vector<int> getChildren();
+    unordered_map<int, vector<int>> getCoefMap();
+
     // basic construction methods
     void writeInt(int value);
     void writeString(string s);

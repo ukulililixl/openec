@@ -33,6 +33,32 @@ vector<unsigned int> SSEntry::getObjloc() {
   return _objLoc;
 }
 
+int SSEntry::getIdxOfObj(string objname) {
+  int toret=-1;
+  for (int i=0; i<_objList.size(); i++) {
+    if (objname == _objList[i]) {
+      toret = i;
+      break;
+    }
+  }
+  assert (toret != -1);
+  return toret;
+}
+
+unsigned int SSEntry::getLocOfObj(string objname) {
+  unsigned int toret;
+  bool find=false;
+  for (int i=0; i<_objList.size(); i++) {
+    if (objname == _objList[i]) {
+      toret = _objLoc[i];
+      find = true;
+      break;
+    }
+  }
+  assert (find);
+  return toret;
+}
+
 void SSEntry::dump() {
   cout << "SSEntry:: filename: "<< _filename << ", type: " << _type << ", filesizeMB: " << _filesizeMB 
        << ", ecidpool: " << _ecidpool << ", objname: ";
