@@ -202,6 +202,7 @@ void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {
   char* reqStr = rReply -> element[1] -> str;
   AGCommand* agCmd = new AGCommand(reqStr);
   freeReplyObject(rReply);
+  redisFree(waitCtx);
   
   int objnum = agCmd->getObjnum();
   int basesizeMB = agCmd->getBasesizeMB();
@@ -275,6 +276,12 @@ void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {
   for (int i=0; i<objnum; i++) delete objstreams[i];
   free(objstreams);
   free(loadQueue);
+
+  // finalize writing offline-encoded file
+  CoorCommand* coorCmd1 = new CoorCommand();
+  coorCmd1->buildType2(2, _conf->_localIp, filename); 
+  coorCmd1->sendTo(_coorCtx);
+  delete coorCmd1;
 }
 
 void OECWorker::loadWorker(BlockingQueue<OECDataPacket*>* readQueue,

@@ -39,8 +39,8 @@ Config::Config(std::string& filepath) {
       _coorThreadNum = std::stoi(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "oec.cmddist.thread.num") {
       _distThreadNum = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-//     } else if (attName == "ec.concurrent.num") {
-//       _ec_concurrent = std::stoi(ele -> NextSiblingElement("value") -> GetText());
+    } else if (attName == "ec.concurrent.num") {
+      _ec_concurrent = std::stoi(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "local.ip.address") {
       _localIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "packet.size") {

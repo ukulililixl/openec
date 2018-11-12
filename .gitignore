@@ -28,3 +28,8 @@ src/*.swp
 src/*/*.swp
 
 src/protocol/CMakeFiles/*
+src/fs/CMakeFiles/*
+
+coor_output
+
+backup/*

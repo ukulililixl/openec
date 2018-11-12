@@ -87,7 +87,7 @@ class AGCommand {
                      int computen);
     void buildType11(int type,
                      int objnum,
-                     int basesize);
+                     int basesizeMB);
     // resolve AGCommand
     void resolveType0();
     void resolveType10();

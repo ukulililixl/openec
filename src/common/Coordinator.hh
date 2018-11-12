@@ -32,14 +32,17 @@ class Coordinator {
     ~Coordinator();
 
     void doProcess();
+
     void registerFile(CoorCommand* coorCmd);
+    void getLocation(CoorCommand* coorCmd);
+    void finalizeFile(CoorCommand* coorCmd);
+    void setECStatus(CoorCommand* coorCmd);
+
     void registerOnlineEC(unsigned int clientIp, string filename, string ecid, int filesizeMB);
     void registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB);
-
     vector<unsigned int> getCandidates(vector<unsigned int> placedIp, vector<int> placedIdx, vector<int> colocWith);
     unsigned int chooseFromCandidates(vector<unsigned int> candidates, string policy, string type); // policy:random/balance; type:control/data/other
-    void getLocation(CoorCommand* coorCmd);
-//    void updateFileSize(CoorCommand* coorCmd);
+
 //    void getFileMeta(CoorCommand* coorCmd);
 //    void offlineDegraded(CoorCommand* coorCmd);
 //    void onlineDegradedUpdate(CoorCommand* coorCmd);

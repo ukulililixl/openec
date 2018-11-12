@@ -1,6 +1,6 @@
 #include "common/Config.hh"
 #include "common/OECOutputStream.hh"
-//#include "CoorCommand.hh"
+#include "protocol/CoorCommand.hh"
 //#include "OECInputStream.hh"
 
 #include "inc/include.hh"
@@ -113,14 +113,14 @@ int main(int argc, char** argv) {
 //    string saveas(argv[3]);
 //    read(filename, saveas);
   } else if (reqType == "startEncode") {
-//    string confpath("./conf/sysSetting.xml");
-//    Config* conf = new Config(confpath);    
-//    // send coorCmd to coordinator?
-//    CoorCommand* cmd = new CoorCommand();
-//    cmd->buildType7(7);
-//    cmd->sendTo(conf->_coorIp);
-//    
-//    delete cmd;
+    string confpath("./conf/sysSetting.xml");
+    Config* conf = new Config(confpath);    
+    // send coorCmd to coordinator?
+    CoorCommand* cmd = new CoorCommand();
+    cmd->buildType7(7, 1, "encode");
+    cmd->sendTo(conf->_coorIp);
+    
+    delete cmd;
   } else if (reqType == "startRepair") {
 //    string confpath("./conf/sysSetting.xml");
 //    Config* conf = new Config(confpath);

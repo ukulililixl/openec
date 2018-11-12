@@ -39,21 +39,22 @@ class StripeStore {
 
     unordered_map<string, OfflineECPool*> _offlineECPoolMap;
     mutex _lockECPoolMap;
-//    BlockingQueue<pair<string, string>> _pendingECQueue;
-//    mutex _lockPECQueue;
+    BlockingQueue<pair<string, string>> _pendingECQueue;
+    mutex _lockPECQueue;
+    vector<string> _ECInProgress;
+    mutex _lockECInProgress;
 //    unordered_map<string, int> _lostMap;
 //    mutex _lockLostMap;
-//    vector<string> _ECInProgress;
-//    mutex _lockECInProgress;
 //    vector<string> _RPInProgress;
 //    mutex _lockRPInProgress;
 //
 //    mutex _lockRandom;
-//
-//    bool _enableScan;
-//    struct timeval _startEnc, _endEnc; 
-//
-//    bool _enableRepair;
+
+    // offline encoding
+    bool _enableScan;
+    struct timeval _startEnc, _endEnc; 
+
+    bool _enableRepair;
   public:
     StripeStore(Config* conf);
 
@@ -63,6 +64,7 @@ class StripeStore {
     SSEntry* getEntryFromObj(string objname);
 
     OfflineECPool* getECPool(string ecpoolid, ECPolicy* ecpolicy, int basesize);
+    OfflineECPool* getECPool(string ecpoolid);
 
 //    int getSize();
     void increaseDataLoadMap(unsigned int ip, int load);
@@ -81,10 +83,16 @@ class StripeStore {
 //    void addToECQueue(string poolname, string stripename);
 //    int getRandomInt(int size);
 //    
+
+    // set status
+    void setECStatus(int op, string ectype);
+
 //    // offline encode
     void scanning();
+    void addEncodeCandidate(string ecpoolid, string stripename);
+    int getECInProgressNum();
+    void startECStripe(string stripename);
 //    void setScan(bool status);
-//    void startECStripe(string stripename);
 //    void finishECStripe(string stripename);
 //    int getECInProgressNum();
 //    

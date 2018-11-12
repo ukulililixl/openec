@@ -7,7 +7,8 @@ OfflineECPool::OfflineECPool(string ecpoolid, ECPolicy* ecpolicy, int basesize) 
 }
 
 void OfflineECPool::addObj(string objname, string stripename) {
-  _objs.push_back(objname);
+//  _objs.push_back(objname);
+  _objs.insert(make_pair(objname, false));
   if (find(_stripes.begin(), _stripes.end(), stripename) == _stripes.end())
     _stripes.push_back(stripename);
   unordered_map<string, vector<string>>::iterator it1 = _stripe2objs.find(stripename);
@@ -20,16 +21,44 @@ void OfflineECPool::addObj(string objname, string stripename) {
   _obj2stripe.insert(make_pair(objname, stripename));
 }
 
+void OfflineECPool::finalizeObj(string objname) {
+  assert(_objs.find(objname) != _objs.end());
+  _objs[objname] = true;
+}
+
+bool OfflineECPool::isCandidateForEC(string stripename) {
+  int eck = _ecpolicy->getK();
+  vector<string> objlist = _stripe2objs[stripename];
+  if (objlist.size() < eck) return false;
+  if (objlist.size() == eck) {
+    // this might be a candidate, check finalize for each obj
+    bool toret = true;
+    for (auto obj: objlist) {
+      if (!_objs[obj]) {
+        toret = false;
+        break;
+      }
+    }
+    return toret;
+  } else {
+    // this stripe has been erasure-coded
+    return false;
+  }
+}
+
 int OfflineECPool::getBasesize() {
   return _basesize;
 }
 
 string OfflineECPool::getStripeForObj(string objname) {
   string stripename;
-  if (find(_objs.begin(), _objs.end(), objname) != _objs.end()) {
-    cout << "OfflineECPool::getStripeForObj return " << _obj2stripe[objname] << endl;
+//  if (find(_objs.begin(), _objs.end(), objname) != _objs.end()) {
+//    cout << "OfflineECPool::getStripeForObj return " << _obj2stripe[objname] << endl;
+//    return _obj2stripe[objname];
+//  } 
+  if (_objs.find(objname) != _objs.end()) {
     return _obj2stripe[objname];
-  } 
+  }
   vector<string> objlist;
   if (_stripes.size() == 0) {
     stripename = "oecstripe-"+getTimeStamp();
@@ -47,6 +76,10 @@ vector<string> OfflineECPool::getStripeObjList(string stripename) {
   unordered_map<string, vector<string>>::iterator it = _stripe2objs.find(stripename);
   if (it != _stripe2objs.end()) toret = _stripe2objs[stripename];
   return toret;
+}
+
+ECPolicy* OfflineECPool::getEcpolicy() {
+  return _ecpolicy;
 }
 
 string OfflineECPool::getTimeStamp() {

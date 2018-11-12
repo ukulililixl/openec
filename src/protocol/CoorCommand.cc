@@ -24,6 +24,9 @@ CoorCommand::CoorCommand(char* reqStr) {
   switch(_type) {
     case 0: resolveType0(); break;
     case 1: resolveType1(); break;
+    case 2: resolveType2(); break;
+    case 4: resolveType4(); break;
+    case 7: resolveType7(); break;
     default: break;
   }
 }
@@ -86,6 +89,14 @@ int CoorCommand::getNumOfReplicas() {
   return _numOfReplicas;
 }
 
+int CoorCommand::getOp() {
+  return _op;
+}
+
+string CoorCommand::getECType() {
+  return _ectype;
+}
+
 void CoorCommand::sendTo(unsigned int ip) {
   redisContext* sendCtx = RedisUtil::createContext(ip);
   redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", _rKey.c_str(), _coorCmd, _cmLen);
@@ -96,7 +107,6 @@ void CoorCommand::sendTo(unsigned int ip) {
 void CoorCommand::sendTo(redisContext* sendCtx) {
   redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", _rKey.c_str(), _coorCmd, _cmLen);
   freeReplyObject(rReply);
-  redisFree(sendCtx);
 }
 
 void CoorCommand::buildType0(int type, unsigned int ip, string filename, string ecid, int mode, int filesizeMB) {
@@ -141,13 +151,68 @@ void CoorCommand::resolveType1() {
   _numOfReplicas = readInt();
 }
 
+void CoorCommand::buildType2(int type, unsigned int ip, string filename) {
+  // set up corresponding parameters
+  _type = type;
+  _clientIp = ip;
+  _filename = filename;
+
+  writeInt(_type);
+  writeInt(_clientIp);
+  writeString(_filename);
+}
+
+void CoorCommand::resolveType2() {
+  _clientIp = readInt();
+  _filename = readString();
+}
+
+void CoorCommand::buildType4(int type, unsigned int ip, string poolname, string stripename) {
+  _type = type;
+  _clientIp = ip;
+  _ecpoolid = poolname;
+  _stripename = stripename;
+
+  writeInt(_type);
+  writeInt(_clientIp);
+  writeString(_ecpoolid);
+  writeString(_stripename);
+}
+
+void CoorCommand::resolveType4() {
+  _clientIp = readInt();
+  _ecpoolid = readString();
+  _stripename = readString();
+}
+
+void CoorCommand::buildType7(int type, int op, string ectype) {
+  _type = type;
+  _op = op;
+  _ectype = ectype;
+
+  writeInt(type);
+  writeInt(op);
+  writeString(ectype);
+}
+
+void CoorCommand::resolveType7() {
+  _op = readInt();
+  _ectype = readString();
+}
+
 void CoorCommand::dump() {
+  cout << "CoorCommand::type: " << _type;
   if (_type == 0) {
-    cout << "CoorCommand::type: " << _type << ", client: " << RedisUtil::ip2Str(_clientIp) 
+    cout << ", client: " << RedisUtil::ip2Str(_clientIp)
          << ", filename: " << _filename << ", ecid: " << _ecid << ", mode: " << _mode 
          << ", filesizeMB: " << _filesizeMB << endl;
   } else if (_type == 1) {
-    cout << "CoorCommand::type: " << _type << ", client: " <<  RedisUtil::ip2Str(_clientIp)
+    cout << ", client: " << RedisUtil::ip2Str(_clientIp)
          << ", filename: " << _filename << ", numOfReplicas: " << _numOfReplicas << endl;
+  } else if (_type == 2) {
+    cout << ", client: " << RedisUtil::ip2Str(_clientIp)
+         << ", filename: " << _filename << endl;
+  } else if (_type == 7) {
+    cout << ", enable: " << _op << ", ectype: " << _ectype << endl;
   }
 }

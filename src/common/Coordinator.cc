@@ -36,7 +36,8 @@ void Coordinator::doProcess() {
       switch (type) {
         case 0: registerFile(coorCmd); break;
         case 1: getLocation(coorCmd); break;
-//        case 2: updateFileSize(coorCmd); break;
+        case 2: finalizeFile(coorCmd); break;
+        case 7: setECStatus(coorCmd); break;
 //        case 3: getFileMeta(coorCmd); break;
 //        case 4: offlineEnc(coorCmd); break;
 //        case 5: offlineDegraded(coorCmd); break;
@@ -156,7 +157,7 @@ void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, stri
   int basesizeMB = _conf->_offlineECBase[ecpoolid];
   assert(_conf->_ecPolicyMap.find(ecid) != _conf->_ecPolicyMap.end());
   ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];
-  OfflineECPool* ecpool = _stripeStore->getECPool(ecid, ecpolicy, basesizeMB);
+  OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid, ecpolicy, basesizeMB);
   ecpool->lock();
   // 2. get placement group 
   ECBase* ec = ecpolicy->createECClass();
@@ -172,22 +173,28 @@ void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, stri
   int objnum = filesizeMB/basesizeMB;
   // 4. for each object, add into a stripe an preassign location
   if (filesizeMB%basesizeMB) objnum += 1;
+  // fileobjnames and fileobjlocs are used to create SSEntry for this file
   vector<string> fileobjnames;
   vector<unsigned int> fileobjlocs;
   for (int objidx=0; objidx<objnum; objidx++) {
     string objname = filename+"_oecobj_"+to_string(objidx);
     fileobjnames.push_back(objname);
 
-    // 1.1 get a stripe for obj 
+    // 4.1 get a stripe for obj 
+    //   we get a stripename from ecpool, however ecpool does not add objname into it at this time
     string stripename = ecpool->getStripeForObj(objname); 
-
+    //   given the stripe name, we get existing objlist for this stripename
     vector<string> stripeobjlist = ecpool->getStripeObjList(stripename);
+    // stripeips records location indexed by erasure coding index for each split in the stripe
     vector<unsigned int> stripeips;
+    // stripeplaced records the objnames that have been stored in this stripe
     vector<int> stripeplaced;
-
+    // we check obj in stripeobjlist one by one to fill stripeips and stripeplaced
     for (int i=0; i<stripeobjlist.size(); i++) {
       string curobjname = stripeobjlist[i];
       // given curobjname, find ssentry of the original file for this curobjname
+      // if this curobjname is from previous stored file, there must be an SSEntry in stripestore
+      // else ssentry is NULL
       SSEntry* ssentry = _stripeStore->getEntryFromObj(curobjname);
       // given curobjname, find location recorded in ssentry
       unsigned int curip;
@@ -196,7 +203,7 @@ void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, stri
         curip = ssentry->getLocOfObj(curobjname);
         find = true;
       } else {
-        // curobjname is in the same file
+        // curobjname is in current file
         for (int j=0; j<fileobjnames.size(); j++) {
           if (curobjname == fileobjnames[j]) {
             curip = fileobjlocs[j];
@@ -212,7 +219,7 @@ void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, stri
       stripeplaced.push_back(i);
     }
 
-    // 1.2 given stripeips and stripeplaced, also group information from erasure code, preassign location for $objname
+    // 4.2 given stripeips and stripeplaced, also group information from erasure code, preassign location for $objname
     int stripeidx = stripeplaced.size();
     vector<int> colocWith;
     if (idx2group.find(stripeidx) != idx2group.end()) colocWith = idx2group[stripeidx];
@@ -238,6 +245,8 @@ void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, stri
   SSEntry* ssentry = new SSEntry(filename, 1, filesizeMB, ecpoolid, fileobjnames, fileobjlocs);
   _stripeStore->insertEntry(ssentry);
   ssentry->dump();
+
+  ecpool->unlock();
 
   // 3. send to agent instructions
   AGCommand* agCmd = new AGCommand();
@@ -384,596 +393,38 @@ void Coordinator::getLocation(CoorCommand* coorCmd) {
   if (toret) free(toret);
 }
 
-//void Coordinator::updateMeta(CoorCommand* coorCmd) {
-//  cout << "Coordinator::updateMeta.filename = " << coorCmd->_filename;
-//  cout << ", ecid = " << coorCmd->_ecid;
-//  cout << ", mode = " << coorCmd->_mode << endl;
-//
-//  unsigned int clientIp = coorCmd->_clientIp;
-//  string filename = coorCmd->_filename;
-//  string ecid = coorCmd->_ecid;
-//  int mode = coorCmd->_mode;
-//  vector<unsigned int> ips;
-//
-//  // 0. check whether there is existing ssentry
-//  if (_stripeStore->existEntry(filename)) {
-//    cout << "Coordinator::updateMeta.ssentry exists" << endl;
-//    // there exists SSEntry for this file, check whether we need to update it.
-//  } else {
-//    cout << "Coordinator::updateMeta.ssentry does not exist" << endl;
-//    // this is a new file
-//    // 1. check the redundancy mode
-//    if (mode == 0) {
-//      // 1.1 online encoding, we need to preassign locations here
-//      ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];  // TODO: we need to make sure the policy exists!
-//      ECBase* ec = ecpolicy->createECClass();
-//      vector<int> placed;
-//
-//      // TODO: change placementRestriction to place(vector<vector<int>>)
-//      // xiaolu add 20180829 start
-//      vector<vector<int>> group;
-//      ec->place(group);
-//      unordered_map<int, vector<int>> idx2group;
-//      for (auto item: group) {
-//        for (auto idx: item) {
-//          idx2group.insert(make_pair(idx, item));
-//        }
-//      }
-//      for (int i=0; i<ec->_n; i++) {
-//        vector<int> colocWith;
-//        vector<int> notColocWith;
-//        if (idx2group.find(i) != idx2group.end()) colocWith = idx2group[i];
-//        if (colocWith.size() > 0) {
-//          for (int j=0; j<ec->_n; j++) {
-//            if (find(colocWith.begin(), colocWith.end(), j) == colocWith.end()) notColocWith.push_back(j);
-//          }
-//        }
-//        vector<unsigned int> candidates = getCandidates(ips, colocWith, notColocWith);
-//        unsigned int curIp; 
-//        if (_conf->_avoid_local) {
-//          vector<unsigned int>::iterator position = find(candidates.begin(), candidates.end(), clientIp);
-//          if (position != candidates.end()) candidates.erase(position);
-//          curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//        } else {
-//          if (find(candidates.begin(), candidates.end(), clientIp) != candidates.end()) curIp = clientIp;
-//          else curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//        }
-//        placed.push_back(i);
-//        ips.push_back(curIp);
-//      }
-//      // xiaolu add 20180829 end
-//
-////       // xiaolu comment 20180829 start
-////       for (int i=0; i<ec->_n; i++) {
-////         vector<int> colocWith;
-////         vector<int> notColocWith;
-////         ec->placementRestriction(i, placed, colocWith, notColocWith);
-//// //        // dump
-//// //        cout << "Coordinator::update." << i << " colocWith:";
-//// //        for (auto item: colocWith) cout << item << " ";
-//// //        cout << ", notColocWith:";
-//// //        for (auto item: notColocWith) cout << item << " ";
-//// //        cout << endl;
-////         vector<unsigned int> candidates = getCandidates(ips, colocWith, notColocWith);
-////         unsigned int curIp;
-////         if (_conf->_avoid_local) {
-////           vector<unsigned int>::iterator position = find(candidates.begin(), candidates.end(), clientIp);
-////           if (position != candidates.end()) candidates.erase(position);
-////           curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-////         } else {
-////           if (find(candidates.begin(), candidates.end(), clientIp) != candidates.end()) curIp = clientIp;
-////           else curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-////         }
-//// //        cout << "Coordinator::updateMeta.candidate size = " << candidates.size();
-//// //        cout << ", curIp = " << RedisUtil::ip2Str(curIp) << endl;
-////         placed.push_back(i);
-////         ips.push_back(curIp);
-////       }
-//      // xiaolu comment 20180829 end
-//      delete ec;
-//
-//      // now we have all the ip in vector ips
-//      SSEntry* ssentry = new SSEntry(filename, mode, ecid, ips);
-//      _stripeStore->insertEntry(ssentry);
-//    } else if (mode == 1) {
-//      // 1.2 offline encoding
-//      string poolname = ecid;
-//      cout << "Coordinator::updateMeta.poolname = " << poolname << endl;
-//      ecid = _conf->_offlineECMap[poolname]; // TODO: we need to make sure the poolname exists!
-//      ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];  // TODO: we need to make sure the policy exists!
-//      // 2.1 check whether pool exist
-//      OfflineECPool* ecpool = _stripeStore->getECPool(poolname, ecpolicy);
-//      ecpool->lock();
-//      // 4. get a stripename for filename
-//      string stripename = ecpool->getStripeForObj(filename);
-//      cout << "Coordinator::updateMeta.stripename: " << stripename << endl;
-//      vector<string> objlist = ecpool->getStripeObjList(stripename);
-//      vector<unsigned int> ips;
-//      vector<int> placed;
-//      for (int i=0; i<objlist.size(); i++) {
-//        string curobjname = objlist[i];
-//        SSEntry* ssentry = _stripeStore->getEntry(curobjname);
-//        assert (ssentry != NULL);
-//        vector<unsigned int> curlocs = ssentry->_objLocs;
-//        ips.push_back(curlocs[0]);
-//        placed.push_back(i);
-//      }
-//     
-//      cout << "Coordinator::updateMeta.objlist: ";
-//      for (int i=0; i<objlist.size(); i++) {
-//        cout << objlist[i] << ":" << RedisUtil::ip2Str(ips[i]) << "; ";
-//      }
-//      cout << endl;
-//      
-//      ECBase* ec = ecpolicy->createECClass();
-//  
-//      // xiaolu add 20180829 start
-//      vector<vector<int>> group;
-//      ec->place(group);
-//      unordered_map<int, vector<int>> idx2group;
-//      for (auto item: group) {
-//        for (auto idx: item) {
-//          idx2group.insert(make_pair(idx, item));
-//        }
-//      }
-//      // xiaolu add 20180829 end
-//
-//      vector<int> colocWith;
-//      vector<int> notColocWith;
-//
-//      // xiaolu comment 20180829 start
-////      ec->placementRestriction(placed.size(), placed, colocWith, notColocWith);
-//      // xiaolu comment 20180829 end
-//
-//      // xiaolu add 20180829 start
-//      int curIdx = placed.size();
-//      if (idx2group.find(curIdx) != idx2group.end()) colocWith = idx2group[curIdx];
-//      if (colocWith.size() > 0) {
-//        for (int j=0; j<ec->_n; j++) {
-//          if (find(colocWith.begin(), colocWith.end(), j) == colocWith.end()) notColocWith.push_back(j);
-//        }
-//      }
-//      // xiaolu add 20180829 end
-//
-//      cout << "Coordinator::updateMeta.colocWith: ";
-//      for (int i=0; i<colocWith.size(); i++) cout << colocWith[i] << " ";
-//      cout << endl;
-//
-//      cout << "Coordinator::updateMeta.notColocWith: ";
-//      for (int i=0; i<notColocWith.size(); i++) cout << notColocWith[i] << " ";
-//      cout << endl;
-//      
-//      vector<unsigned int> candidates = getCandidates(ips, colocWith, notColocWith);
-//    
-//      cout << "Coordinator::updateMeta.candidates: ";
-//      for (int i=0; i<candidates.size(); i++) cout << RedisUtil::ip2Str(candidates[i]) << " ";
-//      cout << endl;
-//     
-//      
-//      // TODO: for filename contains "recovery", we first check whether there is "192.168.10.22" in candidates, if yes, choose it, else choose other
-//      // xiaolu add 20180824 start
-//      unsigned int curIp;
-//      if (filename.find("recovery") != string::npos) {
-//        if (find(candidates.begin(), candidates.end(), _conf->_repairIp) != candidates.end()) {
-//          curIp = _conf->_repairIp;
-//        } else {
-//          curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//        }
-//      } else {
-//        curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//      }
-//      // xiaolu add 20180824 end
-//  
-//      // xiaolu comment 20180824 start
-////      unsigned int curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//      // xiaolu comment 20180824 end
-//      cout << "Coordinator::updateMeta.preassign " << RedisUtil::ip2Str(curIp) << " to " << filename << endl;
-//
-//      delete ec;
-//
-//      // now we have preassigned a location for this obj
-//      // 5. add cur obj to ecpool
-//      ecpool->addObj(filename, stripename);
-//      // 6. create ssentry
-//      vector<unsigned int> assignedips;
-//      assignedips.push_back(curIp);
-//      SSEntry* ssentry = new SSEntry(filename, mode, poolname, assignedips);
-//      _stripeStore->insertEntry(ssentry);
-//    
-//      ecpool->unlock();
-//    }
-//  }
-//
-//  // last. return response to OECAgent?
-//  redisReply* rReply;
-//  redisContext* clientCtx = RedisUtil::createContext(clientIp);
-//
-//  string wkey = "updateMeta:" + filename;
-//  int tmpval = htonl(1);
-//  rReply = (redisReply*)redisCommand(clientCtx, "rpush %s %b", wkey.c_str(), (char*)&tmpval, sizeof(tmpval));
-//  freeReplyObject(rReply);
-//  redisFree(clientCtx);
-//}
-//
-//void Coordinator::getLocation(CoorCommand* coorCmd) {
-//  cout << "Coordinator::getLocation request from " << RedisUtil::ip2Str(coorCmd->_clientIp);
-//  cout << ", objname: " << coorCmd->_filename << endl;
-//  cout << ", numOfReplicas: " << coorCmd->_numOfReplicas << endl;
-//
-//  unsigned int clientIp = coorCmd->_clientIp;
-//  string objname = coorCmd->_filename;
-//  int numOfReplicas = coorCmd->_numOfReplicas;
-//  unsigned int ip=0;
-//  unsigned int* toret = (unsigned int*)calloc(numOfReplicas, sizeof(unsigned int));
-//
-//  // 0. figure out the objtype
-//  if (objname.find("oecobj") != string::npos) {
-//    cout << "Coordinator::getLocation.request for an oecobj!" << endl;
-//    // 1. figure out the original file name
-//    string oecobj("_oecobj_");
-//    size_t cpos = objname.find(oecobj);
-//    string filename = objname.substr(0, cpos);
-////    cout << "Coordinator::getLocation.filename = " << filename << endl;
-//    // 2. figure out the objidx
-//    size_t idxpos = cpos + oecobj.size();  
-//    string idxstr = objname.substr(idxpos, objname.size() - idxpos);
-//    int idx = atoi(idxstr.c_str());
-////    cout << "Coordinator::getLocation.idx = " << idx << endl;
-//    // 3. get the ssentry given the filename
-//    if (_stripeStore->existEntry(filename)) {
-////      cout << "Coordinator::getLocation.ssentry for " << filename << " exists!" << endl;
-//      SSEntry* ssentry = _stripeStore->getEntry(filename);
-//      assert (ssentry != NULL);
-//      toret[0] = ssentry->_objLocs[idx];
-//    } else {
-//      cout << "Coordinator::getLocation.ssentry for " << filename << " does not exist!!!" << endl;
-//    }
-//  } else if (objname.find("workGenControl") != string:: npos) {
-//    cout << "COordinator::getLocation.request is workGenControl file" << endl;
-//    // 1. figure out the filename
-//    size_t cpos = objname.find_last_of("/");
-////    size_t cpos = objname.find("/workGenInput");
-//    string filename = "/workGenInput"+objname.substr(cpos);
-//    cout << "Coordinator::getLocation.data filename = " << filename << endl;
-//    if (_stripeStore->existEntry(filename)) {
-//      cout << "Coordinator:: ss for " << filename << " exist!" << endl;
-//      SSEntry* ssentry = _stripeStore->getEntry(filename);
-//      toret[0] = ssentry->_objLocs[0];
-//    } else {
-//      cout << "Coordinator:: ss for " << filename << " does not exists! choose with control policy!" << endl;
-//      toret[0] = chooseFromCandidates(_conf->_agentsIPs, _conf->_control_policy, "control");
-//    }
-//  } else if (objname.find("io_control") != string::npos) {
-//    cout << "Coordinator::getLocation.request is Mapreduce control file" << endl;
-//    // 1. figure out the file name
-//    size_t cpos = objname.find_last_of("_");
-//    string filename = objname.substr(0, cpos);
-//    string testid = objname.substr(cpos+1);
-//    cout << "Coordinator::getLocation.filename = " << filename << ", testid = " << testid << endl;
-//
-//    toret[0] = chooseFromCandidates(_conf->_agentsIPs, _conf->_control_policy, "control");
-//
-//    // 2. check stripestore. Here the control file is created in sequence, so we do not consider the concurrency problem.
-//    if (_stripeStore->existEntry(filename)) {
-////      cout << "Coordinator::getLocation.mapreduce job for " << filename << " has started!" << endl;
-//      SSEntry* ssentry = _stripeStore->getEntry(filename);
-////      vector<unsigned int> avoid = ssentry->_objLocs;
-////      cout << "Coordinator::getLocation.avoid.size = " << avoid.size() << endl;
-////      vector<unsigned int> candidates = getCandidates(ssentry->_objLocs);
-////      ip = chooseFromCandidates(candidates, _conf->_control_policy, "control");
-//      ssentry->appendLoc(ip);
-//    } else {
-////      cout << "Coordinator::getLocation.first control file for mapreduce job" << endl;
-//      SSEntry* ssentry = new SSEntry(filename);
-//
-////      vector<unsigned int> candidates = _conf->_agentsIPs;
-////      ip = chooseFromCandidates(candidates, _conf->_control_policy, "control");
-//      ssentry->appendLoc(ip);
-//
-//      // add ssentry to stripestore
-//      _stripeStore->insertEntry(ssentry);
-//    }
-////    cout << "Coordinator::getLocation.ip for " << objname << " = " << RedisUtil::ip2Str(ip) << endl;
-//  } else if (objname.find("placetest") != string::npos) {
-//    cout << "Coordinator::getLocation.placetest" << endl;
-//    vector<unsigned int> candidates = _conf->_agentsIPs;
-//
-//    if (!_conf->_avoid_local) {
-//      if (find(candidates.begin(), candidates.end(), clientIp) != candidates.end()) toret[0] = clientIp;
-//      else toret[0] = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//    } else {
-//      toret[0] = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//    }
-//
-//    for (int i=1; i<numOfReplicas; i++) {
-//      vector<unsigned int>::iterator position = find(candidates.begin(), candidates.end(), toret[i-1]);
-//      if (position != candidates.end()) candidates.erase(position);
-//      toret[i] = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//    }
-//
-////    if (numOfReplicas == 1) toret[0] = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-////    else {
-////      toret[0] = clientIp;
-////      for (int i=1; i<numOfReplicas; i++) {
-////        vector<unsigned int>::iterator position = find(candidates.begin(), candidates.end(), toret[i-1]);
-////        if (position != candidates.end()) candidates.erase(position);
-////        toret[i] = chooseFromCandidates(candidates, _conf->_data_policy, "data"); 
-////      }
-////    }
-////    ip = chooseFromCandidates(_conf->_agentsIPs, _conf->_data_policy, "data");
-//  } else if (objname.find("tradeoff") != string::npos) {
-//    cout << "Coordinator::getLocation.tradeoff" << endl;
-//    SSEntry* ssentry;
-//    if (_stripeStore->existEntry(objname)) {
-//      ssentry = _stripeStore->getEntry(objname);
-//    } else {
-//      ssentry = new SSEntry(objname);
-//    }
-//    vector<unsigned int> avoidlocs = ssentry->_objLocs;
-//    vector<unsigned int> candidates = getCandidates(avoidlocs);
-//    toret[0] = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//  } else if (objname.find("offlinepool") != string::npos) {
-//    cout << "Coordinaotr::getLocation.defaultpool" << endl;
-//    // 0. get ssentry
-//    if (_stripeStore->existEntry(objname)) {
-//      cout << "Coordinator::getLocation.defaultpool.entry exists!" << endl;
-//      SSEntry* ssentry = _stripeStore->getEntry(objname);
-//      toret[0] = ssentry->_objLocs[0];
-//    } else {
-//      cout << "Coordinator::getLocation.defaultpool.entry does not exist!" << endl;
-//      vector<unsigned int> candidates = _conf->_agentsIPs;
-//      toret[0] = chooseFromCandidates(candidates, "random", "other");
-//    }
-//  } else if (objname.find("oecstripe") != string::npos) {
-//    cout << "Coordinator::getLocation.oecstripe!" << endl;
-//    if (_stripeStore->existEntry(objname)) {
-//      cout << "Coordinator::getLocation.entry for oecstripe exists!" << endl;
-//      SSEntry* ssentry = _stripeStore->getEntry(objname);
-//      toret[0] = ssentry ->_objLocs[0];
-//    } else {
-//      cout << "Coordinator::getLocation.entry for oecstripe does not exist!" << endl;
-//      vector<unsigned int> candidates = _conf->_agentsIPs;
-//      toret[0] = chooseFromCandidates(candidates, "random", "other");
-//    }
-//  } else {
-//    vector<unsigned int> candidates = _conf->_agentsIPs;
-//    toret[0] = chooseFromCandidates(candidates, "random", "other");
-////    cout << "Coordinator::getLocation.request.non-recognized file type, choose randomly " << RedisUtil::ip2Str(ip) << endl;
-//  }
-//
-//  cout << "Coordinator::getLocation.return: ";
-//  for (int i=0; i<numOfReplicas; i++) {
-//    cout << RedisUtil::ip2Str(toret[i]) << " ";
-//  }
-//  cout << endl;
-//
-//  // last. return ip
-//  redisReply* rReply;
-//  redisContext* clientCtx = RedisUtil::createContext(_conf->_coorIp);
-//
-////  for (int i=0; i<numOfReplicas; i++) {
-////    toret[i] = htonl(toret[i]);
-////  }
-//  cout << "Coordinator::getLocation.toret.size = " << sizeof(toret) << endl;
-//
-//  string wkey = "loc:"+objname;
-////  rReply = (redisReply*)redisCommand(clientCtx, "rpush %s %b", wkey.c_str(), (char*)&ip, sizeof(ip));
-//  rReply = (redisReply*)redisCommand(clientCtx, "rpush %s %b", wkey.c_str(), toret, numOfReplicas*sizeof(unsigned int));
-//  freeReplyObject(rReply);
-//  redisFree(clientCtx);
-//
-//  if (toret) free(toret);
-//}
-//
-//vector<unsigned int> Coordinator::getCandidates(vector<unsigned int> ips,
-//                                       vector<int> colocWith,
-//                                       vector<int> notColocWith) {
-//  vector<unsigned int> toret;
-//  // 0. check colocWith
-//  if (colocWith.size()) {
-//    for (int i=0; i<colocWith.size(); i++) {
-//      int curIdx = colocWith[i];
-//      // TODO: check whether colocWith is in ips
-//      // xiaolu add 20180829 start
-//      if (ips.size() > curIdx) {
-//      // xiaolu add 20180829 end
-//        unsigned int curIp = ips[curIdx];
-//        if (find(toret.begin(), toret.end(), curIp) == toret.end()) {
-//          string rack = _conf->_ip2Rack[curIp];
-//          for (auto item:_conf->_rack2Ips[rack]) {
-//            toret.push_back(item);  // NOTE: we remove placed ip at last
-//          }
-//        }
-//      }
-//    }
-//  } 
-//
-//  if (toret.size() == 0){
-//    for (auto item:_conf->_agentsIPs) toret.push_back(item);
-//  }
-//
-//  // 1. check notColocWith
-//  vector<string> notInRacks;
-//  for (auto idx: notColocWith) {
-//    if (ips.size() > idx) {
-//      unsigned int curIp = ips[idx];
-//      string rack = _conf->_ip2Rack[curIp];
-//      notInRacks.push_back(rack);
-//    }
-//  }
-//  // 1.1 delete duplicate racks
-//  sort(notInRacks.begin(), notInRacks.end());
-//  notInRacks.erase(unique(notInRacks.begin(), notInRacks.end()), notInRacks.end());
-//  cout << "Coordinator::getCandidates.notInRacks: ";
-//  for (auto item: notInRacks) cout << item << " ";
-//  cout << endl;
-//
-//  // 2. delete candidate which is in the notInRacks.
-//  // xiaolu add 20180829 start
-//  for (auto rack: notInRacks) {
-//    vector<unsigned int> nodes = _conf->_rack2Ips[rack];
-//    for (auto curnode: nodes) {
-//      vector<unsigned int>::iterator position = find(toret.begin(), toret.end(), curnode);
-//      if (position != toret.end()) toret.erase(position);
-//    }
-//  }
-//  // xiaolu add 20180829 end
-////  // xiaolu comment 20180829 start
-////  if (notInRacks.size() > 0) {
-////    for (auto ip: toret) {
-////      string rack = _conf->_ip2Rack[ip];
-////      if (find(notInRacks.begin(), notInRacks.end(), rack) != notInRacks.end()) {
-////        // delete this ip
-////        vector<unsigned int>::iterator position = find(toret.begin(), toret.end(), ip);
-////        if (position != toret.end()) toret.erase(position);
-////      }
-////    }
-////  }
-////  // xiaolu comment 20180829 end
-//
-//  // 2. delete placed ips
-//  for (auto ip: ips) {
-//    vector<unsigned int>::iterator position = find(toret.begin(), toret.end(), ip);
-//    if (position != toret.end()) toret.erase(position);
-//  }
-//
-//  return toret;
-//}
-//
-//vector<unsigned int> Coordinator::getCandidates(vector<unsigned int> avoid) {
-//  vector<unsigned int> toret = _conf->_agentsIPs;
-//  cout << "Coordinator::.getCandidates.toret.size = " << toret.size() << endl;
-//  for (auto ip: avoid) {
-//    vector<unsigned int>::iterator position = find(toret.begin(), toret.end(), ip);
-//    if (position != toret.end()) toret.erase(position);
-//  }
-//  cout << "Coordinator::getCandidates.toret.size = " << toret.size() << endl;
-//  return toret;
-//}
-//
-//unsigned int Coordinator::chooseFromCandidates(vector<unsigned int> candidates) {
-//  // XL: now choose randomly
-//  int randomidx = rand() % candidates.size(); 
-//  return candidates[randomidx];
-//}
-//
-//void Coordinator::updateFileSize(CoorCommand* coorCmd) {
-//  cout << "Coordinator::updateFileSize.filename = "  << coorCmd->_filename;
-//  cout << ", filesizeMB = " << coorCmd->_filesizeMB << endl;
-//
-//  string filename = coorCmd->_filename;
-//  int filesizeMB = coorCmd->_filesizeMB;
-//
-//  // 1. get ssentry from stripestore
-//  SSEntry* ssentry = _stripeStore->getEntry(filename);
-//  assert (ssentry != NULL);
-//  // 2. update filesize
-//  ssentry->setFileSizeMB(filesizeMB);
-//
-//  // TODO: for offline encoding, check the stripe for this file
-//  //       if the stripe is full, then submit the offline encoding request to coordinator
-//  if (ssentry->_redundancyType == 1) {
-//    // this is offline encode file
-//    // 1. get the poolname
-//    string poolname = ssentry->_poolname;
-//    // 2. given the poolname, get the pool
-//    OfflineECPool* ecpool = _stripeStore->getECPool(poolname);
-//    // 3. given file name, find the stripename
-//    string stripename = ecpool->_obj2stripe[filename];
-//    // 4. given the stripename, get the stripe list
-//    vector<string> objlist = ecpool->_stripe2objs[stripename];
-//    // 5. get ecpolicy
-//    ECPolicy* ecpolicy = ecpool->_ecpolicy;
-//    // 6. check whether there is enough data, and has finished writting
-//    bool shouldEnc = true;
-//    if (objlist.size() == ecpolicy->_k) {
-//      for (int i=0; i<objlist.size(); i++) {
-//        SSEntry* curentry = _stripeStore->getEntry(objlist[i]);
-//        if (curentry->_filesizeMB == 0) {
-//          shouldEnc = false;
-//          break;
-//        }
-//      }
-//    } else {
-//      shouldEnc = false;
-//      // TODO: add to ecpending list?
-//    }
-//
-//    if (shouldEnc) {
-//      _stripeStore->addToECQueue(poolname, stripename);
-//    }
-//
-//  }
-//}
-//
-//unsigned int Coordinator::chooseFromCandidates(vector<unsigned int> candidates, string policy, string type) {
-//  if (policy == "random") {
-//    int randomidx = rand() % candidates.size();
-////    random_shuffle(candidates.begin(), candidates.end());
-////    int randomidx = _stripeStore->getRandomInt(candidates.size());
-//    // TODO: update loadmap?
-//    return candidates[randomidx];
-//  }
-//  // now the policy is balance
-//  assert (candidates.size() > 0);
-//  if (type == "control") {
-//    int minload = _stripeStore->getControlLoad(candidates[0]);
-//    unsigned int minip = candidates[0];
-//    for (int i=1; i<candidates.size(); i++) {
-//      unsigned int ip = candidates[i];
-//      int load = _stripeStore->getControlLoad(ip);
-//      if (load < minload) {
-//        minload = load;
-//        minip = ip;
-//      }
-//    }
-//    _stripeStore->increaseControlLoadMap(minip, 1);
-//    return minip;
-//  } else if (type == "data") {
-//    int minload = _stripeStore->getDataLoad(candidates[0]);
-//    unsigned int minip = candidates[0];
-//    for (int i=1; i<candidates.size(); i++) {
-//      unsigned int ip = candidates[i];
-//      int load = _stripeStore->getDataLoad(ip);
-//      if (load < minload) {
-//        minload = load;
-//        minip = ip;
-//      }
-//    }
-//    _stripeStore->increaseDataLoadMap(minip, 1);
-//    return minip;
-//  } else if (type == "repair") {
-//    int minload = _stripeStore->getRepairLoad(candidates[0]);
-//    unsigned int minip = candidates[0];
-//    for (int i=1; i<candidates.size(); i++) {
-//      unsigned int ip = candidates[i];
-//      int load = _stripeStore->getRepairLoad(ip);
-//      if (load < minload) {
-//        minload = load;
-//        minip = ip;
-//      }
-//    }
-//    _stripeStore->increaseRepairLoadMap(minip, 1);
-//    return minip;
-//  } else if (type == "encode") {
-//    int minload = _stripeStore->getEncodeLoad(candidates[0]);
-//    unsigned int minip = candidates[0];
-//    for (int i=1; i<candidates.size(); i++) {
-//      unsigned int ip = candidates[i];
-//      int load = _stripeStore->getEncodeLoad(ip);
-//      if (load < minload) {
-//        minload = load;
-//        minip = ip;
-//      }
-//    }
-//    _stripeStore->increaseEncodeLoadMap(minip, 1);
-//    return minip;
-//  } else {
-//    int randomidx = rand() % candidates.size();
-//    return candidates[randomidx];
-//  }
-//}
-//
+void Coordinator::finalizeFile(CoorCommand* coorCmd) {
+  string filename = coorCmd->getFilename();
+  // 0. given filename, get ssentry for this file
+  SSEntry* ssentry = _stripeStore->getEntry(filename);
+  assert(ssentry != NULL);
+  int type = ssentry->getType();
+  assert(type == 1); // offline encoding
+  string ecpoolid = ssentry->getEcidpool();
+  vector<string> objlist = ssentry->getObjlist();
+
+  // 1. for each obj in objlist, check whether corresponding stripe can be a candidate for offline encoding
+  OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
+  ecpool->lock();
+  for (int i=0; i<objlist.size(); i++) {
+    string objname = objlist[i];
+    // finalize objname
+    ecpool->finalizeObj(objname);
+    string stripename = ecpool->getStripeForObj(objname);
+    if (ecpool->isCandidateForEC(stripename)) {
+      cout << "Coordinator::finalizeFile. stripe " << stripename << "is candidate for ec " << endl;
+      _stripeStore->addEncodeCandidate(ecpoolid, stripename);
+    }
+  }
+  ecpool->unlock();
+}
+
+void Coordinator::setECStatus(CoorCommand* coorCmd) {
+  int op = coorCmd->getOp();
+  string ectype = coorCmd->getECType();
+  _stripeStore->setECStatus(op, ectype);
+}
+
 //void Coordinator::getFileMeta(CoorCommand* coorCmd) {
 //  cout << "Coordinator::getFileMeta.filename = " << coorCmd->_filename <<endl;
 //  

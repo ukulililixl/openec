@@ -2,9 +2,9 @@
 
 StripeStore::StripeStore(Config* conf) {
   _conf = conf;
-//   if (_conf->_encode_scheduling == "delay") _enableScan = false;
-//   else _enableScan = true;
-// 
+  // by default, encode scheduling is delayed
+  _enableScan = false;
+
 //   if (_conf->_repair_scheduling == "delay") _enableRepair = false;
 //   else if (_conf->_repair_scheduling == "threshold") _enableRepair = false;
 //   else _enableRepair = true;
@@ -59,6 +59,16 @@ OfflineECPool* StripeStore::getECPool(string ecpoolid, ECPolicy* ecpolicy, int b
   }
   _lockECPoolMap.unlock();
   return toret;
+}
+
+OfflineECPool* StripeStore::getECPool(string poolname) {
+  // TODO: the poolname must exist!
+  OfflineECPool* toret;
+  _lockECPoolMap.lock();
+  unordered_map<string, OfflineECPool*>::iterator it = _offlineECPoolMap.find(poolname);
+  assert (it != _offlineECPoolMap.end());
+  _lockECPoolMap.unlock();
+  return _offlineECPoolMap[poolname];
 }
 
 int StripeStore::getControlLoad(unsigned int ip) {
@@ -134,29 +144,63 @@ void StripeStore::increaseEncodeLoadMap(unsigned int ip, int load) {
   _lockELMap.unlock();
 }
 
-// void StripeStore::insertEntry(SSEntry* entry) {
-//   unordered_map<string, SSEntry*>::iterator it = _ssEntryMap.find(entry->_filename);
-//   if (it == _ssEntryMap.end()) {
-//     // the entry does not exist, insert this entry
-//     _lockSSEntryMap.lock();
-//     _ssEntryMap.insert(make_pair(entry->_filename, entry));
-//     _lockSSEntryMap.unlock();
-//   } else {
-//     // the entry exist, only need to update the entry
-//     _lockSSEntryMap.lock();
-//     SSEntry* oldEntry = _ssEntryMap[entry->_filename];
-//     _ssEntryMap[entry->_filename] = entry;
-//     _lockSSEntryMap.unlock();
-//     // need to delete the old entry?
-//     delete oldEntry;
-//   }
-// }
-// 
-// bool StripeStore::existEntry(string filename) {
-//   unordered_map<string, SSEntry*>::iterator it = _ssEntryMap.find(filename);
-//   return it == _ssEntryMap.end() ? false:true;
-// }
- 
+void StripeStore::setECStatus(int op, string ectype) {
+  if (ectype == "encode") {
+    if (op == 1) _enableScan = true;
+    else _enableScan = false;
+  } else if (ectype == "repair") {
+    if (op == 1) _enableRepair = true;
+    else _enableRepair = false;
+  }
+}
+
+// offline encoding
+void StripeStore::scanning() {
+  int concurrentNum = _conf->_ec_concurrent;
+  while(true) {
+    std::this_thread::sleep_for (std::chrono::seconds(1));
+    if (!_enableScan) continue;
+    // offline encoding is enabled
+    cout << "StripeStore::scanning the pendingECQueue" << endl;
+    _lockPECQueue.lock();
+    int ecInProgressNum = getECInProgressNum();
+    cout << "StripeStore::pendingECQueue.size = " << _pendingECQueue.getSize() << ", ecInProgress = "  << ecInProgressNum << ", concurrentNum = " << concurrentNum << endl;
+    while (_pendingECQueue.getSize() && ecInProgressNum < concurrentNum) {
+      pair<string, string> curpair = _pendingECQueue.pop();
+      string ecpoolid = curpair.first;
+      string stripename = curpair.second;
+      startECStripe(stripename);     
+
+      // send offline encode request to coordinator
+
+      // obtain latest ecInProgress
+      ecInProgressNum = getECInProgressNum();
+    } 
+    _lockPECQueue.unlock();
+  }
+}
+
+void StripeStore::addEncodeCandidate(string ecpoolid, string stripename) {
+  _lockPECQueue.lock();
+  _pendingECQueue.push(make_pair(ecpoolid, stripename));
+  _lockPECQueue.unlock();
+}
+
+int StripeStore::getECInProgressNum() {
+  int toret;
+  _lockECInProgress.lock();
+  toret = _ECInProgress.size();
+  _lockECInProgress.unlock();
+  return toret;
+}
+
+void StripeStore::startECStripe(string stripename) {
+  _lockECInProgress.lock();
+  if (_ECInProgress.size() == 0) gettimeofday(&_startEnc, NULL);
+  _ECInProgress.push_back(stripename);
+  _lockECInProgress.unlock();
+}
+
 // int StripeStore::getSize() {
 //   return _ssEntryMap.size();
 // }
@@ -169,29 +213,6 @@ void StripeStore::increaseEncodeLoadMap(unsigned int ip, int load) {
 //   else toret = false;
 //   _lockECPoolMap.unlock();
 //   return toret;
-// }
-// 
-// OfflineECPool* StripeStore::getECPool(string poolname, ECPolicy* ecpolicy) {
-//   OfflineECPool* toret;
-//   _lockECPoolMap.lock();
-//   unordered_map<string, OfflineECPool*>::iterator it = _offlineECPoolMap.find(poolname);
-//   if (it != _offlineECPoolMap.end()) toret = _offlineECPoolMap[poolname];
-//   else {
-//     toret = new OfflineECPool(poolname, ecpolicy);
-//     _offlineECPoolMap.insert(make_pair(poolname, toret));
-//   }
-//   _lockECPoolMap.unlock();
-//   return toret;
-// }
-// 
-// OfflineECPool* StripeStore::getECPool(string poolname) {
-//   // TODO: the poolname must exist!
-//   OfflineECPool* toret;
-//   _lockECPoolMap.lock();
-//   unordered_map<string, OfflineECPool*>::iterator it = _offlineECPoolMap.find(poolname);
-//   assert (it != _offlineECPoolMap.end());
-//   _lockECPoolMap.unlock();
-//   return _offlineECPoolMap[poolname];
 // }
 // 
 // void StripeStore::addECPool(OfflineECPool* ecpool) {
@@ -289,38 +310,6 @@ void StripeStore::scanRepair() {
 //   return toret;
 // }
 // 
-void StripeStore::scanning() {
-  // TODO: we may add some variable to enable scanning
-//   int concurrentNum = _conf->_ec_concurrent;
-  while (true) {
-//     std::this_thread::sleep_for (std::chrono::seconds(1));
-//     if (!_enableScan) continue;
-//     cout << "StripeStore::scanning the pendingECQueue" << endl;
-//     _lockPECQueue.lock();
-//     int ecInProgressNum = getECInProgressNum();
-//     cout << "StripeStore::scanning.ecInProgressNum = " << ecInProgressNum << endl;
-//     while (_pendingECQueue.getSize() && ecInProgressNum < concurrentNum) {
-//     
-//       pair<string, string> curpair = _pendingECQueue.pop();
-//     
-//       string poolname = curpair.first;
-//       string stripename = curpair.second;
-//       cout << "StripeStore::scanning.poolname: " << poolname << ", stripename: " << stripename << endl;
-//       startECStripe(stripename);
-// 
-//       // send offline enc request to coordinator
-//       CoorCommand* coorCmd = new CoorCommand();
-//       coorCmd->buildType4(4, _conf->_localIp, poolname, stripename);
-//       coorCmd->sendTo(_conf->_coorIp);
-// 
-//       delete coorCmd;
-// 
-//       ecInProgressNum = getECInProgressNum();
-// 
-//     }
-//     _lockPECQueue.unlock();
-  }
-}
 
 // void StripeStore::startECStripe(string stripename) {
 //   _lockECInProgress.lock();

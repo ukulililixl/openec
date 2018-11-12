@@ -104,6 +104,9 @@ for node in cluster:
 #    line="<attribute><name>underline.fs.address</name><value>192.168.0.33:9000</value></attribute>\n"
 #    attr.append(line)
 
+    line="<attribute><name>ec.concurrent.num</name><value>15</value></attribute>\n"
+    attr.append(line)
+
     line="<attribute><name>control.policy</name><value>"+CONTROLP+"</value></attribute>\n"
     attr.append(line)
 
