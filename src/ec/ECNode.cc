@@ -7,6 +7,10 @@ ECNode::ECNode(int id) {
 }
 
 ECNode::~ECNode() {
+  for (auto item: _oecTasks) {
+    delete item.second;
+  }
+  _oecTasks.clear();
 }
 
 void ECNode::addCoefs(int calfor, vector<int> coefs) {
@@ -43,6 +47,10 @@ void ECNode::incRefNumFor(int id) {
 int ECNode::getRefNumFor(int id) {
   assert (_refNumFor.find(id) != _refNumFor.end());
   return _refNumFor[id];
+}
+
+unordered_map<int, int> ECNode::getRefMap() {
+  return _refNumFor;
 }
 
 int ECNode::getNodeId() {
@@ -105,82 +113,226 @@ void ECNode::parseForClient(vector<ECTask*>& tasks) {
   }
 }
 
-// unordered_map<int, ECTask*> ECNode::createTasks() {
-//   unordered_map<int, ECTask*> toret;
-// 
-//   // 0. check for Load task
-//   // if the node does not have any children, then it is leaf and requires Load Task 
-//   bool loadbool = false;
-//   if (_childNodes.size() == 0) loadbool = true;
-//   if (loadbool) {
-//     // there is Load task
-//     ECTask* load = new ECTask();
-//     load->setType(0);
-//     load->setIdx(_nodeId); // cidx; when w == 1, this sidx = cidx; when w > 1, 
-//     toret.insert(make_pair(0, load));
-//   }
-//   // 1. check for fetch task
-//   // if the node has at least one child, then it requires Fetch Task
-//   bool fetchbool = false;
-//   // 1.1 if there are multiple children, then it requires Fetch Task
-//   if (_childNodes.size() > 1) fetchbool = true;
-//   // 1.2 if there is only 1 children, we check whether this child is only linked to a bindnode (the node created from BindX)
-//   if (_childNodes.size() == 1) {
-//     ECNode* curchildnode = _childNodes[0];
-//     vector<ECNode*> grandchildren = curchildnode->getChildren();
-//     // 1.2.1 if number of grandchildren > 1, then child is not only linked to a bindnode(node that is created from BindX)
-//     if (grandchildren.size() > 1) fetchbool = true;
-//     // 1.2.2 if granchildren == 1, then check whether grandchild is a bindnode
-//     if (grandchildren.size() == 1) {
-//       ECNode* grandchild = grandchildren[0];
-//       if (grandchild->getCoefmap().size() > 1 && grandchild->getChildren().size() > 1) {
-//         // grandchild is a bind node, there is no fetch task
-//         // however, we need to record where is result is when we create task for the bindnode
-//         fetchbool = false;
-//       }
-//     }
-//   }
-//   if (fetchbool) {
-//     // there is fetch task
-//     ECTask* fetch = new ECTask();
-//     fetch->setType(1);
-//     vector<int> children;
-//     for (int i=0; i<_childNodes.size(); i++) children.push_back(_childNodes[i]->getNodeId());
-//     fetch->setChildren(children);
-//     toret.insert(make_pair(1, fetch));
-//   }
-// 
-//   // 2. check for compute task
-//   bool computebool = false;
-//   if (_childNodes.size() > 1) computebool = true;
-//   if (_childNodes.size() == 1 && _coefMap.size() == 1) {
-//     // check whether coef is 1
-//     for (auto item: _coefMap) {
-//       if (item.second.size() == 1 && item.second[0] != 1) computebool = true;
-//       break;
-//     }
-//   }
-//   if (computebool) {
-//     ECTask* compute = new ECTask();
-//     compute->setType(2);
-//     vector<int> children;
-//     for (int i=0; i<_childNodes.size(); i++) children.push_back(_childNodes[i]->getNodeId());
-//     compute->setChildren(children);
-//     compute->setCoefmap(_coefMap);
-//     toret.insert(make_pair(2, compute));
-//   }
-// 
-// //  // 3. check for persist task
-// //  // actually, persist task is needed for every operation
-// //  // the difference is that some persist to DSS while some persist to redis
-// //  ECTask* persist = new ECTask();
-// //  persist->setType(3);
-// //  persist->setRefnum(_refNumFor);
-// //  toret.insert(make_pair(3, persist));
-// 
-// //  // 4. review tasks?
-// //  for (auto item: toret) {
-// //    item.second->dump();
-// //  }
-//   return toret;
-// }
+vector<unsigned int> ECNode::candidateIps(unordered_map<int, unsigned int> sid2ip,
+                                          unordered_map<int, unsigned int> cid2ip,
+                                          vector<unsigned int> allIps,
+                                          int n,
+                                          int k,
+                                          int w,
+                                          bool locality) {
+  vector<unsigned int> toret;
+  int sid = _nodeId/w;
+  // 0. current node is preassigned a location
+  if (sid2ip.find(sid) != sid2ip.end()) {
+    toret.push_back(sid2ip[sid]);
+    return toret;
+  }
+
+  // 1. current node has constraint
+  if (_hasConstraint) {
+    assert(cid2ip.find(_consId) != cid2ip.end());
+    toret.push_back(cid2ip[_consId]);
+    return toret;
+  }
+
+  // 2. if locality is enabled prepare candidate from children
+  if (locality) {
+    for (int i=0; i<_childNodes.size(); i++) {
+      int cidx = _childNodes[i]->getNodeId();
+      assert (cid2ip.find(cidx) != cid2ip.end());
+      toret.push_back(cid2ip[cidx]);
+    }
+    return toret;
+  } else {
+    // prepare candidate without child
+    vector<unsigned int> childIps;
+    for (int i=0; i<_childNodes.size(); i++) {
+      int cidx = _childNodes[i]->getNodeId();
+      assert (cid2ip.find(cidx) != cid2ip.end());
+      childIps.push_back(cid2ip[cidx]);
+    }
+    for (auto ip: allIps) {
+      if (find(childIps.begin(), childIps.end(), ip) == childIps.end())
+        toret.push_back(ip);
+    }
+    return toret;
+  }
+}
+
+void ECNode::parseForOEC(unsigned int ip) {
+  _ip = ip;
+  // 0. check for Load
+  // case: When current node is leaf, there is Load Task
+  int childNum = _childNodes.size();
+  if (childNum == 0) {
+    ECTask* load = new ECTask(); 
+    load->setType(0);
+    load->addIdx(_nodeId);
+    _oecTasks.insert(make_pair(0, load));
+  }
+
+  // 1&2 check for Fetch and Compute
+  // We check for Compute and Fetch together.
+  // If there is ComputeTask, there must be FetchTask
+  if (childNum > 1) {
+    // there is more than 1 child for computation
+    vector<int> childrenIdx;
+    for (int i=0; i<childNum; i++) {
+      childrenIdx.push_back(_childNodes[i]->getNodeId());
+    } 
+    // 1. fetch
+    ECTask* fetch = new ECTask();
+    fetch->setType(1);
+    fetch->setChildren(childrenIdx);
+    _oecTasks.insert(make_pair(1, fetch));
+
+    // 2. compute
+    ECTask* compute = new ECTask();
+    compute->setType(2);
+    compute->setChildren(childrenIdx);
+    compute->setCoefmap(_coefMap);
+    _oecTasks.insert(make_pair(2, compute));
+    
+  } else if (childNum == 1) {
+    // case 1: child is bindnode, then there is no computation or fetch
+    // case 2: there is computation to transfer 1 id to another (e.g. the leaf in ClayCode)
+    ECNode* childnode = _childNodes[0];
+    unordered_map<int, vector<int>> cmap = childnode->getCoefmap();
+    int childtarget = cmap.size();
+    if (childtarget > 1) {
+      // child is bindnode there is no need to create compute and fetch task 
+    } else {
+      // child node is not bind node
+      vector<int> childrenIdx;
+      childrenIdx.push_back(childnode->getNodeId());
+
+      // 1. fetch
+      ECTask* fetch = new ECTask();
+      fetch->setType(1);
+      fetch->setChildren(childrenIdx);
+      _oecTasks.insert(make_pair(1, fetch));
+
+      // 2. compute
+      ECTask* compute = new ECTask();
+      compute->setType(2);
+      compute->setChildren(childrenIdx);
+      compute->setCoefmap(_coefMap);
+      _oecTasks.insert(make_pair(2, compute));
+    }
+  }
+
+  // 3. check for Cache
+  // Basically, we need to cache the result of Load or Compute.
+//  int persistDSS = 0;
+//  if (_refNumFor.size() == 0) persistDSS = 1;
+//  if (persistDSS == 1) _refNumFor.insert(make_pair(_nodeId, 1));
+  if (_refNumFor.size() == 0) _refNumFor.insert(make_pair(_nodeId, 1));
+  ECTask* cache = new ECTask();
+  cache->setType(3);
+  cache->addRef(_refNumFor);
+  _oecTasks.insert(make_pair(3, cache));
+}
+
+unordered_map<int, ECTask*> ECNode::getTasks() {
+  return _oecTasks;
+}
+
+void ECNode::clearTasks() {
+  for (auto item: _oecTasks) {
+    delete item.second;
+  }
+  _oecTasks.clear();
+}
+
+unsigned int ECNode::getIp() {
+  return _ip;
+}
+
+AGCommand* ECNode::parseAGCommand(string stripename,
+                                  int n, int k, int w,
+                                  int num,
+                                  unordered_map<int, pair<string, unsigned int>> stripeobjs,
+                                  unordered_map<int, unsigned int> cid2ip) {
+  // type 2: load & cache
+  // type 3: fetch & compute & cache
+  // type 4: tells ip
+  // type 5: fetch & cache
+  // type 7: read & fetch & compute & cache
+  bool load = false;
+  bool fetch = false;
+  bool compute = false;
+  bool cache = false;
+
+  if (_oecTasks.find(0) != _oecTasks.end()) load = true;
+  if (_oecTasks.find(1) != _oecTasks.end()) fetch = true;
+  if (_oecTasks.find(2) != _oecTasks.end()) compute = true;
+  if (_oecTasks.find(3) != _oecTasks.end()) cache = true;
+  cout << "ECNode::parseAGCommand.load: " << load << ", fetch: " << fetch << ", compute: " << compute << ", cache:" << cache << endl;
+ 
+  AGCommand* agCmd = new AGCommand();
+  if (load & !fetch & !compute & cache) {
+    // load from disk
+    vector<int> indices = _oecTasks[0]->getIndices();
+    int sid = indices[0]/w;
+    pair<string, unsigned int> curpair = stripeobjs[sid]; 
+    string objname = curpair.first;
+    agCmd->buildType2(2, _ip, stripename, w, num, objname, indices, _oecTasks[3]->getRefMap());
+    return agCmd;
+  }
+
+  if (!load & fetch & compute & cache) {
+    // from fetch
+    vector<int> prevCids = _oecTasks[1]->getChildren();
+    vector<unsigned int> prevLocs;
+    for (int i=0; i<prevCids.size(); i++) {
+      int cidx = prevCids[i];
+      unsigned int ip = cid2ip[cidx];
+      prevLocs.push_back(ip);
+    }
+    unordered_map<int, vector<int>> coefs = _oecTasks[2]->getCoefMap();
+    unordered_map<int, int> refs = _oecTasks[3]->getRefMap();
+    // fetch and compute
+    agCmd->buildType3(3, _ip, stripename, w, num, prevCids.size(), prevCids, prevLocs, coefs, refs);
+    return agCmd;
+  }
+}
+
+void ECNode::dumpRawTask() {
+  cout << "Raw ECTasks : " << _nodeId << ", " << RedisUtil::ip2Str(_ip) << endl;
+  for (int i=0; i<4; i++) {
+    if (_oecTasks.find(i) == _oecTasks.end()) continue;
+    ECTask* ectask = _oecTasks[i];
+    if (i == 0) {
+      vector<int> indices = ectask->getIndices();
+      cout << "    Load: " ;
+      for (int j=0; j<indices.size(); j++) cout << indices[j] << " ";
+      cout << endl;
+    } else if (i == 1) {
+      cout << "    Fetch: ( ";
+      vector<int> childrenIdx = ectask->getChildren();
+      for (int j=0; j<childrenIdx.size(); j++) cout << childrenIdx[j] << " ";
+      cout << ")" << endl;
+    } else if (i == 2) {
+      vector<int> childrenIdx = ectask->getChildren();
+      unordered_map<int, vector<int>> coefmap = ectask->getCoefMap();
+      for (auto item: coefmap) {
+        int target = item.first;
+        vector<int> coefs = item.second;
+        cout << "    Compute: " << target << " = ( ";
+        for (int j=0; j<childrenIdx.size(); j++) cout << childrenIdx[j] << " ";
+        cout << ") * ( ";
+        for (int j=0; j<coefs.size(); j++) cout << coefs[j] << " ";
+        cout << ")" << endl;
+      }
+    } else if (i == 3) {
+      unordered_map<int, int> refmap = ectask->getRefMap();
+      int persistDSS = ectask->getPersistType();
+      for (auto item: refmap) {
+        int target = item.first;
+        int ref = item.second;
+        cout << "    Cache: ";
+        cout << target << ": " << ref << " times " << endl;
+      }
+    }
+  }
+}

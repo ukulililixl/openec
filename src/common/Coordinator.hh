@@ -36,6 +36,7 @@ class Coordinator {
     void registerFile(CoorCommand* coorCmd);
     void getLocation(CoorCommand* coorCmd);
     void finalizeFile(CoorCommand* coorCmd);
+    void offlineEnc(CoorCommand* coorCmd);
     void setECStatus(CoorCommand* coorCmd);
 
     void registerOnlineEC(unsigned int clientIp, string filename, string ecid, int filesizeMB);

@@ -2,6 +2,7 @@
 #define _ECDAG_HH_
 
 #include "../inc/include.hh"
+#include "../protocol/AGCommand.hh"
 
 #include "Cluster.hh"
 #include "ECNode.hh"
@@ -23,6 +24,7 @@ class ECDAG {
     int findCluster(vector<int> childs);
   public:
     ECDAG(); 
+    ~ECDAG();
 
     void Join(int pidx, vector<int> cidx, vector<int> coefs);
     int BindX(vector<int> idxs);
@@ -31,6 +33,20 @@ class ECDAG {
     // topological sorting
     vector<int> toposort();
     ECNode* getNode(int cidx);
+    vector<int> getHeaders();
+
+    // parse cmd
+    vector<AGCommand*> parseForOEC(unordered_map<int, unsigned int> cid2ip,
+                                   string stripename, 
+                                   int n, int k, int w, int num,
+                                   unordered_map<int, pair<string, unsigned int>> objlist);
+    vector<AGCommand*> persist(unordered_map<int, unsigned int> cid2ip, 
+                                  string stripename,
+                                  int n, int k, int w, int num,
+                                  unordered_map<int, pair<string, unsigned int>> objlist);
+
+    // refine tasks
+    void refineTasks(int n, int k, int w);
 
     // for debug
     void dump();

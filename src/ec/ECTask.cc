@@ -29,7 +29,11 @@ ECTask::ECTask(char* reqStr) {
 }
 
 void ECTask::setType(int type) {
-  _type = 2;
+  _type = type;
+}
+
+void ECTask::addIdx(int idx) {
+  _indices.push_back(idx);
 }
 
 void ECTask::setChildren(vector<int> children) {
@@ -40,12 +44,38 @@ void ECTask::setCoefmap(unordered_map<int, vector<int>> map) {
   _coefMap = map;
 }
 
+void ECTask::setPersistDSS(int pdss) {
+  _persistDSS = pdss;
+}
+
+void ECTask::addRef(unordered_map<int, int> ref) {
+  for (auto item: ref) {
+    _refNum.insert(item);
+  }
+}
+
+void ECTask::addRef(int idx, int ref) {
+  _refNum.insert(make_pair(idx, ref));
+}
+
+vector<int> ECTask::getIndices() {
+  return _indices;
+}
+
 vector<int> ECTask::getChildren() {
   return _children;
 }
 
 unordered_map<int, vector<int>> ECTask::getCoefMap() {
   return _coefMap;
+}
+
+int ECTask::getPersistType() {
+  return _persistDSS;
+}
+
+unordered_map<int, int> ECTask::getRefMap() {
+  return _refNum;
 }
 
 void ECTask::writeInt(int value) {

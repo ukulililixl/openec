@@ -4,12 +4,12 @@
 #include "BlockingQueue.hh"
 #include "Config.hh"
 #include "SSEntry.hh"
-//#include "CoorCommand.hh"
 //#include "ECPolicy.hh"
 //#include "OfflineECPool.hh"
 
 #include "../inc/include.hh"
 #include "../ec/OfflineECPool.hh"
+#include "../protocol/CoorCommand.hh"
 
 using namespace std;
 

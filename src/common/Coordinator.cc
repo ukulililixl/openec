@@ -37,9 +37,9 @@ void Coordinator::doProcess() {
         case 0: registerFile(coorCmd); break;
         case 1: getLocation(coorCmd); break;
         case 2: finalizeFile(coorCmd); break;
+        case 4: offlineEnc(coorCmd); break;
         case 7: setECStatus(coorCmd); break;
 //        case 3: getFileMeta(coorCmd); break;
-//        case 4: offlineEnc(coorCmd); break;
 //        case 5: offlineDegraded(coorCmd); break;
 //        case 6: reportLost(coorCmd); break;
 //        case 7: enableEncoding(coorCmd); break;
@@ -50,8 +50,6 @@ void Coordinator::doProcess() {
 //        default: break;
       }
 
-//      // delete coorCmd
-//      delete coorCmd;
     }
     // free reply object
     freeReplyObject(rReply);
@@ -150,6 +148,7 @@ void Coordinator::registerOnlineEC(unsigned int clientIp, string filename, strin
 void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB) {
   // 0. make sure that there is no existing ssentry
   assert (!_stripeStore->existEntry(filename));
+
   // 1. given ecpoolid, figure out whether there is offline pool created in stripe store
   assert(_conf->_offlineECMap.find(ecpoolid) != _conf->_offlineECMap.end());
   assert(_conf->_offlineECBase.find(ecpoolid) != _conf->_offlineECBase.end());
@@ -159,6 +158,7 @@ void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, stri
   ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];
   OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid, ecpolicy, basesizeMB);
   ecpool->lock();
+
   // 2. get placement group 
   ECBase* ec = ecpolicy->createECClass();
   vector<vector<int>> group;
@@ -169,13 +169,17 @@ void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, stri
       idx2group.insert(make_pair(idx, item));
     }
   }
+
   // 3. check number of object that is going to be created for this file
   int objnum = filesizeMB/basesizeMB;
+
   // 4. for each object, add into a stripe an preassign location
   if (filesizeMB%basesizeMB) objnum += 1;
+
   // fileobjnames and fileobjlocs are used to create SSEntry for this file
   vector<string> fileobjnames;
   vector<unsigned int> fileobjlocs;
+
   for (int objidx=0; objidx<objnum; objidx++) {
     string objname = filename+"_oecobj_"+to_string(objidx);
     fileobjnames.push_back(objname);
@@ -254,6 +258,9 @@ void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, stri
   agCmd->setRkey("registerFile:"+filename);
   agCmd->sendTo(clientIp);
   delete agCmd;
+
+  // free
+  delete ec;
 }
 
 vector<unsigned int> Coordinator::getCandidates(vector<unsigned int> placedIp, vector<int> placedIdx, vector<int> colocWith) {
@@ -417,6 +424,185 @@ void Coordinator::finalizeFile(CoorCommand* coorCmd) {
     }
   }
   ecpool->unlock();
+}
+
+void Coordinator::offlineEnc(CoorCommand* coorCmd) {
+  cout << "Coordinator::offlineEnc" << endl; 
+  string ecpoolid = coorCmd->getECPoolId();
+  string stripename = coorCmd->getStripeName();
+
+  // 0. given ecpoolid, get OfflineECPool
+  OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid); 
+  ECPolicy* ecpolicy = ecpool->getEcpolicy(); 
+  ECBase* ec = ecpolicy->createECClass();
+  int n = ecpolicy->getN();
+  int k = ecpolicy->getK();
+  int w = ecpolicy->getW(); 
+  bool locality = ecpolicy->getLocality();
+
+  vector<vector<int>> group;
+  ec->Place(group);
+  unordered_map<int, vector<int>> idx2group;
+  for (auto item: group) {
+    for (auto idx: item) {
+      idx2group.insert(make_pair(idx, item));
+    }
+  }
+
+  // 1. encode ecdag
+  ECDAG* ecdag = ec->Encode();
+  ecdag->dump();
+
+  // 2. collect physical information
+  // stripeidx -> {objname, location}
+  unordered_map<int, pair<string, unsigned int>> objlist;
+  // stripeidx -> location
+  unordered_map<int, unsigned int> sid2ip;
+  // objs in current stripe (now we only have source objs)
+  vector<string> stripelist = ecpool->getStripeObjList(stripename); 
+  // location for current stripe, indexed by stripe idx (now we only have source locations)
+  vector<unsigned int> stripeips;
+  // stripeplaced records the objnames that have been stored in this stripe
+  vector<int> stripeplaced;
+ 
+  cout << "Coordinator::offlineEnc.encode stripe " << stripename << ", objlist: ";
+  for (int i=0; i<stripelist.size(); i++) cout << stripelist[i] << " ";
+  cout << endl;
+
+  // maximum obj size in current stripe
+  int basesizeMB = ecpool->getBasesize();
+  int pktnum = basesizeMB * 1048576/_conf->_pktSize;
+  
+  // 2.1 get physical information for k source objs
+  for (int i=0; i<stripelist.size(); i++) {
+    int sid = i;
+    string objname = stripelist[i];
+    SSEntry* ssentry = _stripeStore->getEntryFromObj(objname); 
+    unsigned int loc = ssentry->getLocOfObj(objname);
+    pair<string, unsigned int> curpair = make_pair(objname, loc);
+
+    objlist.insert(make_pair(sid, curpair));
+    sid2ip.insert(make_pair(sid, loc));
+    stripeips.push_back(loc);
+    stripeplaced.push_back(i);
+  }
+  // 2.2 prepare physical information for m parity objs
+  for (int i=k; i<n; i++) {
+    string objname = "/"+ecpoolid+"-"+stripename+"-"+to_string(i);
+    vector<int> colocWith;
+    if (idx2group.find(i) != idx2group.end()) colocWith = idx2group[i];
+    vector<unsigned int> candidates = getCandidates(stripeips, stripeplaced, colocWith);
+    unsigned int loc = chooseFromCandidates(candidates, _conf->_data_policy, "data");
+    pair<string, unsigned int> curpair = make_pair(objname, loc);
+
+    objlist.insert(make_pair(i, curpair));
+    sid2ip.insert(make_pair(i, loc));
+    stripeips.push_back(loc);
+    stripeplaced.push_back(i);
+
+    // add parity obj to ecpool
+    ecpool->addObj(objname, stripename);
+    // create ssentry for parity obj, only has 1 obj in it
+    SSEntry* ssentry = new SSEntry(objname, 1, basesizeMB, ecpoolid, {objname}, {loc});
+    _stripeStore->insertEntry(ssentry);
+  }
+
+  // debug info
+  for (auto item: objlist) {
+    int sid = item.first;
+    pair<string, unsigned int> pair = item.second;
+    string objname = pair.first;
+    unsigned int ip = pair.second;
+    cout << "stripe physical info: idx: " << sid << ", objname: " << objname << ", ip: " << RedisUtil::ip2Str(ip) << endl;
+  }
+  
+  // 3. TODO:reconstruction/optimization is performed here
+  // opt0: BindX by default
+  // opt1: BindY
+  // opt2: layering or pipelining reconstruction with physical information
+  
+  // 4. topological sorting
+  vector<int> sortedList = ecdag->toposort();
+
+  // 5. figure out corresponding ip for corresponding node
+  unordered_map<int, unsigned int> cid2ip;
+  for (int i=0; i<sortedList.size(); i++) {
+    int cidx = sortedList[i];
+    ECNode* node = ecdag->getNode(cidx);
+    vector<unsigned int> candidates = node->candidateIps(sid2ip, cid2ip, _conf->_agentsIPs, n, k, w, locality);
+    // choose from candidates
+    unsigned int curip = chooseFromCandidates(candidates, _conf->_control_policy, "control");
+    cid2ip.insert(make_pair(cidx, curip));
+  }
+
+  // 6. parse for oec
+  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, n, k, w, pktnum, objlist);
+
+//  for (int i=0; i<sortedList.size(); i++) {
+//    int cidx = sortedList[i];
+//    ECNode* node = ecdag->getNode(cidx);
+//    unsigned int ip = cid2ip[cidx];
+//    node->parseForOEC(ip);
+//    AGCommand* cmd = node->parseAGCommand(stripename, n, k, w, pktnum, objlist, cid2ip);
+//    cmd->dump();
+//    agcmds.push_back(cmd);
+////    node->dumpRawTask();
+//  }
+  // 7. add persist cmd
+  vector<AGCommand*> persistCmds = ecdag->persist(cid2ip, stripename, n, k, w, pktnum, objlist);
+
+  // 8. send commands to cmddistributor
+  vector<char*> todelete;
+  redisContext* distCtx = RedisUtil::createContext(_conf->_coorIp);
+
+  redisAppendCommand(distCtx, "MULTI");
+  for (auto agcmd: agCmds) {
+    unsigned int ip = agcmd->getSendIp();
+    ip = htonl(ip);
+    if (agcmd->getShouldSend()) {
+      char* cmdstr = agcmd->getCmd();
+      int cmLen = agcmd->getCmdLen();
+      char* todist = (char*)calloc(cmLen + 4, sizeof(char));
+      memcpy(todist, (char*)&ip, 4);
+      memcpy(todist+4, cmdstr, cmLen); 
+      todelete.push_back(todist);
+      redisAppendCommand(distCtx, "RPUSH dist_request %b", todist, cmLen+4);
+    }
+  }
+  for (auto agcmd: persistCmds) {
+    unsigned int ip = agcmd->getSendIp();
+    ip = htonl(ip);
+    if (agcmd->getShouldSend()) {
+      char* cmdstr = agcmd->getCmd();
+      int cmLen = agcmd->getCmdLen();
+      char* todist = (char*)calloc(cmLen + 4, sizeof(char));
+      memcpy(todist, (char*)&ip, 4);
+      memcpy(todist+4, cmdstr, cmLen); 
+      todelete.push_back(todist);
+      redisAppendCommand(distCtx, "RPUSH dist_request %b", todist, cmLen+4);
+    }
+  }
+  redisAppendCommand(distCtx, "EXEC");
+
+  redisReply* distReply;
+  redisGetReply(distCtx, (void **)&distReply);
+  freeReplyObject(distReply);
+  for (auto item: todelete) {
+    redisGetReply(distCtx, (void **)&distReply);
+    freeReplyObject(distReply);
+  }
+  redisGetReply(distCtx, (void **)&distReply);
+  freeReplyObject(distReply);
+  redisFree(distCtx);
+  
+  // 9. wait for finish flag?
+  
+  // free
+  delete ecdag;
+  delete ec; 
+  for (auto item: agCmds) delete item;
+  for (auto item: persistCmds) delete item;
+  for (auto item: todelete) free(item);
 }
 
 void Coordinator::setECStatus(CoorCommand* coorCmd) {

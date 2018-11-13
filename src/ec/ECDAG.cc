@@ -3,6 +3,18 @@
 ECDAG::ECDAG() {
 }
 
+ECDAG::~ECDAG() {
+  for (auto it: _ecNodeMap) {
+    if (it.second) {
+      delete it.second;
+      it.second = nullptr;
+    }
+  }
+  _ecNodeMap.clear();
+
+  for (auto it: _clusterMap) delete it;
+}
+
 int ECDAG::findCluster(vector<int> childs) {
   for (int i=0; i<_clusterMap.size(); i++) {
     if (_clusterMap[i]->childsInCluster(childs)) return i;
@@ -182,6 +194,56 @@ ECNode* ECDAG::getNode(int cidx) {
   return _ecNodeMap[cidx];
 }
 
+vector<int> ECDAG::getHeaders() {
+  return _ecHeaders;
+}
+
+vector<AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
+                                      string stripename, 
+                                      int n, int k, int w, int num,
+                                      unordered_map<int, pair<string, unsigned int>> objlist) {
+  vector<AGCommand*> toret;
+  vector<int> sortedList = toposort();
+  for (int i=0; i<sortedList.size(); i++) {
+    int cidx = sortedList[i];
+    ECNode* node = getNode(cidx);
+    unsigned int ip = cid2ip[cidx];
+    node->parseForOEC(ip);
+    AGCommand* cmd = node->parseAGCommand(stripename, n, k, w, num, objlist, cid2ip);
+    cmd->dump();
+    toret.push_back(cmd);
+//    node->dumpRawTask();
+  }
+  return toret;
+}
+
+vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip, 
+                                  string stripename,
+                                  int n, int k, int w, int num,
+                                  unordered_map<int, pair<string, unsigned int>> objlist) {
+  vector<AGCommand*> toret;
+  // sort headers
+  sort(_ecHeaders.begin(), _ecHeaders.end());
+  int numblks = _ecHeaders.size()/w;
+  for (int i=0; i<numblks; i++) {
+    int sid = _ecHeaders[i];
+    string objname = objlist[sid].first;
+    unsigned int ip = objlist[sid].second;
+    vector<int> prevCids;
+    vector<unsigned int> prevLocs;
+    for (int j=0; j<w; j++) {
+      int cid = sid*w+j;
+      unsigned int cip = cid2ip[cid];
+      prevCids.push_back(cid);
+      prevLocs.push_back(cip);
+    }
+    AGCommand* cmd = new AGCommand(); 
+    cmd->buildType5(5, ip, stripename, w, num, w, prevCids, prevLocs, objname);
+    cmd->dump();
+    toret.push_back(cmd);
+  }
+}
+
 void ECDAG::dump() {
   for (auto id : _ecHeaders) {
     _ecNodeMap[id] ->dump(-1);
@@ -190,4 +252,82 @@ void ECDAG::dump() {
   for (auto cluster: _clusterMap) {
     cluster->dump();
   }
+}
+
+void ECDAG::refineTasks(int n, int k, int w) {
+//  // check for type0: no refine
+//  vector<int> toposortres = toposort();
+//  for (auto cidx : toposortres) {
+//    ECNode* node = _ecNodeMap[cidx];
+//    for (auto item: node->getRefMap()) {
+//      if (item.second > 1) return;
+//    }
+//  }
+//
+//  // check for type1: aggregate load tasks for sub-packetization
+//  if (w > 1) {
+//    unordered_map<int, vector<int>> sid2cids;
+//    for (auto cidx: toposortres) {
+//      ECNode* node = _ecNodeMap[cidx];
+//      unordered_map<int, ECTask*> tasks = node->getTasks();
+//      if (tasks.find(0) != tasks.end()) {
+//        int sid = cidx/w;
+//        if (sid2cids.find(sid) == sid2cids.end()) {
+//          vector<int> curcidlist = {cidx};
+//          sid2cids.insert(make_pair(sid, curcidlist));
+//        } else {
+//          sid2cids[sid].push_back(cidx);
+//        }
+//      }
+//    }
+//    // now we aggregate all load tasks to one node and remove load tasks from others
+//    for (auto item: sid2cids) {
+//      int sid = item.first;
+//      vector<int> cidlist = item.second;
+//      sort(cidlist.begin(), cidlist.end());
+//      if (cidlist.size() > 1) {
+//        int cid = cidlist[0];
+//        unordered_map<int, ECTask*> tasks = _ecNodeMap[cid]->getTasks();
+//        ECTask* load = tasks[0];
+//        for (int i=1; i<cidlist.size(); i++) {
+//          int curcid = cidlist[i];
+//          int ref = _ecNodeMap[curcid]->getRefNumFor(curcid);
+//          load->addIdx(curcid) ;
+//          load->addRef(curcid, ref);
+//          _ecNodeMap[curcid]->clearTasks();
+//        }
+//      }
+//    }
+//  } else {
+//    // aggregate load, fetch and compute
+//    unordered_map<int, int> tomerge;
+//    for (auto cidx: toposortres) {
+//      ECNode* node = _ecNodeMap[cidx];
+//      unordered_map<int, ECTask*> tasks = node->getTasks();
+//      unsigned int ip = node->getIp();
+//      if (tasks.find(2) == tasks.end()) continue;
+//      vector<int> children = tasks[2]->getChildren();
+//      // check whether children is load task
+//      int childid;
+//      bool found = false;
+//      for (auto childidx: children) {
+//        ECNode* childnode = _ecNodeMap[childidx];
+//        unordered_map<int, ECTask*> childtasks = childnode->getTasks();
+//        if (childtasks.find(0) == childtasks.end()) continue; 
+//        else {
+//          if (childnode->getIp() == ip) {
+//            childid = childidx;
+//            break;
+//          }
+//        }
+//      }
+//      if (found) {
+//        // add load task for cidx
+//        // clear load task for childid
+//        unordered_map<int, ECTask*> tasks = _ecNodeMap[childid]->getTasks(); 
+//        ECTask* load = tasks[0];
+//        
+//      }
+//    }
+//  }
 }

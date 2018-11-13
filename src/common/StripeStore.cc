@@ -172,6 +172,10 @@ void StripeStore::scanning() {
       startECStripe(stripename);     
 
       // send offline encode request to coordinator
+      CoorCommand* coorCmd = new CoorCommand();
+      coorCmd->buildType4(4, _conf->_localIp, ecpoolid, stripename);
+      coorCmd->sendTo(_conf->_coorIp);
+      delete coorCmd;
 
       // obtain latest ecInProgress
       ecInProgressNum = getECInProgressNum();

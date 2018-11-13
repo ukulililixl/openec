@@ -10,14 +10,16 @@ using namespace std;
  * type 0: Load
  * type 1: Fetch
  * type 2: Compute
- * type 3: Persist
+ * type 3: Cache
+ * type 4: persist
  */
 class ECTask {
   private:
     int _type;
 
     // for type 0
-    int _idx;  // this is idx
+//    int _idx;  // this is idx
+    vector<int> _indices;
 
     // for type 1
     vector<int> _children;
@@ -28,6 +30,7 @@ class ECTask {
     unordered_map<int, vector<int>> _coefMap;
 
     // for type 3
+    int _persistDSS; // 0: no 1: yes;
     unordered_map<int, int> _refNum;
 
     // serialized task
@@ -39,11 +42,18 @@ class ECTask {
     ECTask(char* reqStr);
 
     void setType(int type);
+    void addIdx(int idx);
     void setChildren(vector<int> children);
     void setCoefmap(unordered_map<int, vector<int>> map);
+    void setPersistDSS(int pdss);
+    void addRef(unordered_map<int, int> ref);
+    void addRef(int idx, int ref);
 
+    vector<int> getIndices();
     vector<int> getChildren();
     unordered_map<int, vector<int>> getCoefMap();
+    int getPersistType();
+    unordered_map<int, int> getRefMap();
 
     // basic construction methods
     void writeInt(int value);

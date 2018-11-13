@@ -33,3 +33,7 @@ int ECPolicy::getK() {
 int ECPolicy::getW() {
   return _w;
 }
+
+bool ECPolicy::getLocality() {
+  return _locality;
+}

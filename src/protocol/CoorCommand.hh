@@ -68,6 +68,8 @@ class CoorCommand {
     int getMode();
     int getFilesizeMB();
     int getNumOfReplicas();
+    string getECPoolId();
+    string getStripeName();
     int getOp();
     string getECType();
 

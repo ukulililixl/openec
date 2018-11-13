@@ -89,6 +89,14 @@ int CoorCommand::getNumOfReplicas() {
   return _numOfReplicas;
 }
 
+string CoorCommand::getECPoolId() {
+  return _ecpoolid;
+}
+
+string CoorCommand::getStripeName() {
+  return _stripename;
+}
+
 int CoorCommand::getOp() {
   return _op;
 }
@@ -212,6 +220,10 @@ void CoorCommand::dump() {
   } else if (_type == 2) {
     cout << ", client: " << RedisUtil::ip2Str(_clientIp)
          << ", filename: " << _filename << endl;
+  } else if (_type == 4) {
+    cout << ", client: " << RedisUtil::ip2Str(_clientIp)
+         << ", ecpoolid: " << _ecpoolid
+         << ", stripename: " << _stripename << endl;
   } else if (_type == 7) {
     cout << ", enable: " << _op << ", ectype: " << _ectype << endl;
   }
