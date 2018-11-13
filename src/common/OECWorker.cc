@@ -43,12 +43,12 @@ void OECWorker::doProcess() {
       switch (type) {
         case 0: clientWrite(agCmd); break;
 //        case 1: clientRead(agCmd); break;
-//        case 2: readDisk(agCmd); break;
-//        case 3: fetchCompute(agCmd); break;
-//        case 5: persist(agCmd); break;
+        case 2: readDisk(agCmd); break;
+        case 3: fetchCompute(agCmd); break;
+        case 5: persist(agCmd); break;
 //        case 6: readDiskList(agCmd); break;
 //        case 7: readFetchCompute(agCmd); break;
-//        default:break;
+        default:break;
       }
 //      gettimeofday(&time2, NULL);
 //      cout << "OECWorker::doProcess().duration = " << RedisUtil::duration(time1, time2) << endl;
@@ -436,119 +436,370 @@ void OECWorker::computeWorker(vector<ECTask*> computeTasks,
   free(curStripe);
 }
 
-//void OECWorker::readDisk(AGCommand* agcmd) {
-//  cout << "OECWorker::readDisk" << endl;
-//  string stripename = agcmd->_stripeName;
-//  int scratio = agcmd->_scratio;
-//  int num = agcmd->_num;
-//  string objname = agcmd->_readObjName;
-//  int cid = agcmd->_Cid;
-//
-//  int pktsize = _conf->_pktSize;
-//  int slicesize = pktsize/scratio;
-//
-//  string key = stripename+":"+to_string(cid);
-//  int unitidx = cid%scratio;
-//  cout << "OECWorker::readDisk. read." << objname << ", with " << num << " reads of size " << slicesize << " in " << pktsize << ", writekey = " << key << endl;
-//
-//  FSObjInputStream* objstream = new FSObjInputStream(_conf, objname, _underfs);
-//  if (!objstream->exist()) {
-//    cout << "OECWorker::readWorker." << objname << " does not exist!" << endl;
-//    return;
-//  }
-//  thread readThread = thread([=]{objstream->readObj(slicesize, unitidx);});
-//
-//  BlockingQueue<OECDataPacket*>* readQueue = objstream->getQueue();
-//  thread wWorker([=]{writeWorker(readQueue, key, num);});
-//
-//  // join
-//  wWorker.join();
-//  readThread.join();
-//  
-//  // delete
-//  if (objstream) delete objstream;
-//  cout << "OECWorker::readDisk finishes!" << endl;
-//}
-//
-//void OECWorker::readDiskList(AGCommand* agcmd) {
-//  cout << "OECWorker::readDiskList" << endl;
-//  string stripename = agcmd->_stripeName;
-//  int scratio = agcmd->_scratio;
-//  int num = agcmd->_num;  // this num is pkt num, when scratio>1, a pkt is divided into several small sub-pkts.
-//                          // the basic read unit is packet
-//  string objname = agcmd->_readObjName;
-//  vector<int> cidlist = agcmd->_readCidList;
-//  sort(cidlist.begin(), cidlist.end());
-//
-//  int pktsize = _conf->_pktSize;
-//  int slicesize = pktsize/scratio;
-//  int numThreads = cidlist.size();
-//  FSObjInputStream* objstream = new FSObjInputStream(_conf, objname, _underfs);
-//  if (!objstream->exist()) {
-//    cout << "OECWorker::readWorker." << objname << " does not exist!" << endl;
-//    return;
-//  }
-//  // read data in serial from disk
-//  thread readThread = thread([=]{objstream->readObj(slicesize);});
-//  BlockingQueue<OECDataPacket*>* readQueue = objstream->getQueue();
-//  // writeThread
-//  thread writeThread = thread([=]{selectWriteWorker(readQueue, num, stripename, scratio, cidlist);});
-//
-//  //join
-//  readThread.join();
-//  writeThread.join();
-//
-//  // delete
-//  if (objstream) delete objstream;
-//  cout << "OECWorker::readDisk finishes!" << endl;
-//}
-//
-//void OECWorker::selectWriteWorker(BlockingQueue<OECDataPacket*>* writeQueue,
-//                           int pktnum,
-//                           string keybase,
-//                           int scratio,
-//                           vector<int> idxlist) {
-//  redisContext* writeCtx = RedisUtil::createContext(_conf->_localIp);
-//  redisReply* rReply;
-//
-//  vector<int> units;
-//  for (int i=0; i<idxlist.size(); i++) units.push_back(idxlist[i]%scratio);
-//  struct timeval time1, time2;
-//  gettimeofday(&time1, NULL);
-//
-//  int replyid=0;
-//  int count=0;
-//  for (int i=0; i<pktnum; i++) {
-//    for (int j=0; j<scratio; j++) {
-//      OECDataPacket* curslice = writeQueue->pop();
-//      if (find(units.begin(), units.end(), j) == units.end()) {
-//        delete curslice;
-//        continue;
-//      }
-//      string key = keybase+":"+to_string(idxlist[j])+":"+to_string(i);
-//      // we write data into redis
-//      int len = curslice->_dataLen; 
-//      char* raw = curslice->_raw;
-//      int rawlen = len + 4;
-//      redisAppendCommand(writeCtx, "RPUSH %s %b", key.c_str(), raw, rawlen); count++;
-//      delete curslice;
-//      if (i>1) {
-//        redisGetReply(writeCtx, (void**)&rReply); replyid++;
-//        freeReplyObject(rReply);
-//      }
-//    }
-//  }
-//
-//  for (int i=replyid; i<count; i++)  {
-//    redisGetReply(writeCtx, (void**)&rReply); replyid++;
-//    freeReplyObject(rReply);
-//  }
-//
-//  gettimeofday(&time2, NULL);
-//  cout << "OECWorker::selectWriteWorker.duration: " << RedisUtil::duration(time1, time2) << " for " << keybase << endl;
-//  redisFree(writeCtx);
-//}
-//
+void OECWorker::readDisk(AGCommand* agcmd) {
+  string stripename = agcmd->getStripeName();
+  int w = agcmd->getW();
+  int num = agcmd->getNum();
+  string objname = agcmd->getReadObjName();
+  vector<int> cidlist = agcmd->getReadCidList();
+  sort(cidlist.begin(), cidlist.end());
+  unordered_map<int, int> refs = agcmd->getCacheRefs();
+
+  int pktsize = _conf->_pktSize;
+  int slicesize = pktsize/w;
+ 
+  int numThreads = cidlist.size();
+
+  FSObjInputStream* objstream = new FSObjInputStream(_conf, objname, _underfs);
+  if (!objstream->exist()) {
+    cout << "OECWorker::readWorker." << objname << " does not exist!" << endl;
+    return;
+  }
+
+  // read data in serial from disk
+  thread readThread = thread([=]{objstream->readObj(slicesize);});
+  BlockingQueue<OECDataPacket*>* readQueue = objstream->getQueue();
+  // cacheThread
+  thread cacheThread = thread([=]{selectCacheWorker(readQueue, num, stripename, w, cidlist, refs);});
+
+  //join
+  readThread.join();
+  cacheThread.join();
+
+  // delete
+  if (objstream) delete objstream;
+  cout << "OECWorker::readDisk finishes!" << endl;
+}
+
+void OECWorker::selectCacheWorker(BlockingQueue<OECDataPacket*>* cacheQueue,
+                                  int pktnum,
+                                  string keybase,
+                                  int w,
+                                  vector<int> idxlist,
+                                  unordered_map<int, int> refs) {
+  redisContext* writeCtx = RedisUtil::createContext(_conf->_localIp);
+  redisReply* rReply;
+  
+  vector<int> units;
+  unordered_map<int, int> unit2idx;
+  for (int i=0; i<idxlist.size(); i++) {
+    int curunit = idxlist[i] % w;
+    units.push_back(curunit);  
+    unit2idx.insert(make_pair(curunit, idxlist[i]));
+  }
+
+  struct timeval time1, time2;
+  gettimeofday(&time1, NULL);
+
+  int count=0;
+  int replyid=0;
+ 
+  for (int i=0; i<pktnum; i++) {
+    for (int j=0; j<w; j++) {
+      OECDataPacket* curslice = cacheQueue->pop();
+      if (find(units.begin(), units.end(), j) == units.end()) {
+        delete curslice;
+        continue;
+      }
+      int curidx = unit2idx[j];
+      string key = keybase+":"+to_string(curidx)+":"+to_string(i);
+      // we write data into redis
+      int refnum = refs[curidx];
+      //cout << "curidx = " << curidx << ", refnum = " << refnum << endl;
+      int len = curslice->getDatalen();
+      //cout << "len = "  << len << ", key = " << key << endl;
+      char* raw = curslice->getRaw();
+      int rawlen = len + 4;
+      for (int k=0; k<refnum; k++) {
+        redisAppendCommand(writeCtx, "RPUSH %s %b", key.c_str(), raw, rawlen); count++;
+      }
+      delete curslice;
+      if (i>1) {
+        redisGetReply(writeCtx, (void**)&rReply); replyid++;
+        freeReplyObject(rReply);
+      }
+    }
+  }
+  for (int i=replyid; i<count; i++)  {
+    redisGetReply(writeCtx, (void**)&rReply); replyid++;
+    freeReplyObject(rReply);
+  }
+
+  gettimeofday(&time2, NULL);
+  cout << "OECWorker::selectCacheWorker.duration: " << RedisUtil::duration(time1, time2) << " for " << keybase << endl;
+  redisFree(writeCtx);
+}
+
+void OECWorker::fetchCompute(AGCommand* agcmd) {
+  string stripename = agcmd->getStripeName();
+  int w = agcmd->getW();
+  int num = agcmd->getNum();
+  int nprevs = agcmd->getNprevs();  
+  vector<int> prevcids = agcmd->getPrevCids();
+  vector<unsigned int> prevlocs = agcmd->getPrevLocs();
+  unordered_map<int, vector<int>> coefs = agcmd->getCoefs();
+  unordered_map<int, int> refs = agcmd->getCacheRefs();
+
+  vector<int> computefor;
+  for (auto item:coefs) {
+    computefor.push_back(item.first);
+  }
+
+  // create fetch queue
+  BlockingQueue<OECDataPacket*>** fetchQueue = (BlockingQueue<OECDataPacket*>**)calloc(nprevs, sizeof(BlockingQueue<OECDataPacket*>*));
+  for (int i=0; i<nprevs; i++) {
+    fetchQueue[i] = new BlockingQueue<OECDataPacket*>();
+  }
+
+  // create write queue
+  BlockingQueue<OECDataPacket*>** writeQueue = (BlockingQueue<OECDataPacket*>**)calloc(coefs.size(), sizeof(BlockingQueue<OECDataPacket*>*));
+  for (int i=0; i<coefs.size(); i++) {
+    writeQueue[i] = new BlockingQueue<OECDataPacket*>();
+  }
+
+  // create fetch thread
+  vector<thread> fetchThreads = vector<thread>(nprevs);
+  for (int i=0; i<nprevs; i++) {
+    string keybase = stripename+":"+to_string(prevcids[i]);
+    fetchThreads[i] = thread([=]{fetchWorker(fetchQueue[i], keybase, prevlocs[i], num);});
+  }
+
+  // create compute thread
+  thread computeThread = thread([=]{computeWorker(fetchQueue, nprevs, num, coefs, computefor, writeQueue, _conf->_pktSize/w);});
+
+  // create cache thread
+  vector<thread> cacheThreads = vector<thread>(computefor.size());
+  for (int i=0; i<computefor.size(); i++) {
+    string keybase = stripename+":"+to_string(computefor[i]);
+    int r = refs[computefor[i]];
+    cacheThreads[i] = thread([=]{cacheWorker(writeQueue[i], keybase, num, r);});
+  }
+
+  // join
+  for (int i=0; i<nprevs; i++) {
+    fetchThreads[i].join();
+  }
+  computeThread.join();
+  for (int i=0; i<computefor.size(); i++) {
+    cacheThreads[i].join();
+  }
+
+  // delete
+  for (int i=0; i<nprevs; i++) {
+    delete fetchQueue[i];
+  }
+  free(fetchQueue);
+  for (int i=0; i<computefor.size(); i++) {
+    delete writeQueue[i];
+  }
+  free(writeQueue);
+  cout << "OECWorker::fetchCompute finishes!" << endl;
+}
+
+void OECWorker::fetchWorker(BlockingQueue<OECDataPacket*>* fetchQueue,
+                     string keybase,
+                     unsigned int loc,
+                     int num) {
+  redisReply* rReply;
+  redisContext* fetchCtx = RedisUtil::createContext(loc);
+
+  struct timeval time1, time2;
+  gettimeofday(&time1, NULL);
+
+  int replyid=0;
+  for (int i=0; i<num; i++) {
+    string key = keybase+":"+to_string(i);
+    redisAppendCommand(fetchCtx, "blpop %s 0", key.c_str());
+  }
+
+  struct timeval t1, t2;
+  double t;
+  for (int i=replyid; i<num; i++) {
+    string key = keybase+":"+to_string(i);
+    gettimeofday(&t1, NULL);
+    redisGetReply(fetchCtx, (void**)&rReply);
+    gettimeofday(&t2, NULL);
+    //if (i == 0) cout << "OECWorker::fetchWorker.fetch first t = " << RedisUtil::duration(t1, t2) << endl;
+    char* content = rReply->element[1]->str;
+    OECDataPacket* pkt = new OECDataPacket(content);
+    int curDataLen = pkt->getDatalen();
+    fetchQueue->push(pkt);
+    freeReplyObject(rReply);
+  }
+  gettimeofday(&time2, NULL);
+  cout << "OECWorker::fetchWorker.duration: " << RedisUtil::duration(time1, time2) << " for " << keybase << endl;
+  redisFree(fetchCtx);
+}
+
+void OECWorker::computeWorker(BlockingQueue<OECDataPacket*>** fetchQueue,
+                       int nprev,
+                       int num,
+                       unordered_map<int, vector<int>> coefs,
+                       vector<int> cfor,
+                       BlockingQueue<OECDataPacket*>** writeQueue,
+                       int slicesize) {
+  // prepare coding matrix
+  int row = cfor.size();
+  int col = nprev;
+  int* matrix = (int*)calloc(row*col, sizeof(int));
+  for (int i=0; i<row; i++) {
+    int cid = cfor[i];
+    vector<int> coef = coefs[cid];
+    for (int j=0; j<col; j++) {
+      matrix[i*col+j] = coef[j];
+    }
+  }
+  cout << "OECWorker::computeWorker.num: " << num << ", row: " << row << ", col: " << col << endl;
+  cout << "-------------------"<< endl;
+  for (int i=0; i<row; i++) {
+    for (int j=0; j<col; j++) {
+      cout << matrix[i*col+j] << " ";
+    }
+    cout << endl;
+  }
+  cout << "-------------------"<< endl;
+
+  OECDataPacket** curstripe = (OECDataPacket**)calloc(row+col, sizeof(OECDataPacket*));
+  char** data = (char**)calloc(col, sizeof(char*));
+  char** code = (char**)calloc(row, sizeof(char*));
+  while(num--) {
+    // prepare data
+    for (int i=0; i<col; i++) {
+      OECDataPacket* curpkt = fetchQueue[i]->pop();
+      curstripe[i] = curpkt;
+      data[i] = curpkt->getData();
+    }
+    for (int i=0; i<row; i++) {
+      curstripe[col+i] = new OECDataPacket(slicesize);
+      code[i] = curstripe[col+i]->getData();
+    }
+    // compute
+    Computation::Multi(code, data, matrix, row, col, slicesize, "Isal");
+
+    // now we free data
+    for (int i=0; i<col; i++) {
+      delete curstripe[i];
+      curstripe[i] = nullptr;
+    }
+    // add the res to writeQueue
+    for (int i=0; i<row; i++) {
+      writeQueue[i]->push(curstripe[col+i]);
+      curstripe[col+i] = nullptr;
+    }
+  }
+
+  // free
+  free(code);
+  free(data);
+  free(curstripe);
+  free(matrix);
+}
+
+void OECWorker::cacheWorker(BlockingQueue<OECDataPacket*>* writeQueue,
+                            string keybase,
+                            int num,
+                            int ref) {
+  redisReply* rReply;
+  redisContext* writeCtx = RedisUtil::createContext("127.0.0.1");
+  
+  struct timeval time1, time2;
+  gettimeofday(&time1, NULL);
+
+  int replyid=0;
+  int count=0;
+  for (int i=0; i<num; i++) {
+    string key = keybase+":"+to_string(i);
+    OECDataPacket* curpkt = writeQueue->pop();
+    char* raw = curpkt->getRaw();
+    int rawlen = curpkt->getDatalen() + 4;
+    for (int k=0; k<ref; k++) {
+      redisAppendCommand(writeCtx, "RPUSH %s %b", key.c_str(), raw, rawlen); count++;
+    }
+    delete curpkt;
+    if (i>1) {
+      redisGetReply(writeCtx, (void**)&rReply);
+      freeReplyObject(rReply);
+      replyid++;
+    }
+  }
+  for (int i=replyid; i<count; i++) {
+    redisGetReply(writeCtx, (void**)&rReply);
+    freeReplyObject(rReply);
+  }
+  // xiaolu start 20180822 end
+
+  gettimeofday(&time2, NULL);
+  cout << "OECWorker::writeWorker.duration: " << RedisUtil::duration(time1, time2) << " for " << keybase << endl;
+  redisFree(writeCtx);
+}
+
+void OECWorker::persist(AGCommand* agcmd) {
+  string stripename = agcmd->getStripeName();
+  int w = agcmd->getW();
+  int num = agcmd->getNum();
+  int nprevs = agcmd->getNprevs();
+  vector<int> prevcids = agcmd->getPrevCids();
+  vector<unsigned int> prevlocs = agcmd->getPrevLocs();
+  string objname = agcmd->getWriteObjName();
+
+  for (int i=0; i<nprevs; i++) {
+    string keybase = stripename+":"+to_string(prevcids[i]);
+    cout << "OECWorker::persist.fetch "<<keybase<<" from " << RedisUtil::ip2Str(prevlocs[i]) << endl;
+  }
+  cout << "OECWorker::persist.write as " << objname << " with " << num << " pkts"<< endl;
+
+  // create fetch queue
+  BlockingQueue<OECDataPacket*>** fetchQueue = (BlockingQueue<OECDataPacket*>**)calloc(nprevs, sizeof(BlockingQueue<OECDataPacket*>*));
+  for (int i=0; i<nprevs; i++) {
+    fetchQueue[i] = new BlockingQueue<OECDataPacket*>();
+  }
+
+  // create fetch thread
+  vector<thread> fetchThreads = vector<thread>(nprevs);
+  for (int i=0; i<nprevs; i++) {
+    string keybase = stripename+":"+to_string(prevcids[i]);
+    fetchThreads[i] = thread([=]{fetchWorker(fetchQueue[i], keybase, prevlocs[i], num);});
+  }
+
+  // create objstream and writeThread
+  FSObjOutputStream* objstream = new FSObjOutputStream(_conf, objname, _underfs, num*nprevs);
+  thread writeThread = thread([=]{objstream->writeObj();});
+
+  int total = num;
+  while(total--) {
+//    cout << "OECWorker::persist.left = " << total << endl;
+    for (int i=0; i<nprevs; i++) {
+      OECDataPacket* curpkt = fetchQueue[i]->pop();
+      objstream->enqueue(curpkt);
+    }
+  }
+
+  // join 
+  for (int i=0; i<nprevs; i++) {
+    fetchThreads[i].join();
+  }
+  writeThread.join();
+
+  // delete
+  for (int i=0; i<nprevs; i++) {
+    delete fetchQueue[i];
+  }
+  free(fetchQueue);
+  if (objstream) delete objstream;
+
+  // write a finish flag to local?
+  // writefinish:objname
+  redisReply* rReply;
+  redisContext* writeCtx = RedisUtil::createContext(_conf->_localIp);
+
+  string wkey = "writefinish:" + objname;
+  int tmpval = htonl(1);
+  rReply = (redisReply*)redisCommand(writeCtx, "rpush %s %b", wkey.c_str(), (char*)&tmpval, sizeof(tmpval));
+  freeReplyObject(rReply);
+  redisFree(writeCtx);
+  cout << "OECWorker::persist finishes!" << endl;
+}
+
 //void OECWorker::readFetchCompute(AGCommand* agcmd) {
 //  cout << "OECWorker::readFetchCompute" << endl;
 //  string stripename = agcmd->_stripeName;

@@ -90,6 +90,15 @@ class AGCommand {
     bool getShouldSend();
     unsigned int getSendIp();
     string getStripeName();
+    int getNum();
+    string getReadObjName();
+    vector<int> getReadCidList();
+    unordered_map<int, int> getCacheRefs();
+    int getNprevs();
+    vector<int> getPrevCids();
+    vector<unsigned int> getPrevLocs();
+    unordered_map<int, vector<int>> getCoefs();
+    string getWriteObjName();
     int getN();
     int getK();
     int getW();

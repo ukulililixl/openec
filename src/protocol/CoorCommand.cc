@@ -29,6 +29,8 @@ CoorCommand::CoorCommand(char* reqStr) {
     case 7: resolveType7(); break;
     default: break;
   }
+  _coorCmd = nullptr;
+  _cmLen = 0;
 }
 
 void CoorCommand::writeInt(int value) {

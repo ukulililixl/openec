@@ -205,6 +205,17 @@ void StripeStore::startECStripe(string stripename) {
   _lockECInProgress.unlock();
 }
 
+void StripeStore::finishECStripe(string stripename) {
+  _lockECInProgress.lock();
+  vector<string>::iterator pos = find(_ECInProgress.begin(), _ECInProgress.end(), stripename);
+  if (pos != _ECInProgress.end()) _ECInProgress.erase(pos);
+  if (_ECInProgress.size() == 0) {
+    gettimeofday(&_endEnc, NULL);
+    cout << "StripeStore::finishECStripe.encodeTime = " << RedisUtil::duration(_startEnc, _endEnc) << endl;
+  }
+  _lockECInProgress.unlock();
+}
+
 // int StripeStore::getSize() {
 //   return _ssEntryMap.size();
 // }
@@ -315,24 +326,6 @@ void StripeStore::scanRepair() {
 // }
 // 
 
-// void StripeStore::startECStripe(string stripename) {
-//   _lockECInProgress.lock();
-//   if (_ECInProgress.size() == 0) gettimeofday(&_startEnc, NULL);
-//   _ECInProgress.push_back(stripename);
-//   _lockECInProgress.unlock();
-// }
-// 
-// void StripeStore::finishECStripe(string stripename) {
-//   _lockECInProgress.lock();
-//   vector<string>::iterator pos = find(_ECInProgress.begin(), _ECInProgress.end(), stripename);
-//   if (pos != _ECInProgress.end()) _ECInProgress.erase(pos);
-//   if (_ECInProgress.size() == 0) {
-//     gettimeofday(&_endEnc, NULL);
-//     cout << "StripeStore::finishECStripe.encodeTime = " << RedisUtil::duration(_startEnc, _endEnc) << endl;
-//   }
-//   _lockECInProgress.unlock();
-// }
-// 
 // int StripeStore::getRandomInt(int size) {
 //   _lockRandom.lock();
 //   int toret = rand() % size;

@@ -21,6 +21,7 @@ class OECDataPacket {
 
     int getDatalen();
     char* getData();
+    char* getRaw();
 };
 
 #endif

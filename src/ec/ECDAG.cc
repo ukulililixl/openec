@@ -242,6 +242,7 @@ vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip,
     cmd->dump();
     toret.push_back(cmd);
   }
+  return toret;
 }
 
 void ECDAG::dump() {

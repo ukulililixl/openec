@@ -43,3 +43,7 @@ int OECDataPacket::getDatalen() {
 char* OECDataPacket::getData() {
   return _data;
 }
+
+char* OECDataPacket::getRaw() {
+  return _raw;
+}

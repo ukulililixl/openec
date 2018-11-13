@@ -93,7 +93,7 @@ class StripeStore {
     int getECInProgressNum();
     void startECStripe(string stripename);
 //    void setScan(bool status);
-//    void finishECStripe(string stripename);
+    void finishECStripe(string stripename);
 //    int getECInProgressNum();
 //    
     // repair

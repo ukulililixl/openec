@@ -104,6 +104,42 @@ string AGCommand::getStripeName() {
   return _stripeName;
 }
 
+int AGCommand::getNum() {
+  return _num;
+}
+
+string AGCommand::getReadObjName() {
+  return _readObjName;
+}
+
+vector<int> AGCommand::getReadCidList() {
+  return _readCidList;
+}
+
+unordered_map<int, int> AGCommand::getCacheRefs() {
+  return _cacheRefs;
+}
+
+int AGCommand::getNprevs() {
+  return _nprevs;
+}
+
+vector<int> AGCommand::getPrevCids() {
+  return _prevCids;
+}
+
+vector<unsigned int> AGCommand::getPrevLocs() {
+  return _prevLocs;
+}
+
+unordered_map<int, vector<int>> AGCommand::getCoefs() {
+  return _coefs;
+}
+
+string AGCommand::getWriteObjName() {
+  return _writeObjName;
+}
+
 int AGCommand::getN() {
   return _ecn;
 }

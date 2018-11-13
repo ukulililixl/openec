@@ -49,7 +49,7 @@ void Coordinator::doProcess() {
 //        case 11: reportRepaired(coorCmd); break;
 //        default: break;
       }
-
+      delete coorCmd;
     }
     // free reply object
     freeReplyObject(rReply);
@@ -383,6 +383,15 @@ void Coordinator::getLocation(CoorCommand* coorCmd) {
     } else {
       cout << "Coordinator::getLocation.ssentry for " << filename << " does not exist!!!" << endl;
     }
+  } else if (objname.find("oecstripe") != string::npos) {
+    // placement request for an oec parity object
+    assert(_stripeStore->existEntry(objname));
+    SSEntry* ssentry = _stripeStore->getEntry(objname);
+    vector<unsigned int> locs = ssentry->getObjloc();
+    toret[0] = locs[0];
+  } else {
+    vector<unsigned int> candidates = _conf->_agentsIPs;
+    toret[0] = chooseFromCandidates(candidates, "random", "other");
   }
 
   cout << "Coordinator::getLocation.return: ";
@@ -596,6 +605,16 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   redisFree(distCtx);
   
   // 9. wait for finish flag?
+  for (auto agcmd: persistCmds) {
+    unsigned int ip = agcmd->getSendIp(); 
+    redisContext* waitCtx = RedisUtil::createContext(ip);
+    string wkey = "writefinish:"+agcmd->getWriteObjName();
+    redisReply* fReply = (redisReply*)redisCommand(waitCtx, "blpop %s 0", wkey.c_str());
+    freeReplyObject(fReply);
+    redisFree(waitCtx);
+  }
+  cout << "Coordinator::offlineEnc for " << stripename << " finishes" << endl;
+  _stripeStore->finishECStripe(stripename);
   
   // free
   delete ecdag;

@@ -3,14 +3,11 @@
 
 #include "BlockingQueue.hh"
 #include "Config.hh"
+#include "FSObjInputStream.hh"
 #include "FSObjOutputStream.hh"
 #include "OECDataPacket.hh"
 //#include "ECBase.hh"
-//#include "FSObjInputStream.hh"
-//#include "FSObjOutputStream.hh"
-//#include "FSUtil.hh"
 //#include "RSCONV.hh"
-//#include "UnderFS.hh"
 //#include "Util/hdfs.h"
 
 #include "../ec/Computation.hh"
@@ -55,6 +52,34 @@ class OECWorker {
                        int ecn,
                        int eck,
                        int ecw);
+
+    // deal with coor instruction
+    void readDisk(AGCommand* agCmd);
+    void fetchCompute(AGCommand* agCmd);
+    void persist(AGCommand* agCmd);
+
+    void selectCacheWorker(BlockingQueue<OECDataPacket*>* cacheQueue,
+                           int pktnum,
+                           string keybase,
+                           int w,
+                           vector<int> idxlist,
+                           unordered_map<int, int> refs);
+    void fetchWorker(BlockingQueue<OECDataPacket*>* fetchQueue,
+                     string keybase,
+                     unsigned int loc,
+                     int num);
+    void computeWorker(BlockingQueue<OECDataPacket*>** fetchQueue,
+                       int nprev,
+                       int num,
+                       unordered_map<int, vector<int>> coefs,
+                       vector<int> cfor,
+                       BlockingQueue<OECDataPacket*>** writeQueue,
+                       int slicesize);
+    void cacheWorker(BlockingQueue<OECDataPacket*>* writeQueue,
+                     string keybase,
+                     int num,
+                     int refs);
+
 //    void offlineWrite(AGCommand* agCmd);
 //    void clientRead(AGCommand* agCmd);
 //    void readDisk(AGCommand* agCmd);
