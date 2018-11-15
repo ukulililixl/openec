@@ -34,8 +34,11 @@ class OECWorker {
     void doProcess();
     // deal with client request
     void clientWrite(AGCommand* agCmd);
+    void clientRead(AGCommand* agCmd);
     void onlineWrite(string filename, string ecid, int filesizeMB);
     void offlineWrite(string filename, string ecpoolid, int filesizeMB);
+    void readOnline(string filename, int filesizeMB);
+    void readOffline(string filename, int filesizeMB);
 
     // load data from redis
     void loadWorker(BlockingQueue<OECDataPacket*>* readQueue,
@@ -52,6 +55,14 @@ class OECWorker {
                        int ecn,
                        int eck,
                        int ecw);
+    void computeWorker(FSObjInputStream** readStreams,
+                              vector<int> idlist,
+                              BlockingQueue<OECDataPacket*>* writeQueue,
+                              vector<ECTask*> computeTasks,
+                              int stripenum,
+                              int ecn,
+                              int eck,
+                              int ecw);
 
     // deal with coor instruction
     void readDisk(AGCommand* agCmd);

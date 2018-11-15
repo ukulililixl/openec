@@ -3,17 +3,17 @@
 
 //#include "AGCommand.hh"
 #include "Config.hh"
-//#include "FSObjInputStream.hh"
-//#include "FSUtil.hh"
+#include "FSObjInputStream.hh"
 //#include "OfflineECPool.hh"
 //#include "RedisUtil.hh"
 #include "StripeStore.hh"
 //#include "SSEntry.hh"
 //#include "UnderFile.hh"
-//#include "UnderFS.hh"
 //#include "Util/hdfs.h"
 
 #include "../ec/ECDAG.hh"
+#include "../fs/FSUtil.hh"
+#include "../fs/UnderFS.hh"
 #include "../inc/include.hh"
 #include "../protocol/AGCommand.hh"
 #include "../protocol/CoorCommand.hh"
@@ -25,7 +25,7 @@ class Coordinator {
     Config* _conf;
     redisContext* _localCtx;
     StripeStore* _stripeStore;
-//    UnderFS* _underfs;
+    UnderFS* _underfs;
 
   public:
     Coordinator(Config* conf, StripeStore* ss);
@@ -38,13 +38,16 @@ class Coordinator {
     void finalizeFile(CoorCommand* coorCmd);
     void offlineEnc(CoorCommand* coorCmd);
     void setECStatus(CoorCommand* coorCmd);
+    void getFileMeta(CoorCommand* coorCmd);
 
     void registerOnlineEC(unsigned int clientIp, string filename, string ecid, int filesizeMB);
     void registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB);
     vector<unsigned int> getCandidates(vector<unsigned int> placedIp, vector<int> placedIdx, vector<int> colocWith);
     unsigned int chooseFromCandidates(vector<unsigned int> candidates, string policy, string type); // policy:random/balance; type:control/data/other
+    void onlineECInst(string filename, SSEntry* ssentry, unsigned int ip);
+    void offlineECInst(string filename, SSEntry* ssentry, unsigned int ip);
+    
 
-//    void getFileMeta(CoorCommand* coorCmd);
 //    void offlineDegraded(CoorCommand* coorCmd);
 //    void onlineDegradedUpdate(CoorCommand* coorCmd);
 //    void reportLost(CoorCommand* coorCmd);

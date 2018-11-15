@@ -10,7 +10,7 @@ using namespace std;
  * OECAgent Command format
  * agent_request: type
  *    type=0 (client write data)| filename | ecid | mode |
- *   ? type=1 (client read data) | filename |
+ *    type=1 (client read data) | filename |
  *    type=2 (read disk->memory) | read? (| objname | unitIdx | scratio | cid |)
  *    type=3 (fetch->compute->memory) | n prevs | n* (prevloc|prevkey) | m res | m * (n int) | key |
  *   ? type=4 (fetch->disk) | 
@@ -36,6 +36,9 @@ class AGCommand {
     string _ecid;  // for writing with online encoding, it refers to ecid. Other wise, it refers to ecpoolid
     string _mode;
     int _filesizeMB;
+
+    // type 1
+    // _filename
 
     // common variables for ectasks
     bool _shouldSend;
@@ -116,14 +119,16 @@ class AGCommand {
                     string ecid,
                     string mode,
                     int filesizeMB);
-     void buildType2(int type,
-                     unsigned int sendIp,
-                     string stripeName,
-                     int w,
-                     int numslices,
-                     string readObjName,
-                     vector<int> cidlist,
-                     unordered_map<int, int> ref);
+    void buildType1(int type,
+                    string filename);
+    void buildType2(int type,
+                    unsigned int sendIp,
+                    string stripeName,
+                    int w,
+                    int numslices,
+                    string readObjName,
+                    vector<int> cidlist,
+                    unordered_map<int, int> ref);
     void buildType3(int type,
                     unsigned int sendIp,
                     string stripeName,
@@ -153,6 +158,7 @@ class AGCommand {
                      int basesizeMB);
     // resolve AGCommand
     void resolveType0();
+    void resolveType1();
     void resolveType2();
     void resolveType3();
     void resolveType5();

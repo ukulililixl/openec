@@ -39,6 +39,33 @@ ECDAG* RSCONV::Encode() {
 }
 
 ECDAG* RSCONV::Decode(vector<int> from, vector<int> to) {
+  ECDAG* ecdag = new ECDAG();
+  generate_matrix(_encode_matrix, _n, _k, 8);
+  vector<int> data;
+  int _select_matrix[_k*_k];
+  for (int i=0; i<_k; i++) {
+    data.push_back(from[i]);
+    int sidx = from[i];
+    memcpy(_select_matrix + i * _k,
+           _encode_matrix + sidx * _k,
+ 	   sizeof(int) * _k);
+  }
+  int _invert_matrix[_k*_k];
+
+  jerasure_invert_matrix(_select_matrix, _invert_matrix, _k, _k); 
+  for (int i=0; i<to.size(); i++) {
+    int ridx = to[i];
+    int _select_vector[_k];
+    memcpy(_select_vector,
+           _encode_matrix + ridx * _k,
+	   _k * sizeof(int));
+    int* _coef_vector = jerasure_matrix_multiply(
+        _select_vector, _invert_matrix, 1, _k, _k, _k, 8);
+    vector<int> coef;
+    for (int i=0; i<_k; i++) coef.push_back(_coef_vector[i]);
+    ecdag->Join(ridx, data, coef);
+  }
+  return ecdag;
 }
 
 void RSCONV::Place(vector<vector<int>>& group) {

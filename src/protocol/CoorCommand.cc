@@ -25,6 +25,7 @@ CoorCommand::CoorCommand(char* reqStr) {
     case 0: resolveType0(); break;
     case 1: resolveType1(); break;
     case 2: resolveType2(); break;
+    case 3: resolveType3(); break;
     case 4: resolveType4(); break;
     case 7: resolveType7(); break;
     default: break;
@@ -177,6 +178,23 @@ void CoorCommand::resolveType2() {
   _filename = readString();
 }
 
+void CoorCommand::buildType3(int type,
+                             unsigned int ip,
+                             string filename) {
+  _type = type;
+  _clientIp = ip;
+  _filename = filename;
+
+  writeInt(_type);
+  writeInt(_clientIp);
+  writeString(_filename);
+}
+
+void CoorCommand::resolveType3() {
+  _clientIp = readInt();
+  _filename = readString();
+}
+
 void CoorCommand::buildType4(int type, unsigned int ip, string poolname, string stripename) {
   _type = type;
   _clientIp = ip;
@@ -220,6 +238,9 @@ void CoorCommand::dump() {
     cout << ", client: " << RedisUtil::ip2Str(_clientIp)
          << ", filename: " << _filename << ", numOfReplicas: " << _numOfReplicas << endl;
   } else if (_type == 2) {
+    cout << ", client: " << RedisUtil::ip2Str(_clientIp)
+         << ", filename: " << _filename << endl;
+  } else if (_type == 3) {
     cout << ", client: " << RedisUtil::ip2Str(_clientIp)
          << ", filename: " << _filename << endl;
   } else if (_type == 4) {

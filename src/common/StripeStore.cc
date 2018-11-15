@@ -267,6 +267,25 @@ void StripeStore::finishECStripe(string stripename) {
 //   return toret;
 // }
 // 
+
+void StripeStore::addLostObj(string objname) {
+  // check whether objname is in _RPInProgress
+  bool inrepair = false;
+  _lockRPInProgress.lock();
+  if (find(_RPInProgress.begin(), _RPInProgress.end(), objname) != _RPInProgress.end()) {
+    inrepair = true;
+  }
+  _lockRPInProgress.unlock();
+  if (inrepair) return;
+  _lockLostMap.lock();
+  if (_lostMap.find(objname) == _lostMap.end()) {
+    _lostMap.insert(make_pair(objname, 1));
+  } else {
+    _lostMap[objname]++;
+  }
+  _lockLostMap.unlock();
+}
+
 void StripeStore::scanRepair() {
 //   int concurrentNum = _conf->_ec_concurrent;
   while (true) {

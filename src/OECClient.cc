@@ -1,7 +1,7 @@
 #include "common/Config.hh"
+#include "common/OECInputStream.hh"
 #include "common/OECOutputStream.hh"
 #include "protocol/CoorCommand.hh"
-//#include "OECInputStream.hh"
 
 #include "inc/include.hh"
 #include "util/RedisUtil.hh"
@@ -15,24 +15,24 @@ void usage() {
   cout << "       ./OECClient startRepair" << endl;
 }
 
-// void read(string filename, string saveas) {
-// 
-//   string confpath("./conf/sysSetting.xml");
-//   Config* conf = new Config(confpath);
-// 
-//   struct timeval time1, time2;
-//   gettimeofday(&time1, NULL);
-//   // 0. create OECInputStream and init
-//   OECInputStream* instream = new OECInputStream(conf, filename);
-//   instream->output2file(saveas);
-//   instream->close();
-// 
-//   gettimeofday(&time2, NULL);
-//   cout << "overall.read.duration: " << RedisUtil::duration(time1, time2)<< endl;
-// 
-//   delete instream;
-//   delete conf;
-// }
+void read(string filename, string saveas) {
+
+  string confpath("./conf/sysSetting.xml");
+  Config* conf = new Config(confpath);
+
+  struct timeval time1, time2;
+  gettimeofday(&time1, NULL);
+  // 0. create OECInputStream and init
+  OECInputStream* instream = new OECInputStream(conf, filename);
+  instream->output2file(saveas);
+  instream->close();
+
+  gettimeofday(&time2, NULL);
+  cout << "overall.read.duration: " << RedisUtil::duration(time1, time2)<< endl;
+
+  delete instream;
+  delete conf;
+}
  
 void write(string inputname, string filename, string ecidpool, string encodemode, int sizeinMB) {
    string confpath("./conf/sysSetting.xml");
@@ -105,13 +105,13 @@ int main(int argc, char** argv) {
       return -1;
     }   
   } else if (reqType == "read") {
-//    if (argc != 4) {
-//      usage();
-//      return -1;
-//    }
-//    string filename(argv[2]);
-//    string saveas(argv[3]);
-//    read(filename, saveas);
+    if (argc != 4) {
+      usage();
+      return -1;
+    }
+    string filename(argv[2]);
+    string saveas(argv[3]);
+    read(filename, saveas);
   } else if (reqType == "startEncode") {
     string confpath("./conf/sysSetting.xml");
     Config* conf = new Config(confpath);    

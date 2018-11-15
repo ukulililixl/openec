@@ -12,7 +12,7 @@ using namespace std;
  *   type = 0: clientip | filename | ecid | mode | filesizeMB |
  *   type = 1: clientip | objname |
  *   type = 2: clientip | filename |
- *  ? type = 3: clientip | filename | get redundancyType, filesize, ecid|
+ *   type = 3: clientip | filename | get redundancyType, filesize, ecid|
  *   type = 4: clientip | poolname | stripename |
  *  ? type = 5: clientip | filename | poolname | stripename |
  *  ? type = 6: clientip | filename |   // report lost
@@ -87,6 +87,9 @@ class CoorCommand {
     void buildType2(int type,
                     unsigned int ip,
                     string filename);
+    void buildType3(int type,
+                    unsigned int ip,
+                    string filename);
     void buildType4(int type,
                     unsigned int ip,
                     string poolname,
@@ -98,6 +101,7 @@ class CoorCommand {
     void resolveType0();
     void resolveType1();
     void resolveType2();
+    void resolveType3();
     void resolveType4();
     void resolveType7();
 

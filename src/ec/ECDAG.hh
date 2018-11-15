@@ -34,6 +34,7 @@ class ECDAG {
     vector<int> toposort();
     ECNode* getNode(int cidx);
     vector<int> getHeaders();
+    vector<int> getLeaves();
 
     // parse cmd
     vector<AGCommand*> parseForOEC(unordered_map<int, unsigned int> cid2ip,

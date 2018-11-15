@@ -23,6 +23,7 @@ AGCommand::AGCommand(char* reqStr) {
 
   switch(_type) {
     case 0: resolveType0(); break;
+    case 1: resolveType1(); break;
     case 2: resolveType2(); break;
     case 3: resolveType3(); break;
     case 5: resolveType5(); break;
@@ -208,6 +209,19 @@ void AGCommand::resolveType0() {
   _mode = readString();
   // 5. filesizeMB
   _filesizeMB = readInt();
+}
+
+void AGCommand::buildType1(int type,
+                           string filename) {
+  _type = type;
+  _filename = filename;
+
+  writeInt(_type);
+  writeString(_filename);
+}
+
+void AGCommand::resolveType1() {
+  _filename = readString();
 }
 
 void AGCommand::buildType2(int type,

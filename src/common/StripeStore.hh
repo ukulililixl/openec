@@ -43,12 +43,12 @@ class StripeStore {
     mutex _lockPECQueue;
     vector<string> _ECInProgress;
     mutex _lockECInProgress;
-//    unordered_map<string, int> _lostMap;
-//    mutex _lockLostMap;
-//    vector<string> _RPInProgress;
-//    mutex _lockRPInProgress;
-//
-//    mutex _lockRandom;
+    unordered_map<string, int> _lostMap;
+    mutex _lockLostMap;
+    vector<string> _RPInProgress;
+    mutex _lockRPInProgress;
+
+    mutex _lockRandom;
 
     // offline encoding
     bool _enableScan;
@@ -77,8 +77,6 @@ class StripeStore {
     int getEncodeLoad(unsigned int ip);
 
 //    bool poolExists(string poolname);
-//    OfflineECPool* getECPool(string poolname, ECPolicy* ecpolicy);
-//    OfflineECPool* getECPool(string poolname);
 //    void addECPool(OfflineECPool* ecpool);
 //    void addToECQueue(string poolname, string stripename);
 //    int getRandomInt(int size);
@@ -98,6 +96,7 @@ class StripeStore {
 //    
     // repair
     void scanRepair();
+    void addLostObj(string objname);
 //    void addToLostMap(string objname);
 //    void setRepair(bool status);
 //    void startRepair(string objname);

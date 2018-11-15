@@ -9,7 +9,7 @@ Coordinator::Coordinator(Config* conf, StripeStore* ss) : _conf(conf) {
     cerr << "initializing redis context to " << " error" << endl;
   }
   _stripeStore = ss;
-//  _underfs = FSUtil::createFS(_conf->_fsType, _conf->_fsFactory[_conf->_fsType], _conf);
+  _underfs = FSUtil::createFS(_conf->_fsType, _conf->_fsFactory[_conf->_fsType], _conf);
   srand((unsigned)time(0));
 }
 
@@ -37,12 +37,11 @@ void Coordinator::doProcess() {
         case 0: registerFile(coorCmd); break;
         case 1: getLocation(coorCmd); break;
         case 2: finalizeFile(coorCmd); break;
+        case 3: getFileMeta(coorCmd); break;
         case 4: offlineEnc(coorCmd); break;
         case 7: setECStatus(coorCmd); break;
-//        case 3: getFileMeta(coorCmd); break;
 //        case 5: offlineDegraded(coorCmd); break;
 //        case 6: reportLost(coorCmd); break;
-//        case 7: enableEncoding(coorCmd); break;
 //        case 8: repairReqFromSS(coorCmd); break;
 //        case 9: enableRepair(coorCmd); break;
 //        case 10: onlineDegradedUpdate(coorCmd); break;
@@ -630,11 +629,195 @@ void Coordinator::setECStatus(CoorCommand* coorCmd) {
   _stripeStore->setECStatus(op, ectype);
 }
 
+void Coordinator::getFileMeta(CoorCommand* coorCmd) {
+  string filename = coorCmd->getFilename();
+  unsigned int clientip = coorCmd->getClientip();
+
+  // 0. getssentry
+  SSEntry* ssentry = _stripeStore->getEntry(filename);
+  assert(ssentry != NULL);
+  int redundancy = ssentry->getType();
+  int filesizeMB = ssentry->getFilesizeMB();
+  // 1. return type, filesizeMB
+  char* filemeta = (char*)calloc(1024,sizeof(char));
+  int metaoff = 0;
+  // 1.1 redundancy type
+  int tmpr = htonl(redundancy);
+  memcpy(filemeta + metaoff, (char*)&tmpr, 4); metaoff += 4;
+  // 1.2 filesizeMB
+  int tmpsize = htonl(filesizeMB);
+  memcpy(filemeta + metaoff, (char*)&tmpsize, 4); metaoff += 4;
+  // 3. send to clientip
+  string key = "filemeta:"+filename;
+  redisContext* sendCtx = RedisUtil::createContext(clientip);
+  redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", key.c_str(), filemeta, metaoff);
+  freeReplyObject(rReply);
+  redisFree(sendCtx);
+  
+  // free
+  if (filemeta) free(filemeta);
+
+  if (redundancy == 0) onlineECInst(filename, ssentry, clientip);
+  else offlineECInst(filename, ssentry, clientip);
+}
+
+void Coordinator::offlineECInst(string filename, SSEntry* ssentry, unsigned int ip) {
+  // |objnum|
+  // for each object: |integrity = 1| -> read from DSS
+  //                  |integrity = 0|
+  // 1. instruction 
+  char* instruction = (char*)calloc(2014, sizeof(char));
+  int offset = 0;
+
+  // 2. check integrity
+  string ecpoolid = ssentry->getEcidpool();
+  int filesizeMB = ssentry->getFileSizeMB();
+  OffineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
+  ECPolicy* ecpolicy = ecpool->getEcpolicy();
+
+  vector<string> objlist = ssentry->getObjlist();
+  vector<int> integrity;
+  for (int i=0; i<objlist; i++) {
+    string objname = objlist[i];
+    FSObjInputStream* objstream = new FSObjInputStream(_conf, objname, _underfs);
+    if (objstreams[i]->exist()) integrity.push_back(1);
+    else {
+      integrity.push_back(0);
+      _stripeStore->addLostObj(objname);
+    }
+  }
+  
+
+  // delete
+  if (instruction) free(instruction);
+  
+}
+
+void Coordinator::onlineECInst(string filename, SSEntry* ssentry, unsigned int ip) {
+  // ecn|eck|ecw|loadn|loadidx|computen|computetasks|
+  // 1. create filemeta
+  char* instruction = (char*)calloc(1024,sizeof(char));
+  int offset = 0; 
+
+  string ecid = ssentry->getEcidpool();
+  int filesizeMB = ssentry->getFilesizeMB();
+   
+  ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];
+  ECBase* ec = ecpolicy->createECClass();
+  int ecn = ecpolicy->getN();
+  int eck = ecpolicy->getK();
+  int ecw = ecpolicy->getW();
+
+  int tmpn = htonl(ecn);
+  memcpy(instruction + offset, (char*)&tmpn, 4); offset += 4;
+  int tmpk = htonl(eck);
+  memcpy(instruction + offset, (char*)&tmpk, 4); offset += 4;
+  int tmpw = htonl(ecw);
+  memcpy(instruction + offset, (char*)&tmpw, 4); offset += 4;
+  
+  // 2. check integrity
+  vector<int> integrity;
+  FSObjInputStream** objstreams = (FSObjInputStream**)calloc(ecn, sizeof(FSObjInputStream*));
+  int streamidx = 0;
+  bool needRecovery = false;
+  for (int i=0; i<ecn; i++) {
+    string objname = filename+"_oecobj_"+to_string(i);
+    objstreams[i] = new FSObjInputStream(_conf, objname, _underfs);
+    if (objstreams[i]->exist()) integrity.push_back(1);
+    else {
+      integrity.push_back(0);
+      _stripeStore->addLostObj(objname);
+      needRecovery = true;
+    }
+  }
+
+  int loadn, computen;
+  vector<ECTask*> computetasks;
+
+  if (!needRecovery) {
+    // return loadn=4|0 1 2 3 ...|computen=0|cachen=4|
+    loadn = eck;
+    int tmploadn = htonl(loadn);
+    memcpy(instruction + offset, (char*)&tmploadn, 4); offset += 4;
+    for (int i=0; i<loadn; i++) {
+      int tmpi = htonl(i);
+      memcpy(instruction + offset, (char*)&tmpi, 4); offset += 4;
+    }
+    
+    computen = 0;
+    int tmpcomputen = htonl(computen);
+    memcpy(instruction + offset, (char*)&tmpcomputen, 4); offset += 4;
+  } else {
+    // return loadn=?|loadidx...|computen|compute tasks|
+    // first check integrity vector to prepare avail and toret
+    vector<int> availcidx;
+    vector<int> toreccidx;
+    for (int i=0; i<eck; i++) {
+      if (integrity[i] == 1) {
+        for (int j=0; j<ecw; j++) availcidx.push_back(i * ecw + j);
+      } else {
+        for (int j=0; j<ecw; j++) toreccidx.push_back(i * ecw + j);
+      }
+    }
+    for (int i=eck; i<ecn; i++) {
+      if (integrity[i] == 1) {
+        for (int j=0; j<ecw; j++) availcidx.push_back(i * ecw + j);
+      }
+    }
+    // obtain decode ecdag
+    ECDAG* ecdag = ec->Decode(availcidx, toreccidx);
+    vector<int> toposeq = ecdag->toposort();
+    cout << "toposeq: ";
+    for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
+    cout << endl;
+    
+    // prepare for load tasks
+    vector<int> leaves = ecdag->getLeaves();
+    vector<int> loadidx;
+    for (int i=0; i<leaves.size(); i++) {
+      int sidx = leaves[i]/ecw;
+      if (find(loadidx.begin(), loadidx.end(), sidx) == loadidx.end()) loadidx.push_back(sidx);
+    }
+    // loadn
+    loadn = loadidx.size();
+    int tmploadn = htonl(loadn);
+    memcpy(instruction + offset, (char*)&tmploadn, 4); offset += 4;
+    for (int i=0; i<loadn; i++) {
+      int tmpidx = htonl(loadidx[i]);
+      memcpy(instruction + offset, (char*)&tmpidx, 4); offset += 4;
+    }
+
+    // prepare for compute tasks 
+    for (int i=0; i<toposeq.size(); i++) {
+      ECNode* curnode = ecdag->getNode(toposeq[i]);
+      curnode->parseForClient(computetasks);
+    }
+    for (int i=0; i<computetasks.size(); i++) computetasks[i]->dump();
+    computen = computetasks.size();
+    int tmpcomputen = htonl(computen);
+    memcpy(instruction + offset, (char*)&tmpcomputen, 4); offset += 4;
+  }
+
+  string key = "onlineinst:"+filename;
+  redisContext* sendCtx = RedisUtil::createContext(ip);
+  redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", key.c_str(), instruction, offset);
+  freeReplyObject(rReply);
+  redisFree(sendCtx);
+
+  // send compute tasks
+  for (int i=0; i<computetasks.size(); i++) {
+    ECTask* curcompute = computetasks[i];
+    curcompute->buildType2();
+    string key = "compute:"+filename+":"+to_string(i);
+    curcompute->sendTo(key, ip);
+  }
+
+  if (instruction) free(instruction);
+  for (int i=0; i<ecn; i++) delete objstreams[i];
+  if (objstreams) free(objstreams);
+}
+
 //void Coordinator::getFileMeta(CoorCommand* coorCmd) {
-//  cout << "Coordinator::getFileMeta.filename = " << coorCmd->_filename <<endl;
-//  
-//  string filename = coorCmd->_filename;
-//  unsigned int clientip = coorCmd->_clientIp;
 //
 //  // 0. get ssentry
 //  SSEntry* ssentry = _stripeStore->getEntry(filename);

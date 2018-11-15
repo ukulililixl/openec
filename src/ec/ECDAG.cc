@@ -198,6 +198,17 @@ vector<int> ECDAG::getHeaders() {
   return _ecHeaders;
 }
 
+vector<int> ECDAG::getLeaves() {
+  vector<int> toret;
+  for (auto item: _ecNodeMap) {
+    int idx = item.first;
+    ECNode* node = item.second;
+    if (node->getChildNum() == 0) toret.push_back(idx);
+  }
+  sort(toret.begin(), toret.end());
+  return toret;
+}
+
 vector<AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
                                       string stripename, 
                                       int n, int k, int w, int num,
