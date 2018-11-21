@@ -14,6 +14,7 @@ using namespace std;
  *   type = 2: clientip | filename |
  *   type = 3: clientip | filename | get redundancyType, filesize, ecid|
  *   type = 4: clientip | poolname | stripename |
+ *   type = 5: clientip | objname // offline degraded for object
  *  ? type = 5: clientip | filename | poolname | stripename |
  *  ? type = 6: clientip | filename |   // report lost
  *   type = 7:  0 (disable)/ 1 (enable) | encode/repair
@@ -45,6 +46,9 @@ class CoorCommand {
     // client ip
     string _ecpoolid;
     string _stripename;
+
+    // type 5
+    // _filename
 
     // type 7
     int _op; // enable/disable
@@ -94,6 +98,9 @@ class CoorCommand {
                     unsigned int ip,
                     string poolname,
                     string stripename);
+    void buildType5(int type,
+                    unsigned int ip,
+                    string objname);
     void buildType7(int type,
                     int op,
                     string ectype);
@@ -103,6 +110,7 @@ class CoorCommand {
     void resolveType2();
     void resolveType3();
     void resolveType4();
+    void resolveType5();
     void resolveType7();
 
     // for debug

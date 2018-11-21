@@ -37,3 +37,7 @@ int ECPolicy::getW() {
 bool ECPolicy::getLocality() {
   return _locality;
 }
+
+int ECPolicy::getOpt() {
+  return _opt;
+}

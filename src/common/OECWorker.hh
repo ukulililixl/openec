@@ -63,6 +63,15 @@ class OECWorker {
                               int ecn,
                               int eck,
                               int ecw);
+    void computeWorkerDegradedOffline(FSObjInputStream** readStreams,
+                                      vector<int> idlist,
+                                      BlockingQueue<OECDataPacket*>* writeQueue,
+                                      int lostidx,
+                                      vector<ECTask*> computeTasks,
+                                      int stripenum,
+                                      int ecn,
+                                      int eck,
+                                      int ecw);
 
     // deal with coor instruction
     void readDisk(AGCommand* agCmd);
@@ -90,6 +99,11 @@ class OECWorker {
                      string keybase,
                      int num,
                      int refs);
+    void cacheWorker(BlockingQueue<OECDataPacket*>* writeQueue,
+                     string keybase,
+                     int startidx,
+                     int num,
+                    int refs);
 
 //    void offlineWrite(AGCommand* agCmd);
 //    void clientRead(AGCommand* agCmd);

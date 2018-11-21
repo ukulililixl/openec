@@ -159,7 +159,7 @@ Config::Config(std::string& filepath) {
          std::string localitystr = curele->GetText();
          if (localitystr == "true") locality=true;
          // opt level
-         int optlevel = 0; // by default we enable Bind as optimization
+         int optlevel = -1; // by default we enable Bind as optimization
          if (curele->NextSiblingElement("opt")) {
            curele = curele->NextSiblingElement("opt");
            optlevel = std::stoi(curele->GetText());

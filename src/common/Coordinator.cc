@@ -39,6 +39,7 @@ void Coordinator::doProcess() {
         case 2: finalizeFile(coorCmd); break;
         case 3: getFileMeta(coorCmd); break;
         case 4: offlineEnc(coorCmd); break;
+        case 5: offlineDegradedInst(coorCmd); break;
         case 7: setECStatus(coorCmd); break;
 //        case 5: offlineDegraded(coorCmd); break;
 //        case 6: reportLost(coorCmd); break;
@@ -671,26 +672,43 @@ void Coordinator::offlineECInst(string filename, SSEntry* ssentry, unsigned int 
 
   // 2. check integrity
   string ecpoolid = ssentry->getEcidpool();
-  int filesizeMB = ssentry->getFileSizeMB();
-  OffineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
+  int filesizeMB = ssentry->getFilesizeMB();
+  OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
   ECPolicy* ecpolicy = ecpool->getEcpolicy();
 
   vector<string> objlist = ssentry->getObjlist();
   vector<int> integrity;
-  for (int i=0; i<objlist; i++) {
+  FSObjInputStream** objstreams = (FSObjInputStream**)calloc(objlist.size(), sizeof(FSObjInputStream*));
+  for (int i=0; i<objlist.size(); i++) {
     string objname = objlist[i];
-    FSObjInputStream* objstream = new FSObjInputStream(_conf, objname, _underfs);
+    objstreams[i] = new FSObjInputStream(_conf, objname, _underfs);
     if (objstreams[i]->exist()) integrity.push_back(1);
     else {
       integrity.push_back(0);
       _stripeStore->addLostObj(objname);
     }
   }
-  
+ 
+  // 3.1 num of object
+  int tmpobjnum = htonl(objlist.size());
+  memcpy(instruction + offset, (char*)&tmpobjnum, 4); offset += 4;
+  // 3.2 integirity for each object
+  for (int i=0; i<objlist.size(); i++) {
+    int tmpintegrity = htonl(integrity[i]);
+    memcpy(instruction + offset, (char*)&tmpintegrity, 4); offset += 4;
+  }
+
+  // 3. send to client
+  string key = "offlineinst:"+filename;
+  redisContext* sendCtx = RedisUtil::createContext(ip);
+  redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", key.c_str(), instruction, offset);
+  freeReplyObject(rReply);
+  redisFree(sendCtx);
 
   // delete
+  for (int i=0; i<objlist.size(); i++) delete objstreams[i];
+  if (objstreams) free(objstreams);
   if (instruction) free(instruction);
-  
 }
 
 void Coordinator::onlineECInst(string filename, SSEntry* ssentry, unsigned int ip) {
@@ -817,6 +835,482 @@ void Coordinator::onlineECInst(string filename, SSEntry* ssentry, unsigned int i
   if (objstreams) free(objstreams);
 }
 
+void Coordinator::offlineDegradedInst(CoorCommand* coorCmd) {
+  unsigned int clientIp = coorCmd->getClientip();
+  string lostobj = coorCmd->getFilename();
+  _stripeStore->addLostObj(lostobj);
+
+  // 1. given lostobj, find SSEntry and figure out opt version
+  SSEntry* ssentry = _stripeStore->getEntryFromObj(lostobj);
+  string ecpoolid = ssentry->getEcidpool();
+  OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
+  ECPolicy* ecpolicy = ecpool->getEcpolicy();  
+  int opt = ecpolicy->getOpt();
+
+  if (opt < 0) {
+    nonOptOfflineDegrade(lostobj, clientIp, ecpool, ecpolicy); 
+    // 2. if opt version < 0, apply non-optimized degraded read
+    // 2.1 in this case, we need ecdag, toposort and parseForClient
+    // 2.2 we need object name and index that needs to be read from DSS
+    // 2.3 we need lostidx computetasks n, k, w to compute lost pkt
+    // return: lostidx|n|k|w|loadn|objname-objidx|objname-objidx|..|computen|computetasks|
+  } else {
+    optOfflineDegrade(lostobj, clientIp, ecpool, ecpolicy);
+    // 3. if opt version >=0, apply optimized degraded read
+    // 3.1 in this case, we need ecdag, toposort and parseForOEC, which requires cid2ip, stripename, n,k,w,pktnum,objlist
+    // after we create commands, we send these commands to corresponding Agenst
+    // we only need to tell client where to fetch and key to fetch
+    // return: num|key-ip|key-ip|..|
+  }
+}
+
+void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy) {
+  // return |opt|stripename|num|key-ip|key-ip|...|
+  cout << "Coordinator::nonOptOfflineDegrade" << endl;
+  int opt = ecpolicy->getOpt();  
+
+  // 0. create ec instances
+  ECBase* ec = ecpolicy->createECClass();
+
+  // 1, get stripeobjs for lostobj to figure out lostidx
+  string stripename = ecpool->getStripeForObj(lostobj);
+  vector<string> stripeobjs = ecpool->getStripeObjList(stripename);
+  int lostidx;
+  vector<int> integrity;
+  for (int i=0; i<stripeobjs.size(); i++) {
+    if (lostobj == stripeobjs[i]) {
+      integrity.push_back(0);
+      lostidx = i;
+    } else {
+      integrity.push_back(1);
+    }
+  }
+
+  // prepare availcidx and toreccidx
+  int ecn = ecpolicy->getN();
+  int eck = ecpolicy->getK();
+  int ecw = ecpolicy->getW();
+  bool locality = ecpolicy->getLocality();
+  vector<int> availcidx;
+  vector<int> toreccidx;
+  for (int i=0; i<ecn; i++) {
+    if (i == lostidx) {
+      for (int j=0; j<ecw; j++) toreccidx.push_back(i*ecw+j);
+    } else {
+      for (int j=0; j<ecw; j++) availcidx.push_back(i*ecw+j);
+    }
+  }
+
+  // create ecdag
+  ECDAG* ecdag = ec->Decode(availcidx, toreccidx);
+  vector<int> toposeq = ecdag->toposort();
+
+  // prepare sid2ip, for cip2ip
+  // prepare stripeips for client info
+  unordered_map<int, unsigned int> sid2ip;
+  unordered_map<int, pair<string, unsigned int>> objlist;
+  vector<unsigned int> stripeips;
+  for (int i=0; i<stripeobjs.size(); i++) {
+    int sid = i;
+    string objname = stripeobjs[i];
+    SSEntry* ssentry = _stripeStore->getEntryFromObj(objname); 
+    unsigned int loc;
+    if (integrity[i] == 1) loc = ssentry->getLocOfObj(objname);
+    else loc=clientIp;
+    pair<string, unsigned int> curpair = make_pair(objname, loc);
+
+    objlist.insert(make_pair(sid, curpair));
+    sid2ip.insert(make_pair(sid, loc));
+    stripeips.push_back(loc);
+//    stripeplaced.push_back(i);
+  }
+
+  // prepare cid2ip, for parseForOEC
+  unordered_map<int, unsigned int> cid2ip;
+  for (int i=0; i<toposeq.size(); i++) {
+    int cidx = toposeq[i];
+    ECNode* node = ecdag->getNode(cidx);
+    vector<unsigned int> candidates = node->candidateIps(sid2ip, cid2ip, _conf->_agentsIPs, ecn, eck, ecw, locality);
+    // choose from candidates
+    unsigned int curip = chooseFromCandidates(candidates, _conf->_control_policy, "control");
+    cid2ip.insert(make_pair(cidx, curip));
+  }
+
+  // prepare pktnum for parseForOEC
+  int basesizeMB = ecpool->getBasesize();
+  int pktnum = basesizeMB * 1048576/_conf->_pktSize;
+
+  // 6. parse for oec
+  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+  for (auto item: agCmds) item->dump();
+
+  // 7. figure out roots and their ip
+  vector<int> headers = ecdag->getHeaders();
+  sort(headers.begin(), headers.end());
+  int numblks = headers.size()/ecw; 
+  // there should only be one blk for offline degraded read
+  assert(numblks == 1);
+  vector<pair<int, unsigned int>> rootinfo;
+  for (int i=0; i<headers.size(); i++) {
+    int cid = headers[i];
+    int sid = cid/ecw;
+    unsigned int loc = stripeips[sid];
+    pair<int, unsigned int> curpair = make_pair(cid, loc);
+    rootinfo.push_back(curpair);
+  }
+   
+  // 8. send info to client
+  char* instruction = (char*)calloc(1024,sizeof(char));
+  int offset = 0; 
+
+  // return |opt|stripename|num|key-ip|key-ip|...|
+  int tmpopt = htonl(opt);
+  memcpy(instruction + offset, (char*)&tmpopt, 4); offset += 4;
+  int tmpstripenamelen = htonl(stripename.length());
+  memcpy(instruction + offset, (char*)&tmpstripenamelen, 4); offset += 4;
+  memcpy(instruction + offset, stripename.c_str(), stripename.length()); offset += stripename.length();
+  int tmpnum = htonl(numblks);
+  memcpy(instruction + offset, (char*)&tmpnum, 4); offset += 4;
+  for (int i=0; i<numblks; i++) {
+    pair<int, unsigned int> curpair = rootinfo[i];
+    int tmpcidx = htonl(curpair.first);
+    unsigned int tmpip = htonl(curpair.second);
+    memcpy(instruction + offset, (char*)&tmpcidx, 4); offset += 4;
+    memcpy(instruction + offset, (char*)&tmpip, 4); offset += 4;
+  }
+
+  // send instruction back to client agent
+  string key = "offlinedegradedinst:"+lostobj;
+  redisContext* sendCtx = RedisUtil::createContext(clientIp);
+  redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", key.c_str(), instruction, offset);
+  freeReplyObject(rReply);
+  redisFree(sendCtx);
+   
+  // send commands to cmddistributor
+  vector<char*> todelete;
+  redisContext* distCtx = RedisUtil::createContext(_conf->_coorIp);
+
+  redisAppendCommand(distCtx, "MULTI");
+  for (auto agcmd: agCmds) {
+    unsigned int ip = agcmd->getSendIp();
+    ip = htonl(ip);
+    if (agcmd->getShouldSend()) {
+      char* cmdstr = agcmd->getCmd();
+      int cmLen = agcmd->getCmdLen();
+      char* todist = (char*)calloc(cmLen + 4, sizeof(char));
+      memcpy(todist, (char*)&ip, 4);
+      memcpy(todist+4, cmdstr, cmLen); 
+      todelete.push_back(todist);
+      redisAppendCommand(distCtx, "RPUSH dist_request %b", todist, cmLen+4);
+    }
+  }
+  redisAppendCommand(distCtx, "EXEC");
+
+  redisReply* distReply;
+  redisGetReply(distCtx, (void **)&distReply);
+  freeReplyObject(distReply);
+  for (auto item: todelete) {
+    redisGetReply(distCtx, (void **)&distReply);
+    freeReplyObject(distReply);
+  }
+  redisGetReply(distCtx, (void **)&distReply);
+  freeReplyObject(distReply);
+  redisFree(distCtx);
+  
+
+  // delete
+  delete ecdag;
+  delete ec;
+  for (auto item: agCmds) delete item;
+  for (auto item: todelete) free(item);
+}
+
+void Coordinator::nonOptOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy) {
+  cout << "Coordinator::nonOptOfflineDegrade" << endl;
+  int opt = ecpolicy->getOpt(); 
+  // 0, create ec instance
+  ECBase* ec = ecpolicy->createECClass();
+
+  // 1, get stripeobjs for lostobj to figure out lostidx
+  string stripename = ecpool->getStripeForObj(lostobj);
+  vector<string> stripeobjs = ecpool->getStripeObjList(stripename);
+  int lostidx;
+  vector<int> integrity;
+  for (int i=0; i<stripeobjs.size(); i++) {
+    if (lostobj == stripeobjs[i]) {
+      integrity.push_back(0);
+      lostidx = i;
+    } else {
+      integrity.push_back(1);
+    }
+  }
+  cout << "Coordinator::nonOptOfflineDegrade.lostidx = " << lostidx << endl;
+
+  // 2. we need n, k, w to obtain availcidx and toreccidx
+  int ecn = ecpolicy->getN();
+  int eck = ecpolicy->getK();
+  int ecw = ecpolicy->getW();
+  vector<int> availcidx;
+  vector<int> toreccidx;
+  for (int i=0; i<ecn; i++) {
+    if (i == lostidx) {
+      for (int j=0; j<ecw; j++) toreccidx.push_back(i*ecw+j);
+    } else {
+      for (int j=0; j<ecw; j++) availcidx.push_back(i*ecw+j);
+    }
+  }
+
+  // need availcidx and toreccidx
+  ECDAG* ecdag = ec->Decode(availcidx, toreccidx);
+  vector<int> toposeq = ecdag->toposort();
+ 
+  // obtain information for source objs
+  vector<int> leaves = ecdag->getLeaves();
+  vector<int> loadidx;
+  vector<string> loadobjs;
+  for (int i=0; i<leaves.size(); i++) {
+    int sidx = leaves[i]/ecw;
+    if (find(loadidx.begin(), loadidx.end(), sidx) == loadidx.end()) { 
+      loadidx.push_back(sidx);
+      loadobjs.push_back(stripeobjs[sidx]);
+    }
+  }
+  // obtain computetask
+  vector<ECTask*> computetasks;
+  for (int i=0; i<toposeq.size(); i++) {
+    ECNode* curnode = ecdag->getNode(toposeq[i]);
+    curnode->parseForClient(computetasks);
+  }
+  for (int i=0; i<computetasks.size(); i++) computetasks[i]->dump();
+
+  char* instruction = (char*)calloc(1024,sizeof(char));
+  int offset = 0; 
+
+  // we need to return 
+  // |opt|lostidx|ecn|eck|ecw|loadn|loadidx-objname|..|computen|computetask|..|
+  int tmpopt = htonl(opt);
+  memcpy(instruction + offset, (char*)&tmpopt, 4); offset += 4;
+  int tmplostidx = htonl(lostidx);
+  memcpy(instruction + offset, (char*)&tmplostidx, 4); offset += 4;
+  int tmpecn = htonl(ecn);
+  memcpy(instruction + offset, (char*)&tmpecn, 4); offset += 4;
+  int tmpeck = htonl(eck);
+  memcpy(instruction + offset, (char*)&tmpeck, 4); offset += 4;
+  int tmpecw = htonl(ecw);
+  memcpy(instruction + offset, (char*)&tmpecw, 4); offset += 4;
+  int tmploadn = htonl(loadidx.size());
+  memcpy(instruction + offset, (char*)&tmploadn, 4); offset += 4;
+  for (int i=0; i<loadidx.size(); i++) {
+    int tmpidx = htonl(loadidx[i]);
+    memcpy(instruction + offset, (char*)&tmpidx, 4); offset += 4;
+    // objname
+    string loadobjname = loadobjs[i];
+    int len = loadobjname.size();
+    int tmpobjlen = htonl(len);
+    memcpy(instruction + offset, (char*)&tmpobjlen, 4); offset += 4;
+    memcpy(instruction + offset, loadobjname.c_str(), len); offset += len;
+  }
+  int computen = computetasks.size();
+  int tmpcomputen = htonl(computen);
+  memcpy(instruction + offset, (char*)&tmpcomputen, 4); offset += 4;
+ 
+  // first send out info without compute
+  string key = "offlinedegradedinst:"+lostobj;
+  redisContext* sendCtx = RedisUtil::createContext(clientIp);
+  redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", key.c_str(), instruction, offset);
+  freeReplyObject(rReply);
+  redisFree(sendCtx);
+
+  // then send out computetasks
+  for (int i=0; i<computetasks.size(); i++) {
+    ECTask* curcompute = computetasks[i];
+    curcompute->buildType2();
+    string key = "compute:"+lostobj+":"+to_string(i);
+    curcompute->sendTo(key, clientIp);
+  }
+
+  // free
+  for (auto task: computetasks) delete task;
+  delete ecdag;
+  delete ec;
+  free(instruction);
+}
+
+//void Coordinator::offlineDegradedInst(CoorCommand* coorCmd) {
+//  char* instruction = (char*)calloc(1024,sizeof(char));
+//  int offset = 0; 
+//
+//  unsigned int clientIp = coorCmd->getClientip();
+//  string objname = coorCmd->getFilename();
+//  cout << "Coordinator::offlineDegradedInst.objname = " << objname << ", clientIp = " << RedisUtil::ip2Str(clientIp) << endl;
+//  _stripeStore->addLostObj(objname);
+//
+//  cout << "Coordinator::offlineDegradedInst.ecpoolid = " << ecpoolid << endl;
+//  // 1.3 ecbase
+//  ECBase* ec = ecpolicy->createECClass();
+//  // 1.4 ec parameters
+//  int ecn = ecpolicy->getN();
+//  int eck = ecpolicy->getK();
+//  int ecw = ecpolicy->getW();
+//  bool locality = ecpolicy->getLocality();
+//
+//  string stripename = ecpool->getStripeForObj(objname);
+//  vector<string> stripeobjs = ecpool->getStripeObjList(stripename);
+//  cout << "Coordinator::offlineDegradedInst.stripeobjs: ";
+//  for (int i=0; i<stripeobjs.size(); i++) cout << stripeobjs[i] << " ";
+//  cout << endl;
+//
+//  // 3. figure out corrupted index 
+//  int corruptsidx;
+//  vector<int> integrity;
+//  // stripeidx->{objname, location}
+//  unordered_map<int, pair<string, unsigned int>> objlist;
+//  // stripeidx -> location
+//  unordered_map<int, unsigned int> sid2ip;
+//  
+//  for (int i=0; i<stripeobjs.size(); i++) {
+//    string curobjname = stripeobjs[i];
+//    SSEntry* ssentry = _stripeStore->getEntryFromObj(curobjname); 
+//    if (stripeobjs[i] == objname) {
+//      integrity.push_back(0);
+//      corruptsidx = i;
+//      pair<string, unsigned int> curpair = make_pair(curobjname, clientIp);
+//      objlist.insert(make_pair(i, curpair));
+//      sid2ip.insert(make_pair(i, clientIp));   
+//    } else {
+//      integrity.push_back(1);
+//      unsigned int loc = ssentry->getLocOfObj(curobjname);
+//      pair<string, unsigned int> curpair = make_pair(curobjname, loc);
+//      objlist.insert(make_pair(i, curpair));
+//      sid2ip.insert(make_pair(i, loc));
+//    }
+//  }
+//
+//  // debug info
+//  for (auto item: objlist) {
+//    int sid = item.first;
+//    pair<string, unsigned int> pair = item.second;
+//    string curobjname = pair.first;
+//    unsigned int curloc = pair.second;
+//    cout << "Coordinator::offlineDegradedInst.sid: " << sid << ", objname: " << curobjname << ", curloc" << RedisUtil::ip2Str(curloc) << endl;
+//  }
+//
+//  // 4. decode ecdag
+//  vector<int> availcidx;
+//  vector<int> toreccidx;
+//
+//  for (int i=0; i<eck; i++) {
+//    if (integrity[i] == 1) {
+//      for (int j=0; j<ecw; j++) availcidx.push_back(i * ecw + j);
+//    } else {
+//      for (int j=0; j<ecw; j++) toreccidx.push_back(i * ecw + j);
+//    }
+//  }
+//
+//  for (int i=eck; i<ecn; i++) {
+//    if (integrity[i] == 1) {
+//      for (int j=0; j<ecw; j++) availcidx.push_back(i * ecw + j);
+//    }
+//  }
+//
+//  ECDAG* ecdag = ec->Decode(availcidx, toreccidx);
+//  vector<int> toposeq = ecdag->toposort();
+//  cout << "toposeq: ";
+//  for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
+//  cout << endl; 
+//
+//  // 2. if opt is enabled, we apply technical degraded read
+//  int opt = ecpolicy->getOpt();
+//  int tmpopt = htonl(opt);
+//  memcpy(instruction + offset, (char*)&tmpopt, 4); offset += 4;
+//
+//  int tmplostidx = htonl(corruptsidx);
+//  memcpy(instruction + offset, (char*)&tmplostidx, 4); offset += 4;
+//
+//  if (opt>=0) {
+//    // opt is enabled, we use openec technique
+//    // we only need to tell corresponding agent fetch key
+//    // openec offload the reconstruction work
+//    unordered_map<int, unsigned int> cid2ip;
+//    for (int i=0; i<toposeq.size(); i++) {
+//      int cidx = toposeq[i];
+//      ECNode* node = ecdag->getNode(cidx);
+//      vector<unsigned int> candidates = node->candidateIps(sid2ip, cid2ip, _conf->_agentsIPs, ecn, eck, ecw, locality);
+//      // choose from candidates
+//      unsigned int curip = chooseFromCandidates(candidates, _conf->_control_policy, "control");
+//      cid2ip.insert(make_pair(cidx, curip));
+//    }
+//    // 3. parse for oec
+//    vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+//
+//    // 4. get header
+//    
+//     
+//  } else {
+//  // 3. if opt is disabled, we return inputs as well as ectask?
+//    // 3.1 ecn|eck|ecw
+//    int tmpn = htonl(ecn);
+//    memcpy(instruction + offset, (char*)&tmpn, 4); offset += 4;
+//    int tmpk = htonl(eck);
+//    memcpy(instruction + offset, (char*)&tmpk, 4); offset += 4;
+//    int tmpw = htonl(ecw);
+//    memcpy(instruction + offset, (char*)&tmpw, 4); offset += 4;
+//
+//    vector<int> leaves = ecdag->getLeaves();
+//    vector<int> loadidx;
+//    vector<string> loadobjs;
+//    for (int i=0; i<leaves.size(); i++) {
+//      int sidx = leaves[i]/ecw;
+//      if (find(loadidx.begin(), loadidx.end(), sidx) == loadidx.end()) { 
+//        loadidx.push_back(sidx);
+//        loadobjs.push_back(stripeobjs[sidx]);
+//      }
+//    }
+//    // 3.2 num loads
+//    int tmpnumloads = htonl(loadidx.size());
+//    memcpy(instruction + offset, (char*)&tmpnumloads, 4); offset += 4;
+//    for (int i=0; i<loadidx.size(); i++) {
+//      // idx
+//      int tmpidx = htonl(loadidx[i]);
+//      memcpy(instruction + offset, (char*)&tmpidx, 4); offset += 4;
+//      // objname
+//      string loadobjname = loadobjs[i];
+//      int len = loadobjname.size();
+//      int tmpobjlen = htonl(len);
+//      memcpy(instruction + offset, (char*)&tmpobjlen, 4); offset += 4;
+//      memcpy(instruction + offset, loadobjname.c_str(), len); offset += len;
+//    }
+//
+//    // 3.3 compute task
+//    int computen;
+//    vector<ECTask*> computetasks;
+//    for (int i=0; i<toposeq.size(); i++) {
+//      ECNode* curnode = ecdag->getNode(toposeq[i]);
+//      curnode->parseForClient(computetasks);
+//    }
+//    for (int i=0; i<computetasks.size(); i++) computetasks[i]->dump();
+//    computen = computetasks.size();
+//    int tmpcomputen = htonl(computen);
+//    memcpy(instruction + offset, (char*)&tmpcomputen, 4); offset += 4;
+//   
+//    string key = "offlinedegradedinst:"+objname;
+//    redisContext* sendCtx = RedisUtil::createContext(clientIp);
+//    redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", key.c_str(), instruction, offset);
+//    freeReplyObject(rReply);
+//    redisFree(sendCtx);
+//
+//    // send compute task
+//    for (int i=0; i<computetasks.size(); i++) {
+//      ECTask* curcompute = computetasks[i];
+//      curcompute->buildType2();
+//      string key = "compute:"+objname+":"+to_string(i);
+//      curcompute->sendTo(key, clientIp);
+//    }
+//  }
+//
+//  if (instruction) free(instruction);
+//}
+
 //void Coordinator::getFileMeta(CoorCommand* coorCmd) {
 //
 //  // 0. get ssentry
@@ -879,238 +1373,6 @@ void Coordinator::onlineECInst(string filename, SSEntry* ssentry, unsigned int i
 //  if (filemeta) free(filemeta);
 //}
 //
-//void Coordinator::offlineEnc(CoorCommand* coorCmd) {
-//  cout << "Coordinator::offlineEnc" << endl;
-//  string poolname = coorCmd->_poolname;
-//  string stripename = coorCmd->_stripename;
-//
-//  // 0. given the poolname, get the ecpool
-//  OfflineECPool* ecpool = _stripeStore->getECPool(poolname);
-//  ECPolicy* ecpolicy = ecpool->_ecpolicy;
-//  ECBase* ec = ecpolicy->createECClass();
-//  int k=ec->_k;
-//  int n=ec->_n;
-//  int scratio=ec->_cps;
-//  cout << "Coordinator::offlineEnc.poolname:" << poolname <<", stripename:" << stripename << ", k:" << k << ", n:" << n << ", scratio:" << scratio << endl;
-//
-//  // 1. prepare data and code vector
-//  vector<int> data;
-//  vector<int> code;
-//  for (int i=0; i<k*scratio; i++) data.push_back(i);
-//  for (int i=k*scratio; i<n*scratio; i++) code.push_back(i);
-//
-//  // 2. create encode ecdag
-//  ec->encode(data, code);
-//  ec->dump();
-//
-//  // 3. prepare objlist
-//  unordered_map<int, pair<string, unsigned int>> objlist;
-//  vector<string> stripelist = ecpool->getStripeObjList(stripename);
-//  vector<int> placed;
-//  vector<unsigned int> ips;
-//  int filesizeMB=0;
-//  for (int i=0; i<stripelist.size(); i++) {
-//    int sid = i;
-//    string objname = stripelist[i];
-//    SSEntry* ssentry = _stripeStore->getEntry(objname);
-//    unsigned int loc = ssentry->_objLocs[0];
-//    pair<string, unsigned int> curpair = make_pair(objname, loc);
-//    objlist.insert(make_pair(sid, curpair));
-//    if (ssentry->_filesizeMB>filesizeMB) filesizeMB = ssentry->_filesizeMB;
-//    ips.push_back(loc);
-//    placed.push_back(sid);
-//  }
-//
-//  cout << "Coordinator::offlineEnc.objlist (sid, objname, loc) = ";
-//  for (auto item: objlist) {
-//    int sid = item.first;
-//    string objname = item.second.first;
-//    unsigned int ip = item.second.second;
-//    cout << "(" << sid << ", " << objname << ", " << RedisUtil::ip2Str(ip) << ") ";
-//  }
-//  cout << endl;
-//
-//  // 3.1 get the final bind node and preassign location for it.
-//  int bindCid = ec->getBindCid();
-//  if ((bindCid != -1) && (_conf->_encode_policy == "balance")) {
-//    // we do some encoding job scheduling here
-//    vector<unsigned int> candidates = _conf->_agentsIPs;
-//    unsigned int curloc = chooseFromCandidates(candidates, _conf->_encode_policy, "encode");
-//    pair<string, unsigned int> curpair = make_pair(to_string(bindCid), curloc);
-//    objlist.insert(make_pair(bindCid/scratio, curpair));
-//    cout << "Coordinator::offlineEnc.encode for " << stripename << " is assigned at " << RedisUtil::ip2Str(curloc) << endl;
-//  }
-//  
-//  // 4. prepare num of slices
-//  int num = filesizeMB * 1048576 / _conf->_pktSize;
-//
-//  // 5. denforce
-//  unordered_map<int, bool> denforceMap;
-//  unordered_map<int, AGCommand*> agCmds;
-//  vector<unsigned int> allnodes = _conf->_agentsIPs;
-//
-//  // xiaolu add 20180828 start
-//  ec->Optimize(ec->_opt, objlist, _conf->_ip2Rack, n, k, scratio);
-//  // xiaolu add 20180828 end
-//
-//  ec->DEnforce(denforceMap, agCmds, objlist, stripename, n, k, scratio, num, allnodes, ec->_locality);
-//
-//  // xiaolu add 20180829 start
-//  vector<vector<int>> group;
-//  ec->place(group);
-//  unordered_map<int, vector<int>> idx2group;
-//  for (auto item: group) {
-//    for (auto idx: item) {
-//      idx2group.insert(make_pair(idx, item));
-//    }
-//  }
-//  // xiaolu add 20180829 end
-//  
-//  // 6. create parityobj names and locs
-//  unordered_map<int, pair<string, unsigned int>> paritylist;
-//  for (int i=k; i<n; i++) {
-//    string parityname = "/"+poolname+"-"+stripename+"-"+to_string(i);
-//
-//    vector<int> colocWith;
-//    vector<int> notColocWith;
-//
-//    // xiaolu add 20180829 start
-//    if (idx2group.find(i) != idx2group.end()) colocWith = idx2group[i];
-//    if (colocWith.size() > 0) {
-//      for (int j=0; j<ec->_n; j++) {
-//        if (find(colocWith.begin(), colocWith.end(), j) == colocWith.end()) notColocWith.push_back(j);
-//      }
-//    }
-//    // xiaolu add 20180829 end
-//
-//
-//    // xiaolu comment 20180829 start
-////    ec->placementRestriction(i, placed, colocWith, notColocWith);
-//    // xiaolu comment 20180829 end
-//
-//    vector<unsigned int> candidates = getCandidates(ips, colocWith, notColocWith);
-//    unsigned int curIp = chooseFromCandidates(candidates, _conf->_data_policy, "data");
-//
-//    placed.push_back(i);
-//    ips.push_back(curIp);
-//    pair<string, unsigned int> curpair = make_pair(parityname, curIp);
-//    paritylist.insert(make_pair(i, curpair));
-//
-//    // now we have preassigned a location for this obj
-//    // 6.1 add cur obj to ecpool
-//    ecpool->addObj(parityname, stripename);
-//    // 6.2 create ssentry
-//    vector<unsigned int> assignedips;
-//    assignedips.push_back(curIp);
-//    SSEntry* ssentry = new SSEntry(parityname, 1, poolname, assignedips);
-//    _stripeStore->insertEntry(ssentry);
-//  }
-//  cout << "Coordinator::offlineEnc.paritylist (sid, objname, loc) = ";
-//  for (auto item: paritylist) {
-//    int sid = item.first;
-//    string objname = item.second.first;
-//    unsigned int ip = item.second.second;
-//    cout << "(" << sid << ", " << objname << ", " << RedisUtil::ip2Str(ip) << ") ";
-//  }
-//  cout << endl;
-//
-//  // 7. persists header
-//  vector<AGCommand*> persistCmds;
-//  ec->PersistHeader(agCmds, paritylist, stripename, n, k, scratio, num, persistCmds);
-//
-//
-//  // xiaolu comment 20180825 start
-//  // 8. send compute commands to distributor
-//  vector<char*> todelete;
-//  redisContext* distCtx = RedisUtil::createContext(_conf->_coorIp);
-//
-//  redisAppendCommand(distCtx, "MULTI");
-//  for (auto item: agCmds) {
-//    int cid = item.first;
-//    AGCommand* agcmd = item.second;
-//    unsigned int ip = agcmd->_sendIp;
-//    ip = htonl(ip);
-//    if (agcmd->_shouldSend) {
-//      char* cmdstr = agcmd->_agCmd;
-//      int cmLen = agcmd->_cmLen;
-//      char* todist = (char*)calloc(cmLen + 4, sizeof(char));
-//      memcpy(todist, (char*)&ip, 4);
-//      memcpy(todist+4, cmdstr, cmLen); 
-//      todelete.push_back(todist);
-//      redisAppendCommand(distCtx, "RPUSH dist_request %b", todist, cmLen+4);
-//    }
-//  }
-//  // xiaolu commdn 20180825 end
-//
-////  // xiaolu add 20180825 start
-////  vector<AGCommand*> reverseCmds;
-////  for (auto item: agCmds) reverseCmds.push_back(item.second);
-////
-////  vector<char*> todelete;
-////  redisContext* distCtx = RedisUtil::createContext(_conf->_coorIp);
-////
-////  redisAppendCommand(distCtx, "MULTI");
-////  for (int i=reverseCmds.size()-1; i>=0; i--) {
-////    AGCommand* agcmd = reverseCmds[i];
-////    unsigned int ip = agcmd->_sendIp;
-////    ip = htonl(ip);
-////    if (agcmd->_shouldSend) {
-////      char* cmdstr = agcmd->_agCmd;
-////      int cmLen = agcmd->_cmLen;
-////      char* todist = (char*)calloc(cmLen + 4, sizeof(char));
-////      memcpy(todist, (char*)&ip, 4);
-////      memcpy(todist+4, cmdstr, cmLen); 
-////      todelete.push_back(todist);
-////      redisAppendCommand(distCtx, "RPUSH dist_request %b", todist, cmLen+4);
-////    }
-////  }
-////  
-////  // xiaolu add 20180825 end
-//
-//  for (auto agcmd: persistCmds) {
-//    unsigned int ip = agcmd->_sendIp;
-//    ip = htonl(ip);
-//    if (agcmd->_shouldSend) {
-//      char* cmdstr = agcmd->_agCmd;
-//      int cmLen = agcmd->_cmLen;
-//      char* todist = (char*)calloc(cmLen + 4, sizeof(char));
-//      memcpy(todist, (char*)&ip, 4);
-//      memcpy(todist+4, cmdstr, cmLen); 
-//      todelete.push_back(todist);
-//      redisAppendCommand(distCtx, "RPUSH dist_request %b", todist, cmLen+4);
-//    }
-//  }
-//  redisAppendCommand(distCtx, "EXEC");
-//
-//  redisReply* distReply;
-//  redisGetReply(distCtx, (void **)&distReply);
-//  freeReplyObject(distReply);
-//  for (auto item: todelete) {
-//    redisGetReply(distCtx, (void **)&distReply);
-//    freeReplyObject(distReply);
-//  }
-//  redisGetReply(distCtx, (void **)&distReply);
-//  freeReplyObject(distReply);
-//  redisFree(distCtx);
-//
-//  // wait for finish flag?
-//  for (auto agcmd: persistCmds) {
-//    unsigned int ip = agcmd->_sendIp; 
-//    redisContext* waitCtx = RedisUtil::createContext(ip);
-//    string wkey = "writefinish:"+agcmd->_writeObjName;
-//    redisReply* fReply = (redisReply*)redisCommand(waitCtx, "blpop %s 0", wkey.c_str());
-//    freeReplyObject(fReply);
-//    redisFree(waitCtx);
-//  }
-//  cout << "Coordinator::offlineEnc for " << stripename << " finishes" << endl;
-//  _stripeStore->finishECStripe(stripename);
-//
-//  // last. delete
-//  delete ec;
-//  for (auto item: agCmds) delete item.second;
-//  for (auto item: persistCmds) delete item;
-//  for (auto item: todelete) free(item);
-//}
 //
 //void Coordinator::onlineDegradedUpdate(CoorCommand* coorCmd) {
 //  unsigned int clientIp = coorCmd->_clientIp;

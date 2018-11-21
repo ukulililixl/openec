@@ -25,6 +25,7 @@ class ECPolicy {
     int getK();
     int getW();
     bool getLocality();
+    int getOpt();
 };
 
 #endif

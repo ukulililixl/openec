@@ -237,7 +237,7 @@ vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip,
   sort(_ecHeaders.begin(), _ecHeaders.end());
   int numblks = _ecHeaders.size()/w;
   for (int i=0; i<numblks; i++) {
-    int sid = _ecHeaders[i];
+    int sid = _ecHeaders[i*w];
     string objname = objlist[sid].first;
     unsigned int ip = objlist[sid].second;
     vector<int> prevCids;

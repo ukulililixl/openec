@@ -27,6 +27,7 @@ CoorCommand::CoorCommand(char* reqStr) {
     case 2: resolveType2(); break;
     case 3: resolveType3(); break;
     case 4: resolveType4(); break;
+    case 5: resolveType5(); break;
     case 7: resolveType7(); break;
     default: break;
   }
@@ -211,6 +212,21 @@ void CoorCommand::resolveType4() {
   _clientIp = readInt();
   _ecpoolid = readString();
   _stripename = readString();
+}
+
+void CoorCommand::buildType5(int type, unsigned int ip, string objname) {
+  _type = type;
+  _clientIp = ip;
+  _filename = objname;
+
+  writeInt(_type);
+  writeInt(_clientIp);
+  writeString(_filename);
+}
+
+void CoorCommand::resolveType5() {
+  _clientIp = readInt();
+  _filename = readString();
 }
 
 void CoorCommand::buildType7(int type, int op, string ectype) {

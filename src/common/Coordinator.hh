@@ -4,7 +4,6 @@
 //#include "AGCommand.hh"
 #include "Config.hh"
 #include "FSObjInputStream.hh"
-//#include "OfflineECPool.hh"
 //#include "RedisUtil.hh"
 #include "StripeStore.hh"
 //#include "SSEntry.hh"
@@ -12,6 +11,7 @@
 //#include "Util/hdfs.h"
 
 #include "../ec/ECDAG.hh"
+#include "../ec/OfflineECPool.hh"
 #include "../fs/FSUtil.hh"
 #include "../fs/UnderFS.hh"
 #include "../inc/include.hh"
@@ -39,6 +39,7 @@ class Coordinator {
     void offlineEnc(CoorCommand* coorCmd);
     void setECStatus(CoorCommand* coorCmd);
     void getFileMeta(CoorCommand* coorCmd);
+    void offlineDegradedInst(CoorCommand* coorCmd);
 
     void registerOnlineEC(unsigned int clientIp, string filename, string ecid, int filesizeMB);
     void registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB);
@@ -46,6 +47,8 @@ class Coordinator {
     unsigned int chooseFromCandidates(vector<unsigned int> candidates, string policy, string type); // policy:random/balance; type:control/data/other
     void onlineECInst(string filename, SSEntry* ssentry, unsigned int ip);
     void offlineECInst(string filename, SSEntry* ssentry, unsigned int ip);
+    void nonOptOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy);
+    void optOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy);
     
 
 //    void offlineDegraded(CoorCommand* coorCmd);
