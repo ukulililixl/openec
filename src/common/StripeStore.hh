@@ -92,16 +92,14 @@ class StripeStore {
     void startECStripe(string stripename);
 //    void setScan(bool status);
     void finishECStripe(string stripename);
-//    int getECInProgressNum();
-//    
+    
     // repair
     void scanRepair();
     void addLostObj(string objname);
-//    void addToLostMap(string objname);
 //    void setRepair(bool status);
-//    void startRepair(string objname);
-//    void finishRepair(string objname);
-//    int getRPInProgressNum();
+    void startRepair(string objname);
+    void finishRepair(string objname);
+    int getRPInProgressNum();
   
 };
 

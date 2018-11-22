@@ -4,6 +4,7 @@ StripeStore::StripeStore(Config* conf) {
   _conf = conf;
   // by default, encode scheduling is delayed
   _enableScan = false;
+  _enableRepair = false;
 
 //   if (_conf->_repair_scheduling == "delay") _enableRepair = false;
 //   else if (_conf->_repair_scheduling == "threshold") _enableRepair = false;
@@ -239,34 +240,14 @@ void StripeStore::finishECStripe(string stripename) {
 //   _pendingECQueue.push(make_pair(poolname, stripename));
 //   _lockPECQueue.unlock();
 // }
-// 
-// void StripeStore::addToLostMap(string objname) {
-//   // check whether objname is in _RPInProgress
-//   bool inrepair = false;
-//   _lockRPInProgress.lock();
-//   if (find(_RPInProgress.begin(), _RPInProgress.end(), objname) != _RPInProgress.end()) {
-//     inrepair = true;
-//   }
-//   _lockRPInProgress.unlock();
-// 
-//   if (inrepair) return;
-// 
-//   _lockLostMap.lock();
-//   if (_lostMap.find(objname) == _lostMap.end()) {
-//     _lostMap.insert(make_pair(objname, 1));
-//   } else {
-//     _lostMap[objname]++;
-//   }
-//   _lockLostMap.unlock();
-// }
-// 
-// int StripeStore::getRPInProgressNum() {
-//   _lockRPInProgress.lock();
-//   int toret = _RPInProgress.size();
-//   _lockRPInProgress.unlock();
-//   return toret;
-// }
-// 
+ 
+int StripeStore::getRPInProgressNum() {
+  _lockRPInProgress.lock();
+  int toret = _RPInProgress.size();
+  _lockRPInProgress.unlock();
+  return toret;
+}
+
 
 void StripeStore::addLostObj(string objname) {
   // check whether objname is in _RPInProgress
@@ -287,53 +268,53 @@ void StripeStore::addLostObj(string objname) {
 }
 
 void StripeStore::scanRepair() {
-//   int concurrentNum = _conf->_ec_concurrent;
+  int concurrentNum = _conf->_ec_concurrent;
   while (true) {
-//     std::this_thread::sleep_for(std::chrono::seconds(1));
-//     if (!_enableRepair) continue;
-//     cout << "StripeStore::scanning repair queue" << endl;
-//     int rpInProgressNum = getRPInProgressNum();
-//     cout << "StripeStore::scanRepair.rpInProgressNum = " << rpInProgressNum << endl;
-//     while (_lostMap.size() && (rpInProgressNum < concurrentNum)) {
-//       string objname;
-// 
-//       // search the lost map and find the one with the most request num
-//       int maxreq=0;
-//       _lockLostMap.lock();
-//       for (auto item: _lostMap) {
-//         if (item.second > maxreq) {
-//           maxreq = item.second;
-//           objname = item.first;
-//         }
-//       }
-//       _lockLostMap.unlock();
-// 
-//       // now we have the obj with the most request num
-//       if (_conf->_repair_scheduling == "threshold") {
-//         if (!_enableRepair) continue;
-//         if (maxreq < _conf->_repair_threshold) continue;
-//       }
-// 
-//       if ((_conf->_repair_scheduling == "delay" ) && 
-//           !_enableRepair) continue;
-// 
-// //      if (_conf->_repair_scheduling == "normal") continue;
-//     
-//       // send repair request to coordinator  
-//       CoorCommand* coorCmd = new CoorCommand();
-//       coorCmd->buildType8(8, _conf->_localIp, objname);
-//       coorCmd->sendTo(_conf->_coorIp);
-// 
-//       delete coorCmd;
-// 
-//       // now we move the obj to RPInProgress
-//       startRepair(objname);
-//       _lockLostMap.lock();
-//       _lostMap.erase(_lostMap.find(objname));
-//       _lockLostMap.unlock();
-// 
-//       rpInProgressNum = getRPInProgressNum();
-//     }
+     std::this_thread::sleep_for(std::chrono::seconds(1));
+     if (!_enableRepair) continue;
+     cout << "StripeStore::scanning repair queue" << endl;
+     int rpInProgressNum = getRPInProgressNum();
+     cout << "StripeStore::scanRepair.rpInProgressNum = " << rpInProgressNum << endl;
+     while (_lostMap.size() && (rpInProgressNum < concurrentNum)) {
+       string objname;
+ 
+       // search the lost map and find the one with the most request num
+       int maxreq=0;
+       _lockLostMap.lock();
+       for (auto item: _lostMap) {
+         if (item.second > maxreq) {
+           maxreq = item.second;
+           objname = item.first;
+         }
+       }
+       _lockLostMap.unlock();
+ 
+       // now we have the obj with the most request num
+       if (_conf->_repair_scheduling == "threshold") {
+         if (!_enableRepair) continue;
+         if (maxreq < _conf->_repair_threshold) continue;
+       }
+
+      if ((_conf->_repair_scheduling == "delay" ) && 
+          !_enableRepair) continue;
+
+//      if (_conf->_repair_scheduling == "normal") continue;
+    
+      // send repair request to coordinator  
+      CoorCommand* coorCmd = new CoorCommand();
+      coorCmd->buildType8(8, _conf->_localIp, objname);
+      coorCmd->sendTo(_conf->_coorIp);
+
+      delete coorCmd;
+
+      // now we move the obj to RPInProgress
+      startRepair(objname);
+      _lockLostMap.lock();
+      _lostMap.erase(_lostMap.find(objname));
+      _lockLostMap.unlock();
+
+      rpInProgressNum = getRPInProgressNum();
+    }
   }
 }
 
@@ -360,15 +341,15 @@ void StripeStore::scanRepair() {
 //   _enableRepair = status;
 // }
 // 
-// void StripeStore::startRepair(string objname) {
-//   _lockRPInProgress.lock();
-//   _RPInProgress.push_back(objname);
-//   _lockRPInProgress.unlock();
-// }
-// 
-// void StripeStore::finishRepair(string objname) {
-//   _lockRPInProgress.lock();
-//   vector<string>::iterator pos = find(_RPInProgress.begin(), _RPInProgress.end(), objname);
-//   if (pos != _RPInProgress.end()) _RPInProgress.erase(pos);
-//   _lockRPInProgress.unlock();
-// }
+void StripeStore::startRepair(string objname) {
+  _lockRPInProgress.lock();
+  _RPInProgress.push_back(objname);
+  _lockRPInProgress.unlock();
+}
+
+void StripeStore::finishRepair(string objname) {
+  _lockRPInProgress.lock();
+  vector<string>::iterator pos = find(_RPInProgress.begin(), _RPInProgress.end(), objname);
+  if (pos != _RPInProgress.end()) _RPInProgress.erase(pos);
+  _lockRPInProgress.unlock();
+}

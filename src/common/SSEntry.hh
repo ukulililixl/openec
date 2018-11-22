@@ -16,8 +16,11 @@ class SSEntry {
     vector<string> _objList; // OpenEC transfer file into several oecobj, this is the obj name in sequence
     vector<unsigned int> _objLoc;  // location for each obj in this file
 
+    mutex _updateLock; 
+
   public:
     SSEntry(string filename, int type, int filesizeMB, string ecidpool, vector<string> objname, vector<unsigned int> loc);
+
     string getFilename();
     int getType();
     int getFilesizeMB();
@@ -29,6 +32,9 @@ class SSEntry {
 
     // for debug
     void dump();
+
+    // update
+    void updateObjLoc(string objname, unsigned int loc);
 };
 
 #endif

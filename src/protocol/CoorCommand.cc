@@ -28,7 +28,10 @@ CoorCommand::CoorCommand(char* reqStr) {
     case 3: resolveType3(); break;
     case 4: resolveType4(); break;
     case 5: resolveType5(); break;
+    case 6: resolveType6(); break;
     case 7: resolveType7(); break;
+    case 8: resolveType8(); break;
+    case 11: resolveType11(); break;
     default: break;
   }
   _coorCmd = nullptr;
@@ -229,6 +232,11 @@ void CoorCommand::resolveType5() {
   _filename = readString();
 }
 
+void CoorCommand::resolveType6() {
+  _clientIp = readInt();
+  _filename = readString(); 
+}
+
 void CoorCommand::buildType7(int type, int op, string ectype) {
   _type = type;
   _op = op;
@@ -242,6 +250,26 @@ void CoorCommand::buildType7(int type, int op, string ectype) {
 void CoorCommand::resolveType7() {
   _op = readInt();
   _ectype = readString();
+}
+
+void CoorCommand::buildType8(int type, unsigned int ip, string objname) {
+  _type = type;
+  _clientIp = ip;
+  _filename = objname;
+
+  writeInt(_type);
+  writeInt(_clientIp);
+  writeString(_filename);
+}
+
+void CoorCommand::resolveType8() {
+  _clientIp = readInt();
+  _filename = readString();
+}
+
+void CoorCommand::resolveType11() {
+  _clientIp = readInt();
+  _filename = readString();
 }
 
 void CoorCommand::dump() {
@@ -263,6 +291,9 @@ void CoorCommand::dump() {
     cout << ", client: " << RedisUtil::ip2Str(_clientIp)
          << ", ecpoolid: " << _ecpoolid
          << ", stripename: " << _stripename << endl;
+  } else if (_type == 6) {
+    cout << ", client: " << RedisUtil::ip2Str(_clientIp)
+         << ", filename: " << _filename << endl;
   } else if (_type == 7) {
     cout << ", enable: " << _op << ", ectype: " << _ectype << endl;
   }

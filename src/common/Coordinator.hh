@@ -39,7 +39,10 @@ class Coordinator {
     void offlineEnc(CoorCommand* coorCmd);
     void setECStatus(CoorCommand* coorCmd);
     void getFileMeta(CoorCommand* coorCmd);
+    void reportLost(CoorCommand* coorCmd);
     void offlineDegradedInst(CoorCommand* coorCmd);
+    void repairReqFromSS(CoorCommand* coorCmd);
+    void reportRepaired(CoorCommand* coorCmd);
 
     void registerOnlineEC(unsigned int clientIp, string filename, string ecid, int filesizeMB);
     void registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB);
@@ -49,26 +52,8 @@ class Coordinator {
     void offlineECInst(string filename, SSEntry* ssentry, unsigned int ip);
     void nonOptOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy);
     void optOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy);
-    
-
-//    void offlineDegraded(CoorCommand* coorCmd);
-//    void onlineDegradedUpdate(CoorCommand* coorCmd);
-//    void reportLost(CoorCommand* coorCmd);
-//    void enableEncoding(CoorCommand* coorCmd);
-//    void repairReqFromSS(CoorCommand* coorCmd);
-//    void enableRepair(CoorCommand* coorCmd);
-//    void reportRepaired(CoorCommand* coorCmd);
-//
-//    void offlineEnc(CoorCommand* coorCmd);
-//    void recoveryOnline(string filename);
-//    void recoveryOffline(string filename);
-//    vector<unsigned int> getCandidates(vector<unsigned int> ips,
-//                                       vector<int> colocWith,
-//                                       vector<int> notColocWith);
-//    vector<unsigned int> getCandidates(vector<unsigned int> avoid);
-//    unsigned int chooseFromCandidates(vector<unsigned int> candidates);
-//    unsigned int chooseFromCandidates(vector<unsigned int> candidates, string policy, string type); // policy:random/balance; type:control/data/other
-
+    void recoveryOnline(string filename);
+    void recoveryOffline(string filename);
 };
 
 #endif

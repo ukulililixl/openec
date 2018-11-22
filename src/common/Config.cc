@@ -61,16 +61,16 @@ Config::Config(std::string& filepath) {
        _control_policy = ele -> NextSiblingElement("value") -> GetText();
      } else if (attName == "data.policy") {
        _data_policy = ele -> NextSiblingElement("value") -> GetText();
-//     } else if (attName == "encode.scheduling") {
-//       _encode_scheduling = ele -> NextSiblingElement("value") -> GetText();
-//     } else if (attName == "encode.policy") {
-//       _encode_policy = ele -> NextSiblingElement("value") -> GetText();
-//     } else if (attName == "repair.scheduling") {
-//       _repair_scheduling = ele -> NextSiblingElement("value") -> GetText();
-//     } else if (attName == "repair.policy") {
-//       _repair_policy = ele -> NextSiblingElement("value") -> GetText();
-//     } else if (attName == "repair.threshold") {
-//       _repair_threshold = std::stoi(ele -> NextSiblingElement("value") -> GetText());
+     } else if (attName == "encode.scheduling") {
+       _encode_scheduling = ele -> NextSiblingElement("value") -> GetText();
+     } else if (attName == "encode.policy") {
+       _encode_policy = ele -> NextSiblingElement("value") -> GetText();
+     } else if (attName == "repair.scheduling") {
+       _repair_scheduling = ele -> NextSiblingElement("value") -> GetText();
+     } else if (attName == "repair.policy") {
+       _repair_policy = ele -> NextSiblingElement("value") -> GetText();
+     } else if (attName == "repair.threshold") {
+       _repair_threshold = std::stoi(ele -> NextSiblingElement("value") -> GetText());
      } else if (attName == "placetest.avoidlocal") {
        std::string avoidlocal = ele->NextSiblingElement("value")->GetText();
        if (avoidlocal == "true") _avoid_local = true;

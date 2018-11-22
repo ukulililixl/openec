@@ -59,6 +59,20 @@ unsigned int SSEntry::getLocOfObj(string objname) {
   return toret;
 }
 
+void SSEntry::updateObjLoc(string objname, unsigned int loc) {
+  _updateLock.lock();
+  int idx=-1;
+  for (int i=0; i<_objList.size(); i++) {
+    if (_objList[i] == objname) {
+      idx = i;
+      break;
+    }
+  }
+  if (idx != -1) _objLoc[idx] = loc;
+  _updateLock.unlock();
+  assert(idx != -1);
+}
+
 void SSEntry::dump() {
   cout << "SSEntry:: filename: "<< _filename << ", type: " << _type << ", filesizeMB: " << _filesizeMB 
        << ", ecidpool: " << _ecidpool << ", objname: ";

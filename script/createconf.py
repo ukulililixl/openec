@@ -34,10 +34,6 @@ cluster=[
 "192.168.0.13",
 "192.168.0.14",
 "192.168.0.15",
-"192.168.0.16",
-"192.168.0.17",
-"192.168.0.18",
-"192.168.0.19"
 ]
 
 networkMap={
@@ -45,10 +41,6 @@ networkMap={
 "192.168.0.13":"/rack1",
 "192.168.0.14":"/rack1",
 "192.168.0.15":"/rack1",
-"192.168.0.16":"/rack1",
-"192.168.0.17":"/rack1",
-"192.168.0.18":"/rack1",
-"192.168.0.19":"/rack1"
 }
 
 for node in cluster:
@@ -133,7 +125,7 @@ for node in cluster:
 
     line="<attribute><name>ec.policy</name>\n"
     attr.append(line)
-    line="<value><id>rs_6_4</id><class>RSCONV</class><n>6</n><k>4</k><w>1</w><locality>false</locality></value>\n"
+    line="<value><id>rs_3_2</id><class>RSCONV</class><n>3</n><k>2</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
     attr.append(line)
 #    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><cps>1</cps><locality>false</locality></value>\n"
 #    attr.append(line)
@@ -180,6 +172,8 @@ for node in cluster:
     line="<value><poolid>rspipe_9_6_pool</poolid><ecid>rspipe_9_6</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
     line="<value><poolid>rs_6_4_pool</poolid><ecid>rs_6_4</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_3_2_pool</poolid><ecid>rs_3_2</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
     line="<value><poolid>ia_8_4_pool</poolid><ecid>ia_8_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)

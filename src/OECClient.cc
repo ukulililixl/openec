@@ -122,12 +122,12 @@ int main(int argc, char** argv) {
     
     delete cmd;
   } else if (reqType == "startRepair") {
-//    string confpath("./conf/sysSetting.xml");
-//    Config* conf = new Config(confpath);
-//    // send coorCmd to coordinator
-//    CoorCommand* cmd = new CoorCommand();
-//    cmd->buildType9(9);
-//    cmd->sendTo(conf->_coorIp);
+    string confpath("./conf/sysSetting.xml");
+    Config* conf = new Config(confpath);
+    // send coorCmd to coordinator
+    CoorCommand* cmd = new CoorCommand();
+    cmd->buildType7(7, 1, "repair");
+    cmd->sendTo(conf->_coorIp);
   } else {
     cout << "ERROR: un-recognized request!" << endl;
     usage();

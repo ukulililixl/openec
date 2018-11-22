@@ -15,13 +15,13 @@ using namespace std;
  *   type = 3: clientip | filename | get redundancyType, filesize, ecid|
  *   type = 4: clientip | poolname | stripename |
  *   type = 5: clientip | objname // offline degraded for object
- *  ? type = 5: clientip | filename | poolname | stripename |
- *  ? type = 6: clientip | filename |   // report lost
+ *   type = 5: clientip | filename | poolname | stripename |
+ *   type = 6: clientip | filename |   // report lost
  *   type = 7:  0 (disable)/ 1 (enable) | encode/repair
- *  ? type = 8: clientip | lostobjname |  // stripestore send repair request to coordinator
+ *   type = 8: clientip | lostobjname |  // stripestore send repair request to coordinator
  *  ? type = 9: // enable repair
  *  ? type = 10: clientip| filename |  // update lostmap in stripestore
- *  ? type = 11: clientip| filename |   // report successfully repair
+ *   type = 11: clientip| filename |   // report successfully repair
  */
 
 
@@ -48,6 +48,9 @@ class CoorCommand {
     string _stripename;
 
     // type 5
+    // _filename
+
+    // type 6
     // _filename
 
     // type 7
@@ -104,6 +107,9 @@ class CoorCommand {
     void buildType7(int type,
                     int op,
                     string ectype);
+    void buildType8(int type,
+                    unsigned int ip,
+                    string objname);
     // resolve CoorCommand
     void resolveType0();
     void resolveType1();
@@ -111,7 +117,10 @@ class CoorCommand {
     void resolveType3();
     void resolveType4();
     void resolveType5();
+    void resolveType6();
     void resolveType7();
+    void resolveType8();
+    void resolveType11();
 
     // for debug
     void dump();
