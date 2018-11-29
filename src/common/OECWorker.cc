@@ -89,7 +89,8 @@ void OECWorker::onlineWrite(string filename, string ecid, int filesizeMB) {
   char* reqStr = rReply -> element[1] -> str;
   AGCommand* agCmd = new AGCommand(reqStr);
   freeReplyObject(rReply);
- 
+
+  // filter out ecn, eck, ecw, computen from the response 
   int ecn = agCmd->getN();
   int eck = agCmd->getK();
   int ecw = agCmd->getW();
@@ -102,6 +103,7 @@ void OECWorker::onlineWrite(string filename, string ecid, int filesizeMB) {
   bool zeropadding = false;
   if (lastNum > 0) zeropadding = true;
 
+  // 2. get compute tasks
   vector<ECTask*> computeTasks;
   for (int i=0; i<computen; i++) {
     string wkey = "compute:" + filename+":"+to_string(i);
@@ -182,6 +184,7 @@ void OECWorker::onlineWrite(string filename, string ecid, int filesizeMB) {
   for (int i=0; i<ecn; i++) delete objstreams[i];
   free(objstreams);
   for (auto compute: computeTasks) delete compute;
+  for (auto task: computeTasks) delete task;
 }
 
 void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {
