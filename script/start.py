@@ -50,6 +50,8 @@ for slave in slavelist:
     os.system(command)
     command="scp "+home_dir+"/OECClient "+slave+":"+home_dir+"/"
     os.system(command)
+    command="scp "+home_dir+"/HDFSClient "+slave+":"+home_dir+"/"
+    os.system(command)
     os.system("ssh " + slave + " \"redis-cli flushall \"")
     command="ssh "+slave+" \"cd "+home_dir+"; . script/env.sh "+fstype+"; ./OECAgent &> "+home_dir+"/agent_output &\""
     os.system(command)

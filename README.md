@@ -1,5 +1,5 @@
 ------------------Build------------------------
 
-$> cd OpenEC-v3.0
-$> cmake .
+$> cd OpenEC-v3.0 
+$> cmake . 
 $> make

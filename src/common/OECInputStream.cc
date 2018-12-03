@@ -16,6 +16,7 @@ void OECInputStream::init() {
   AGCommand* agCmd = new AGCommand();
   agCmd->buildType1(1, _filename);
   agCmd->sendTo(_conf->_localIp);
+  delete agCmd;
 
   // wait for filesize?
   string wkey = "filesize:"+_filename;
@@ -33,6 +34,9 @@ void OECInputStream::init() {
 }
 
 void OECInputStream::readWorker(BlockingQueue<OECDataPacket*>* readQueue, string keybase) { 
+  struct timeval t1, t2, start, end;
+  gettimeofday(&start, NULL);
+
   int pktnum = _filesizeMB * 1048576/_conf->_pktSize;
   redisReply* rReply;
   redisContext* readCtx = _localCtx;
@@ -42,21 +46,23 @@ void OECInputStream::readWorker(BlockingQueue<OECDataPacket*>* readQueue, string
     redisAppendCommand(readCtx, "blpop %s 0", key.c_str());
   }
 
-  struct timeval t1, t2;
   double t=0;
   for (int i=0; i<pktnum; i++) {
     string key = keybase+":"+to_string(i);
-    gettimeofday(&t1, NULL);
+//    gettimeofday(&t1, NULL);
     redisGetReply(readCtx, (void**)&rReply);
-    gettimeofday(&t2, NULL);
-    if (i == 0) cout << "OECInputStream:: the first pkt : " << RedisUtil::duration(t1, t2) << endl;
-    t += RedisUtil::duration(t1, t2);
+//    gettimeofday(&t2, NULL);
+//    if (i == 0) cout << "OECInputStream:: the first pkt : " << RedisUtil::duration(t1, t2) << endl;
+//    cout << "OECInputStream::readWorker.getpkt: " << RedisUtil::duration(t1, t2) << endl;
+//    t += RedisUtil::duration(t1, t2);
     char* content = rReply->element[1]->str;
     OECDataPacket* pkt = new OECDataPacket(content);
     int curDataLen = pkt->getDatalen();
     readQueue->push(pkt);
     freeReplyObject(rReply);
   }
+  gettimeofday(&end, NULL);
+  cout << "OECInputStream::readWorker.duration: " << RedisUtil::duration(start, end) << endl;
 }
 
 void OECInputStream::output2file(string saveas) {

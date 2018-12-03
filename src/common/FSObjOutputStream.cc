@@ -20,8 +20,7 @@ FSObjOutputStream::FSObjOutputStream(Config* conf, string objname, UnderFS* fs, 
     exit(-1);
   }
   gettimeofday(&time2, NULL);
-//  cout << "FSObjOutputStream.connect to hdfs.time = " << RedisUtil::duration(time1, time2) << endl;
-  cout << "FSObjOutputStream.objname: " << objname << ", pktnum: " << _totalPktNum << endl;
+  cout << "FSObjOutputStream.objname: " << objname << ", pktnum: " << _totalPktNum << ", initialize time: " << RedisUtil::duration(time1, time2) << endl;
 }
 
 FSObjOutputStream::~FSObjOutputStream() {
@@ -39,7 +38,6 @@ void FSObjOutputStream::writeObj() {
 
   for (int pktid=0; pktid < _totalPktNum; pktid++) {
     OECDataPacket* curPkt = _queue->pop();
-//    cout << "FSObjOutputStream("<<_objname<<")::write pkt " << pktid << ", len = " << curPkt->getDatalen() << endl;
     _objsize += curPkt->getDatalen();
     // write to hdfs
     _underfs->writeFile(_underfile, curPkt->getData(), curPkt->getDatalen());

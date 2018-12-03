@@ -6,3 +6,7 @@ jar cf oec-fs-protocol.jar oec/protocol/AGCommand.class oec/protocol/CoorCommand
 #copy to hadoop-3.0 directory
 DIR=/home/xiaolu/OpenEC/hadoop-3.0.0-src/oeclib
 cp oec-fs-protocol.jar $DIR/
+
+# #copy to java client directory
+# JAVACLIENTDIR=/home/xiaolu/OpenEC/OpenEC/hadoop-3.0-helper/client
+# cp oec-fs-protocol.jar $JAVACLIENTDIR/

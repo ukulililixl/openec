@@ -19,7 +19,7 @@ using namespace std;
  *   type = 6: clientip | filename |   // report lost
  *   type = 7:  0 (disable)/ 1 (enable) | encode/repair
  *   type = 8: clientip | lostobjname |  // stripestore send repair request to coordinator
- *  ? type = 9: // enable repair
+ *   type = 9: clientip | filename | corrupnum | idx1-idx2..| // 
  *  ? type = 10: clientip| filename |  // update lostmap in stripestore
  *   type = 11: clientip| filename |   // report successfully repair
  */
@@ -57,6 +57,10 @@ class CoorCommand {
     int _op; // enable/disable
     string _ectype; // encode/repair
 
+    // type9
+    // _filename
+    vector<int> _corruptIdx;
+
   public:
     CoorCommand();
     ~CoorCommand();
@@ -79,6 +83,7 @@ class CoorCommand {
     string getStripeName();
     int getOp();
     string getECType();
+    vector<int> getCorruptIdx();
 
     // send method
     void sendTo(unsigned int ip);
@@ -110,6 +115,10 @@ class CoorCommand {
     void buildType8(int type,
                     unsigned int ip,
                     string objname);
+    void buildType9(int type, 
+                    unsigned int ip,
+                    string filename,
+                    vector<int> corruptIdx);
     // resolve CoorCommand
     void resolveType0();
     void resolveType1();
@@ -120,6 +129,7 @@ class CoorCommand {
     void resolveType6();
     void resolveType7();
     void resolveType8();
+    void resolveType9();
     void resolveType11();
 
     // for debug
