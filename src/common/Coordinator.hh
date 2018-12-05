@@ -50,7 +50,7 @@ class Coordinator {
     vector<unsigned int> getCandidates(vector<unsigned int> placedIp, vector<int> placedIdx, vector<int> colocWith);
     unsigned int chooseFromCandidates(vector<unsigned int> candidates, string policy, string type); // policy:random/balance; type:control/data/other
 //    void onlineECInst(string filename, SSEntry* ssentry, unsigned int ip);
-    void offlineECInst(string filename, SSEntry* ssentry, unsigned int ip);
+//    void offlineECInst(string filename, SSEntry* ssentry, unsigned int ip);
     void nonOptOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy);
     void optOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy);
     void recoveryOnline(string filename);

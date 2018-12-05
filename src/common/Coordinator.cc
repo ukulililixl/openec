@@ -144,6 +144,8 @@ void Coordinator::registerOnlineEC(unsigned int clientIp, string filename, strin
 }
 
 void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB) {
+  cout << "Coordinator::registerOfflineEC" << endl;
+  struct timeval time1, time2, time3, time4;
   // 0. make sure that there is no existing ssentry
   assert (!_stripeStore->existEntry(filename));
 
@@ -636,7 +638,7 @@ void Coordinator::getFileMeta(CoorCommand* coorCmd) {
   unsigned int clientip = coorCmd->getClientip();
 
   // online:  |type|filesizeMB|ecn|eck|ecw|
-  // offline: |type|
+  // offline: |type|filesizeMB|objnum|
 
   // 0. getssentry
   SSEntry* ssentry = _stripeStore->getEntry(filename);
@@ -672,7 +674,12 @@ void Coordinator::getFileMeta(CoorCommand* coorCmd) {
 
     delete ec;
   } else {
-
+    // for offlineec
+    vector<string> objlist = ssentry->getObjlist();
+    // append number of obj
+    int numobjs=objlist.size();
+    int tmpnum = htonl(numobjs);
+    memcpy(filemeta + metaoff, (char*)&tmpnum, 4); metaoff += 4;
   }
 
   redisContext* sendCtx = RedisUtil::createContext(clientip);
@@ -714,54 +721,54 @@ void Coordinator::getFileMeta(CoorCommand* coorCmd) {
 //  else offlineECInst(filename, ssentry, clientip);
 //}
 
-void Coordinator::offlineECInst(string filename, SSEntry* ssentry, unsigned int ip) {
-  // |objnum|
-  // for each object: |integrity = 1| -> read from DSS
-  //                  |integrity = 0|
-  // 1. instruction 
-  char* instruction = (char*)calloc(2014, sizeof(char));
-  int offset = 0;
-
-  // 2. check integrity
-  string ecpoolid = ssentry->getEcidpool();
-  int filesizeMB = ssentry->getFilesizeMB();
-  OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
-  ECPolicy* ecpolicy = ecpool->getEcpolicy();
-
-  vector<string> objlist = ssentry->getObjlist();
-  vector<int> integrity;
-  FSObjInputStream** objstreams = (FSObjInputStream**)calloc(objlist.size(), sizeof(FSObjInputStream*));
-  for (int i=0; i<objlist.size(); i++) {
-    string objname = objlist[i];
-    objstreams[i] = new FSObjInputStream(_conf, objname, _underfs);
-    if (objstreams[i]->exist()) integrity.push_back(1);
-    else {
-      integrity.push_back(0);
-      _stripeStore->addLostObj(objname);
-    }
-  }
- 
-  // 3.1 num of object
-  int tmpobjnum = htonl(objlist.size());
-  memcpy(instruction + offset, (char*)&tmpobjnum, 4); offset += 4;
-  // 3.2 integirity for each object
-  for (int i=0; i<objlist.size(); i++) {
-    int tmpintegrity = htonl(integrity[i]);
-    memcpy(instruction + offset, (char*)&tmpintegrity, 4); offset += 4;
-  }
-
-  // 3. send to client
-  string key = "offlineinst:"+filename;
-  redisContext* sendCtx = RedisUtil::createContext(ip);
-  redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", key.c_str(), instruction, offset);
-  freeReplyObject(rReply);
-  redisFree(sendCtx);
-
-  // delete
-  for (int i=0; i<objlist.size(); i++) delete objstreams[i];
-  if (objstreams) free(objstreams);
-  if (instruction) free(instruction);
-}
+//void Coordinator::offlineECInst(string filename, SSEntry* ssentry, unsigned int ip) {
+//  // |objnum|
+//  // for each object: |integrity = 1| -> read from DSS
+//  //                  |integrity = 0|
+//  // 1. instruction 
+//  char* instruction = (char*)calloc(2014, sizeof(char));
+//  int offset = 0;
+//
+//  // 2. check integrity
+//  string ecpoolid = ssentry->getEcidpool();
+//  int filesizeMB = ssentry->getFilesizeMB();
+//  OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
+//  ECPolicy* ecpolicy = ecpool->getEcpolicy();
+//
+//  vector<string> objlist = ssentry->getObjlist();
+//  vector<int> integrity;
+//  FSObjInputStream** objstreams = (FSObjInputStream**)calloc(objlist.size(), sizeof(FSObjInputStream*));
+//  for (int i=0; i<objlist.size(); i++) {
+//    string objname = objlist[i];
+//    objstreams[i] = new FSObjInputStream(_conf, objname, _underfs);
+//    if (objstreams[i]->exist()) integrity.push_back(1);
+//    else {
+//      integrity.push_back(0);
+//      _stripeStore->addLostObj(objname);
+//    }
+//  }
+// 
+//  // 3.1 num of object
+//  int tmpobjnum = htonl(objlist.size());
+//  memcpy(instruction + offset, (char*)&tmpobjnum, 4); offset += 4;
+//  // 3.2 integirity for each object
+//  for (int i=0; i<objlist.size(); i++) {
+//    int tmpintegrity = htonl(integrity[i]);
+//    memcpy(instruction + offset, (char*)&tmpintegrity, 4); offset += 4;
+//  }
+//
+//  // 3. send to client
+//  string key = "offlineinst:"+filename;
+//  redisContext* sendCtx = RedisUtil::createContext(ip);
+//  redisReply* rReply = (redisReply*)redisCommand(sendCtx, "RPUSH %s %b", key.c_str(), instruction, offset);
+//  freeReplyObject(rReply);
+//  redisFree(sendCtx);
+//
+//  // delete
+//  for (int i=0; i<objlist.size(); i++) delete objstreams[i];
+//  if (objstreams) free(objstreams);
+//  if (instruction) free(instruction);
+//}
 
 // void Coordinator::onlineECInst(string filename, SSEntry* ssentry, unsigned int ip) {
 //   cout << "Coordinator::onlineECInst" << endl;

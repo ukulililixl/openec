@@ -37,9 +37,9 @@ class OECWorker {
     void clientRead(AGCommand* agCmd);
     void onlineWrite(string filename, string ecid, int filesizeMB);
     void offlineWrite(string filename, string ecpoolid, int filesizeMB);
-//    void readOnline(string filename, int filesizeMB);
     void readOnline(string filename, int filesizeMB, int ecn, int eck, int ecw);
-    void readOffline(string filename, int filesizeMB);
+    void readOffline(string filename, int filesizeMB, int objnum);
+    void readOfflineObj(string filename, string objname, int objsizeMB, FSObjInputStream* objstream, int pktnum, int idx);
 
     // load data from redis
     void loadWorker(BlockingQueue<OECDataPacket*>* readQueue,

@@ -149,7 +149,6 @@ void OECWorker::onlineWrite(string filename, string ecid, int filesizeMB) {
     if (lastNum > 0 && i >= eck) curnum = curnum + 1;
     string objname = filename+"_oecobj_"+to_string(i);
     createThreads[i] = thread([=]{objstreams[i] = new FSObjOutputStream(_conf, objname, _underfs, curnum);});
-//    objstreams[i] = new FSObjOutputStream(_conf, objname, _underfs, curnum);
   }
   // join create thread
   for (int i=0; i<ecn; i++) createThreads[i].join();
@@ -198,7 +197,6 @@ void OECWorker::onlineWrite(string filename, string ecid, int filesizeMB) {
   for (int i=0; i<ecn; i++) delete objstreams[i];
   free(objstreams);
   for (auto compute: computeTasks) delete compute;
-  for (auto task: computeTasks) delete task;
 }
 
 void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {
@@ -225,6 +223,8 @@ void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {
   int objnum = agCmd->getObjnum();
   int basesizeMB = agCmd->getBasesizeMB();
   delete agCmd;
+  gettimeofday(&time2, NULL);
+  cout << "offlineWrite::get response from coordinator: " << RedisUtil::duration(time1, time2) << endl;
   cout << "offlineWrite::objnum = " << objnum << ", basesizeMB = " << basesizeMB << endl;
 
   vector<int> pktnums;
@@ -240,16 +240,20 @@ void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {
   }
   // 2. create outputstream for each obj
   FSObjOutputStream** objstreams = (FSObjOutputStream**)calloc(objnum, sizeof(FSObjOutputStream*));
+  vector<thread> createThreads = vector<thread>(objnum);
   for (int i=0; i<objnum; i++) {
     // figure out number of pkts to persist for this stream
     int curnum = pktnums[i];
     string objname = filename+"_oecobj_"+to_string(i);
-    objstreams[i] = new FSObjOutputStream(_conf, objname, _underfs, curnum);
+    createThreads[i] = thread([=]{objstreams[i] = new FSObjOutputStream(_conf, objname, _underfs, curnum);});
   }
+  for (int i=0; i<objnum; i++) createThreads[i].join();
+
   BlockingQueue<OECDataPacket*>** loadQueue = (BlockingQueue<OECDataPacket*>**)calloc(objnum, sizeof(BlockingQueue<OECDataPacket*>*));
   for (int i=0; i<objnum; i++) {
     loadQueue[i] = objstreams[i]->getQueue();
   }
+
   // 3. create loadThreads
   vector<thread> loadThreads = vector<thread>(objnum);
   int startid = 0;
@@ -258,6 +262,7 @@ void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {
     loadThreads[i] = thread([=]{loadWorker(loadQueue[i], filename, startid, 1, curnum, false);});
     startid += curnum;
   }
+
   // 4. create persistThreads
   vector<thread> persistThreads = vector<thread>(objnum);
   for (int i=0; i<objnum; i++) {  
@@ -1235,264 +1240,260 @@ void OECWorker::clientRead(AGCommand* agcmd) {
 
     readOnline(filename, filesizeMB, ecn, eck, ecw);
   } else {
-
+    // objnum
+    int objnum;
+    memcpy((char*)&objnum, metastr, 4); metastr += 4;
+    objnum = ntohl(objnum);
+    readOffline(filename, filesizeMB, objnum);
   }
 
   freeReplyObject(metareply);
   redisFree(metaCtx);
 
-//  if (redundancy == 0) readOnline(filename, filesizeMB);
-//  else readOffline(filename, filesizeMB);
 }
 
-void OECWorker::readOffline(string filename, int filesizeMB) {
-  cout << "OECWorker::readOffline.filename: " << filename << ", filesizeMB: " << filesizeMB << endl;
-  string instkey = "offlineinst:"+filename;
-  redisReply* instreply;
-  redisContext* instCtx = RedisUtil::createContext(_conf->_localIp);
-  instreply = (redisReply*)redisCommand(instCtx, "blpop %s 0", instkey.c_str());
-  char* inststr = instreply->element[1]->str;
-  // 0.1 objnum
-  int objnum;
-  memcpy((char*)&objnum, inststr, 4); inststr += 4;
-  objnum = ntohl(objnum);
-  vector<int> integrity;
+void OECWorker::readOffline(string filename, int filesizeMB, int objnum) {
+  cout << "OECWorker::readOffline.filename: " << filename << ", filesizeMB: " << filesizeMB << ", objnum: " << objnum << endl;
+
+  // create inputstream
+  vector<thread> createThreads = vector<thread>(objnum);
+  FSObjInputStream** objstreams = (FSObjInputStream**)calloc(objnum, sizeof(FSObjInputStream*));
   for (int i=0; i<objnum; i++) {
-    int integ;
-    memcpy((char*)&integ, inststr, 4); inststr += 4;
-    integ = ntohl(integ);
-    integrity.push_back(integ);
+    string objname = filename+"_oecobj_"+to_string(i);
+    createThreads[i] = thread([=]{objstreams[i] = new FSObjInputStream(_conf, objname, _underfs);});
   }
-  cout << "OECWorker::readOffline.integrity vector: ";
-  for (int i=0; i<objnum; i++) cout << integrity[i] << " ";
-  cout << endl;
+  for (int i=0; i<objnum; i++) {
+    createThreads[i].join();
+  }
 
   // read object one by one
-  for (int obji=0; obji<objnum; obji++) {
-    string objname = filename+"_oecobj_"+to_string(obji);
-    int objsize = filesizeMB / objnum;
-    if (integrity[obji] == 1) {
-      // this obj is in good health
-      // 1.0 create objinputstream
-      FSObjInputStream* objstream = new FSObjInputStream(_conf, objname, _underfs);
-      thread readThread = thread([=]{objstream->readObj();});
-      BlockingQueue<OECDataPacket*>* writeQueue = new BlockingQueue<OECDataPacket*>();
-      // 1.1 cacheThread
-      int pktnum = objsize * 1048576/_conf->_pktSize; 
-      thread cacheThread = thread([=]{cacheWorker(writeQueue, filename, pktnum * obji, pktnum, 1);});
-
-      // 1.3 get pkt from readThread to writeThread
-      while (true) {
-        OECDataPacket* curpkt = objstream->dequeue();
-        if (curpkt->getDatalen()) writeQueue->push(curpkt);
-        if (!objstream->hasNext()) break;
-      }
-
-      // join
-      readThread.join();
-      cacheThread.join();
-
-      // delete
-      delete objstream;
-    } else {
-      // issue degraded read for this object
-      CoorCommand* coorCmd = new CoorCommand();
-      coorCmd->buildType5(5, _conf->_localIp, objname); 
-      coorCmd->sendTo(_coorCtx);
-      delete coorCmd;
-     
-      // wait for response
-      string instkey = "offlinedegradedinst:" +objname;
-      redisReply* instreply;
-      redisContext* instCtx = RedisUtil::createContext(_conf->_localIp);
-      instreply = (redisReply*)redisCommand(instCtx, "blpop %s 0", instkey.c_str());
-      char* inststr = instreply->element[1]->str; 
-
-      // opt
-      int opt;
-      memcpy((char*)&opt, inststr, 4); inststr += 4;
-      opt = ntohl(opt);
-      cout << "opt = " << opt << endl;
-
-      if (opt < 0) {
-        // lostidx
-        int lostidx;
-        memcpy((char*)&lostidx, inststr, 4); inststr += 4;
-        lostidx = ntohl(lostidx);
-        cout << "lostidx = " << lostidx << endl;
-
-        // |ecn|eck|ecw|loadn|loadidx-objname|..|computen|computetask|..|
-        cout << "OfflineDegradedRead without technique" << endl;
-        // 0.1 ecn
-        int ecn;
-        memcpy((char*)&ecn, inststr, 4); inststr += 4;
-        ecn = ntohl(ecn);
-        // 0.2 eck
-        int eck;
-        memcpy((char*)&eck, inststr, 4); inststr += 4;
-        eck = ntohl(eck);
-        // 0.3 ecw
-        int ecw;
-        memcpy((char*)&ecw, inststr, 4); inststr += 4;
-        ecw = ntohl(ecw);
-        cout << "ecn = " << ecn << ", eck = " << eck << ", ecw = " << ecw << endl;
-        // 0.4 load
-        int loadn;
-        memcpy((char*)&loadn, inststr, 4); inststr += 4;
-        loadn = ntohl(loadn);
-        vector<int> loadidx;
-        vector<string> loadobj;
-        for (int loadi=0; loadi<loadn; loadi++) {
-          int curidx;
-          memcpy((char*)&curidx, inststr, 4); inststr += 4;
-          curidx = ntohl(curidx);
-          loadidx.push_back(curidx);
-          int len;
-          memcpy((char*)&len, inststr, 4); inststr += 4;
-          len = ntohl(len);
-          char* objstr = (char*)calloc(len, sizeof(char));
-          memcpy(objstr, inststr, len); inststr += len;
-          loadobj.push_back(string(objstr));
-          free(objstr);
-        }
-        cout << "loadobj: ";
-        for (int loadi=0; loadi<loadn; loadi++) cout << loadobj[loadi] << " ";
-        cout << endl;
-        // 0.5 computen
-        int computen;
-        memcpy((char*)&computen, inststr, 4); inststr += 4;
-        computen = ntohl(computen);
-        assert(computen>0);
-
-        vector<ECTask*> computeTasks;
-        redisReply* rReply;
-        redisContext* waitCtx = RedisUtil::createContext(_conf->_localIp);
-        for (int computei=0; computei<computen; computei++) {
-          string wkey = "compute:" + objname+":"+to_string(computei);
-          rReply = (redisReply*)redisCommand(waitCtx, "blpop %s 0", wkey.c_str());
-          char* reqStr = rReply -> element[1] -> str;
-          ECTask* compute = new ECTask(reqStr);
-          compute->dump();
-          freeReplyObject(rReply);
-          computeTasks.push_back(compute);
-        }
-        redisFree(waitCtx);
-
-        // 1.0 create input stream
-        FSObjInputStream** readStreams = (FSObjInputStream**)calloc(loadn, sizeof(FSObjInputStream*));
-        for (int loadi=0; loadi<loadn; loadi++) {
-          string loadobjname = loadobj[loadi];
-          readStreams[loadi] = new FSObjInputStream(_conf, loadobjname, _underfs);
-        }
-        vector<thread> readThreads = vector<thread>(loadn);
-        for (int loadi=0; loadi<loadn; loadi++) {
-          readThreads[loadi] = thread([=]{readStreams[loadi]->readObj();});
-        }
-
-        BlockingQueue<OECDataPacket*>* writeQueue = new BlockingQueue<OECDataPacket*>();
-        int pktnum = objsize * 1048576/_conf->_pktSize;
-        thread cacheThread = thread([=]{cacheWorker(writeQueue, filename, pktnum * obji, pktnum, 1);});
- 
-        // 2.1 computeThread
-        thread computeThread = thread([=]{computeWorkerDegradedOffline(readStreams, loadidx, writeQueue, lostidx, computeTasks, pktnum, ecn, eck, ecw);});
-
-        // join
-        for (int loadi=0; loadi<loadn; loadi++) readThreads[loadi].join();
-        computeThread.join();
-        cacheThread.join();
-
-        // delete
-        for (int i=0; i<loadn; i++) delete readStreams[i];
-        free(readStreams);
-        delete writeQueue;
-        for (auto item: computeTasks) delete item;
-      } else {
-        cout << "OfflineDegradedRead using OpenEC technique" << endl;
-        // get |stripename|num|key-ip|key-ip|...| 
-        // stripename
-        int stripenamelen;
-        memcpy((char*)&stripenamelen, inststr, 4); inststr += 4;
-        stripenamelen = ntohl(stripenamelen);
-        char* stripenamestr = (char*)calloc(stripenamelen, sizeof(char));
-        memcpy(stripenamestr, inststr, stripenamelen); inststr += stripenamelen;
-        string stripename(stripenamestr);
-        free(stripenamestr);
-        // num 
-        int num;
-        memcpy((char*)&num, inststr, 4); inststr += 4;
-        num = ntohl(num);
-        vector<int> cidxlist;
-        vector<unsigned int> iplist;
-        for (int i=0; i<num; i++) {
-          int cidx;
-          memcpy((char*)&cidx, inststr, 4); inststr += 4;
-          cidx = ntohl(cidx);
-          cidxlist.push_back(cidx);
-          unsigned int ip;
-          memcpy((char*)&ip, inststr, 4); inststr += 4;
-          ip = ntohl(ip);
-          iplist.push_back(ip);
-        }
-
-        // create fetch queue
-        BlockingQueue<OECDataPacket*>** fetchQueue = (BlockingQueue<OECDataPacket*>**)calloc(num, sizeof(BlockingQueue<OECDataPacket*>*));
-        for (int i=0; i<num; i++) {
-          fetchQueue[i] = new BlockingQueue<OECDataPacket*>();
-        }
-        // create writeQueue
-        BlockingQueue<OECDataPacket*>* writeQueue = new BlockingQueue<OECDataPacket*>();
-
-        // create fetchThread
-        int pktnum = objsize * 1048576/_conf->_pktSize;
-        vector<thread> fetchThreads = vector<thread>(num);
-        for (int i=0; i<num; i++) {
-          int cid = cidxlist[i];
-          string keybase = stripename+":"+to_string(cid);
-          fetchThreads[i] = thread([=]{fetchWorker(fetchQueue[i], keybase, iplist[i], pktnum);});
-        } 
-
-        thread cacheThread = thread([=]{cacheWorker(writeQueue, filename, pktnum * obji, pktnum, 1);});
-
-        //fetch pkt from fetchQueue to writeQueue
-        for (int i=0; i<pktnum; i++) {
-          if (num == 1) {
-            OECDataPacket* curpkt = fetchQueue[0]->pop();
-            writeQueue->push(curpkt);
-            continue;
-          } 
-          int slicesize = _conf->_pktSize/num;
-          char* content = (char*)calloc(4+_conf->_pktSize, sizeof(char));
-          int tmplen = htonl(_conf->_pktSize);
-          memcpy(content, (char*)&tmplen, 4);
-          for (int j=0; j<num; j++) { 
-            OECDataPacket* curpkt = fetchQueue[j]->pop();
-            memcpy(content+4+j*slicesize, curpkt->getData(), slicesize);
-            delete curpkt;
-          }
-          OECDataPacket* retpkt = new OECDataPacket();
-          retpkt->setRaw(content);
-          writeQueue->push(retpkt);
-        }
-
-        // join
-        for (int i=0; i<num; i++) fetchThreads[i].join();
-        cacheThread.join();
-
-        // delete
-        delete writeQueue;
-        for (int i=0; i<num; i++) delete fetchQueue[i];
-        free(fetchQueue);
-      }
- 
-      // free
-      freeReplyObject(instreply);
-      redisFree(instCtx);
-    }
+  int objsizeMB = filesizeMB/objnum;
+  int pktnum = objsizeMB * 1048576/_conf->_pktSize;
+  for (int i=0; i<objnum; i++) {
+    string objname = filename+"_oecobj_"+to_string(i);
+    readOfflineObj(filename, objname, objsizeMB, objstreams[i], pktnum, i);
   }
 
   // free
-  freeReplyObject(instreply);
-  redisFree(instCtx); 
+  for (int i=0; i<objnum; i++) {
+    delete objstreams[i];
+  }
+  free(objstreams);
+}
+
+void OECWorker::readOfflineObj(string filename, string objname, int objsizeMB, FSObjInputStream* objstream, int pktnum, int idx) {
+  cout << "OECWorker::readOfflineObj" << endl;
+  bool objexist = objstream->exist();
+  if (objexist) {
+    cout << "OECWorker::readOfflineObj. "  << objname << " exists!" << endl;
+    // this obj is in good health
+    // 1. create read thread
+    thread readThread = thread([=]{objstream->readObj();});
+    BlockingQueue<OECDataPacket*>* writeQueue = objstream->getQueue();
+    // 2. cache thread
+    thread cacheThread = thread([=]{cacheWorker(writeQueue, filename, pktnum * idx, pktnum, 1);});
+    // join
+    readThread.join();
+    cacheThread.join();
+  } else {
+    cout << "OECWorker::readOfflineObj. "  << objname << " does not exist!" << endl;
+    // we need to repair this lost obj
+    // issue degraded read for this obj
+    CoorCommand* coorCmd = new CoorCommand();
+    coorCmd->buildType5(5, _conf->_localIp, objname); 
+    coorCmd->sendTo(_coorCtx);
+    delete coorCmd;
+    
+    // wait for response
+    string instkey = "offlinedegradedinst:" +objname;
+    redisReply* instreply;
+    redisContext* instCtx = RedisUtil::createContext(_conf->_localIp);
+    instreply = (redisReply*)redisCommand(instCtx, "blpop %s 0", instkey.c_str());
+    char* inststr = instreply->element[1]->str; 
+
+    // opt
+    int opt;
+    memcpy((char*)&opt, inststr, 4); inststr += 4;
+    opt = ntohl(opt);
+    cout << "opt = " << opt << endl;
+
+    if (opt < 0) {
+      // we fetch available data here and repair
+      // lostidx
+      int lostidx;
+      memcpy((char*)&lostidx, inststr, 4); inststr += 4;
+      lostidx = ntohl(lostidx);
+      cout << "lostidx = " << lostidx << endl;
+      // |ecn|eck|ecw|loadn|loadidx-objname|..|computen|computetask|..|
+      cout << "OfflineDegradedRead without technique" << endl;
+      // 0.1 ecn
+      int ecn;
+      memcpy((char*)&ecn, inststr, 4); inststr += 4;
+      ecn = ntohl(ecn);
+      // 0.2 eck
+      int eck;
+      memcpy((char*)&eck, inststr, 4); inststr += 4;
+      eck = ntohl(eck);
+      // 0.3 ecw
+      int ecw;
+      memcpy((char*)&ecw, inststr, 4); inststr += 4;
+      ecw = ntohl(ecw);
+      cout << "ecn = " << ecn << ", eck = " << eck << ", ecw = " << ecw << endl;
+      // 0.4 load
+      int loadn;
+      memcpy((char*)&loadn, inststr, 4); inststr += 4;
+      loadn = ntohl(loadn);
+      vector<int> loadidx;
+      vector<string> loadobj;
+      for (int loadi=0; loadi<loadn; loadi++) {
+        int curidx;
+        memcpy((char*)&curidx, inststr, 4); inststr += 4;
+        curidx = ntohl(curidx);
+        loadidx.push_back(curidx);
+        int len;
+        memcpy((char*)&len, inststr, 4); inststr += 4;
+        len = ntohl(len);
+        char* objstr = (char*)calloc(len, sizeof(char));
+        memcpy(objstr, inststr, len); inststr += len;
+        loadobj.push_back(string(objstr));
+        free(objstr);
+      }
+      cout << "loadobj: ";
+      for (int loadi=0; loadi<loadn; loadi++) cout << loadobj[loadi] << " ";
+      cout << endl;
+      // 0.5 computen
+      int computen;
+      memcpy((char*)&computen, inststr, 4); inststr += 4;
+      computen = ntohl(computen);
+      assert(computen>0);
+
+      vector<ECTask*> computeTasks;
+      redisReply* rReply;
+      redisContext* waitCtx = RedisUtil::createContext(_conf->_localIp);
+      for (int computei=0; computei<computen; computei++) {
+        string wkey = "compute:" + objname+":"+to_string(computei);
+        rReply = (redisReply*)redisCommand(waitCtx, "blpop %s 0", wkey.c_str());
+        char* reqStr = rReply -> element[1] -> str;
+        ECTask* compute = new ECTask(reqStr);
+        compute->dump();
+        freeReplyObject(rReply);
+        computeTasks.push_back(compute);
+      }
+      redisFree(waitCtx);
+
+      // 1.0 create input stream
+      FSObjInputStream** readStreams = (FSObjInputStream**)calloc(loadn, sizeof(FSObjInputStream*));
+      vector<thread> createThreads = vector<thread>(loadn);
+      for (int loadi=0; loadi<loadn; loadi++) {
+        string loadobjname = loadobj[loadi];
+        createThreads[loadi] = thread([=]{readStreams[loadi] = new FSObjInputStream(_conf, loadobjname, _underfs);});
+      }
+      for (int loadi=0; loadi<loadn; loadi++) createThreads[loadi].join();
+
+      vector<thread> readThreads = vector<thread>(loadn);
+      for (int loadi=0; loadi<loadn; loadi++) {
+        readThreads[loadi] = thread([=]{readStreams[loadi]->readObj();});
+      }
+
+      // 2. create cache queue and cache thread
+      BlockingQueue<OECDataPacket*>* writeQueue = new BlockingQueue<OECDataPacket*>();
+      thread cacheThread = thread([=]{cacheWorker(writeQueue, filename, pktnum * idx, pktnum, 1);});
+
+      // 3. computeThread
+      thread computeThread = thread([=]{computeWorkerDegradedOffline(readStreams, loadidx, writeQueue, lostidx, computeTasks, pktnum, ecn, eck, ecw);});
+
+
+      // join
+      for (int loadi=0; loadi<loadn; loadi++) readThreads[loadi].join();
+      computeThread.join();
+      cacheThread.join();
+      
+      // free
+      for (int loadi=0; loadi<loadn; loadi++) delete readStreams[loadi];
+      free(readStreams);
+      delete writeQueue;
+
+    } else {
+      // we enable OpenEC optimization
+      // get |stripename|num|key-ip|key-ip|...| 
+      // stripename
+      int stripenamelen;
+      memcpy((char*)&stripenamelen, inststr, 4); inststr += 4;
+      stripenamelen = ntohl(stripenamelen);
+      char* stripenamestr = (char*)calloc(stripenamelen, sizeof(char));
+      memcpy(stripenamestr, inststr, stripenamelen); inststr += stripenamelen;
+      string stripename(stripenamestr);
+      free(stripenamestr);
+      // num 
+      int num;
+      memcpy((char*)&num, inststr, 4); inststr += 4;
+      num = ntohl(num);
+      vector<int> cidxlist;
+      vector<unsigned int> iplist;
+      for (int i=0; i<num; i++) {
+        int cidx;
+        memcpy((char*)&cidx, inststr, 4); inststr += 4;
+        cidx = ntohl(cidx);
+        cidxlist.push_back(cidx);
+        unsigned int ip;
+        memcpy((char*)&ip, inststr, 4); inststr += 4;
+        ip = ntohl(ip);
+        iplist.push_back(ip);
+      }
+
+      // create fetch queue
+      BlockingQueue<OECDataPacket*>** fetchQueue = (BlockingQueue<OECDataPacket*>**)calloc(num, sizeof(BlockingQueue<OECDataPacket*>*));
+      for (int i=0; i<num; i++) {
+        fetchQueue[i] = new BlockingQueue<OECDataPacket*>();
+      }
+      // create writeQueue
+      BlockingQueue<OECDataPacket*>* writeQueue = new BlockingQueue<OECDataPacket*>();
+
+      // create fetchThread
+      vector<thread> fetchThreads = vector<thread>(num);
+      for (int i=0; i<num; i++) {
+        int cid = cidxlist[i];
+        string keybase = stripename+":"+to_string(cid);
+        fetchThreads[i] = thread([=]{fetchWorker(fetchQueue[i], keybase, iplist[i], pktnum);});
+      } 
+
+      thread cacheThread = thread([=]{cacheWorker(writeQueue, filename, pktnum * idx, pktnum, 1);});
+
+      //fetch pkt from fetchQueue to writeQueue
+      for (int i=0; i<pktnum; i++) {
+        if (num == 1) {
+          OECDataPacket* curpkt = fetchQueue[0]->pop();
+          writeQueue->push(curpkt);
+          continue;
+        } 
+        int slicesize = _conf->_pktSize/num;
+        char* content = (char*)calloc(4+_conf->_pktSize, sizeof(char));
+        int tmplen = htonl(_conf->_pktSize);
+        memcpy(content, (char*)&tmplen, 4);
+        for (int j=0; j<num; j++) { 
+          OECDataPacket* curpkt = fetchQueue[j]->pop();
+          memcpy(content+4+j*slicesize, curpkt->getData(), slicesize);
+          delete curpkt;
+        }
+        OECDataPacket* retpkt = new OECDataPacket();
+        retpkt->setRaw(content);
+        writeQueue->push(retpkt);
+      }
+
+      //join
+      for (int i=0; i<num; i++)  fetchThreads[i].join();
+      cacheThread.join();
+
+      // delete
+      for (int i=0; i<num; i++) delete fetchQueue[i];
+      free(fetchQueue);
+      delete writeQueue;
+    }
+
+    // free
+    freeReplyObject(instreply);
+    redisFree(instCtx); 
+  }
 }
 
 void OECWorker::readOnline(string filename, int filesizeMB, int ecn, int eck, int ecw) {

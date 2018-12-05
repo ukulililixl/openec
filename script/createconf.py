@@ -153,12 +153,10 @@ for node in cluster:
     attr.append(line)
     line="<value><id>rs_3_2</id><class>RSCONV</class><n>3</n><k>2</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
     attr.append(line)
-    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
+    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>1</opt></value>\n"
     attr.append(line)
-#    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><cps>1</cps><locality>false</locality></value>\n"
-#    attr.append(line)
-#    line="<value><id>rs_12_8</id><class>RSCONV</class><n>12</n><k>8</k><cps>1</cps><locality>false</locality></value>\n"
-#    attr.append(line)
+    line="<value><id>rs_12_8</id><class>RSCONV</class><n>12</n><k>8</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
+    attr.append(line)
 #    line="<value><id>waslrc_6_2_2</id><class>WASLRC</class><n>10</n><k>6</k><cps>1</cps><locality>false</locality><param>2,2</param></value>\n"
 #    attr.append(line)
 #    line="<value><id>drc963</id><class>DRC963</class><n>9</n><k>6</k><cps>3</cps><locality>true</locality><param>3</param></value>\n"
@@ -190,6 +188,20 @@ for node in cluster:
     line="<value><poolid>rs_9_6_pool</poolid><ecid>rs_9_6</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
     line="<value><poolid>rs_12_8_pool</poolid><ecid>rs_12_8</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_8_1_pool</poolid><ecid>rs_12_8</ecid><base>1</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_8_2_pool</poolid><ecid>rs_12_8</ecid><base>2</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_8_4_pool</poolid><ecid>rs_12_8</ecid><base>4</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_8_8_pool</poolid><ecid>rs_12_8</ecid><base>8</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_8_16_pool</poolid><ecid>rs_12_8</ecid><base>16</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_8_32_pool</poolid><ecid>rs_12_8</ecid><base>32</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_8_64_pool</poolid><ecid>rs_12_8</ecid><base>64</base></value>\n"
     attr.append(line)
     line="<value><poolid>waslrc_6_2_2_pool</poolid><ecid>waslrc_6_2_2</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)

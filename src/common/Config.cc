@@ -205,7 +205,7 @@ Config::Config(std::string& filepath) {
         curele = curele->NextSiblingElement("base");
         int basesize;
         if (!curele) {
-          basesize = 1048576;
+          basesize = 1;
         } else {
           basesize = std::stoi(curele -> GetText());
         }
