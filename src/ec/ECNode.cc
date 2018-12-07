@@ -39,14 +39,31 @@ vector<ECNode*> ECNode::getChildren() {
   return _childNodes;
 }
 
+ECNode* ECNode::getChildNode(int cid) {
+  for (auto item: _childNodes) {
+    if (item->getNodeId() == cid) return item;
+  }
+}
+
 void ECNode::incRefNumFor(int id) {
   if (_refNumFor.find(id) == _refNumFor.end()) _refNumFor.insert(make_pair(id, 1));
   else _refNumFor[id]++;
+
+  // if current node is lined to a bind node, we also need to update bind node
+  if (_childNodes.size() == 1 && _childNodes[0]->getCoefmap().size() > 1) {
+    _childNodes[0]->incRefNumFor(id);
+  }
 }
 
 int ECNode::getRefNumFor(int id) {
-  assert (_refNumFor.find(id) != _refNumFor.end());
-  return _refNumFor[id];
+//  assert (_refNumFor.find(id) != _refNumFor.end());
+  if (_refNumFor.find(id) != _refNumFor.end()) return _refNumFor[id];
+  else return 0;
+//  return _refNumFor[id];
+}
+
+void ECNode::setRefNum(int nid, int ref) {
+  _refNumFor[nid] = ref;
 }
 
 unordered_map<int, int> ECNode::getRefMap() {
@@ -59,6 +76,11 @@ int ECNode::getNodeId() {
 
 unordered_map<int, vector<int>> ECNode::getCoefmap() {
   return _coefMap;
+}
+
+void ECNode::setConstraint(bool cons, int id) {
+  _hasConstraint = cons;
+  if (_hasConstraint) _consId = id;
 }
 
 void ECNode::dump(int parent) {
@@ -161,6 +183,7 @@ vector<unsigned int> ECNode::candidateIps(unordered_map<int, unsigned int> sid2i
 
 void ECNode::parseForOEC(unsigned int ip) {
   _ip = ip;
+  bool cache = true;
   // 0. check for Load
   // case: When current node is leaf, there is Load Task
   int childNum = _childNodes.size();
@@ -201,6 +224,13 @@ void ECNode::parseForOEC(unsigned int ip) {
     int childtarget = cmap.size();
     if (childtarget > 1) {
       // child is bindnode there is no need to create compute and fetch task 
+      // however, this node need to tell where should fetch data
+      // create a tell task
+      //ECTask* tell = new ECTask();
+      //tell->setType(5);
+      //tell->setBind(childnode->getNodeId());
+      //_oecTasks.insert(make_pair(5, tell));
+      _ip = childnode->getIp();  // ?? Not sure
     } else {
       // child node is not bind node
       vector<int> childrenIdx;
@@ -226,11 +256,14 @@ void ECNode::parseForOEC(unsigned int ip) {
 //  int persistDSS = 0;
 //  if (_refNumFor.size() == 0) persistDSS = 1;
 //  if (persistDSS == 1) _refNumFor.insert(make_pair(_nodeId, 1));
-  if (_refNumFor.size() == 0) _refNumFor.insert(make_pair(_nodeId, 1));
-  ECTask* cache = new ECTask();
-  cache->setType(3);
-  cache->addRef(_refNumFor);
-  _oecTasks.insert(make_pair(3, cache));
+
+//  if (_refNumFor.size() == 0) _refNumFor.insert(make_pair(_nodeId, 1));
+  if (cache) {
+    ECTask* cache = new ECTask();
+    cache->setType(3);
+    cache->addRef(_refNumFor);
+    _oecTasks.insert(make_pair(3, cache));
+  }
 }
 
 unordered_map<int, ECTask*> ECNode::getTasks() {
@@ -267,15 +300,16 @@ AGCommand* ECNode::parseAGCommand(string stripename,
   if (_oecTasks.find(1) != _oecTasks.end()) fetch = true;
   if (_oecTasks.find(2) != _oecTasks.end()) compute = true;
   if (_oecTasks.find(3) != _oecTasks.end()) cache = true;
-  cout << "ECNode::parseAGCommand.load: " << load << ", fetch: " << fetch << ", compute: " << compute << ", cache:" << cache << endl;
+//  cout << "ECNode::parseAGCommand.load: " << load << ", fetch: " << fetch << ", compute: " << compute << ", cache:" << cache << endl;
  
-  AGCommand* agCmd = new AGCommand();
   if (load & !fetch & !compute & cache) {
     // load from disk
     vector<int> indices = _oecTasks[0]->getIndices();
     int sid = indices[0]/w;
     pair<string, unsigned int> curpair = stripeobjs[sid]; 
     string objname = curpair.first;
+
+    AGCommand* agCmd = new AGCommand();
     agCmd->buildType2(2, _ip, stripename, w, num, objname, indices, _oecTasks[3]->getRefMap());
     return agCmd;
   }
@@ -286,15 +320,20 @@ AGCommand* ECNode::parseAGCommand(string stripename,
     vector<unsigned int> prevLocs;
     for (int i=0; i<prevCids.size(); i++) {
       int cidx = prevCids[i];
-      unsigned int ip = cid2ip[cidx];
+      //unsigned int ip = cid2ip[cidx];
+      ECNode* cnode = getChildNode(cidx);
+      unsigned int ip = cnode->getIp();
       prevLocs.push_back(ip);
     }
     unordered_map<int, vector<int>> coefs = _oecTasks[2]->getCoefMap();
     unordered_map<int, int> refs = _oecTasks[3]->getRefMap();
     // fetch and compute
+    AGCommand* agCmd = new AGCommand();
     agCmd->buildType3(3, _ip, stripename, w, num, prevCids.size(), prevCids, prevLocs, coefs, refs);
     return agCmd;
   }
+
+  return NULL;
 }
 
 void ECNode::dumpRawTask() {

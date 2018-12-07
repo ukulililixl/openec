@@ -28,6 +28,10 @@ void Cluster::addParent(int parent) {
   _parents.push_back(parent);
 }
 
+void Cluster::setOpt(int opt) {
+  _opted = opt;
+}
+
 void Cluster::dump() {
   cout << "Cluster:: ( ";
   for (int i=0; i<_childs.size(); i++) cout << _childs[i] << " ";

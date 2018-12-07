@@ -58,6 +58,10 @@ void ECTask::addRef(int idx, int ref) {
   _refNum.insert(make_pair(idx, ref));
 }
 
+//void ECTask::setBind(int id) {
+//  _bind = id;
+//}
+
 vector<int> ECTask::getIndices() {
   return _indices;
 }

@@ -9,8 +9,13 @@ using namespace std;
 void usage() {
   cout << "Usage: ./ECDAGTest parsetype code operation" << endl;
   cout << "  0. parsetype (online/offline)" << endl;
-  cout << "  1. code (rs/waslrc/ia/drc643/rsppr/drc963/rawrs/clay_6_4/butterfly_6_4)" << endl;
+  cout << "  1. code (rs_9_6_op1/waslrc/ia/drc643/rsppr/drc963/rawrs/clay_6_4/butterfly_6_4)" << endl;
   cout << "  2. operation (encode/decode)" << endl;
+}
+
+int loss(int ecn) {
+  // simulate a loss index
+  return 0;
 }
 
 int main(int argc, char** argv) {
@@ -28,73 +33,83 @@ int main(int argc, char** argv) {
   string confpath = "conf/sysSetting.xml";
   Config* conf = new Config(confpath);
 
-  // just for test
-  int n=6, k=4, w=1;
-  bool locality=false;
-  int opt=-1;
-  vector<string> param;
-  ECBase* ec = new RSCONV(n, k, 1, locality, opt, param);
+  // get ecpolicy
+  ECPolicy* ecpolicy = conf->_ecPolicyMap[ecid];
+  ECBase* ec = ecpolicy->createECClass();
+  int ecn = ecpolicy->getN();
+  int eck = ecpolicy->getK();
+  int ecw = ecpolicy->getW();
+  int opt = ecpolicy->getOpt();
+  bool locality = ecpolicy->getLocality();
+  cout << "ecn: " << ecn << ", eck: " << eck << ", ecw: " << ecw << ", opt: " << opt << endl;
 
-  // construct encode/decode ECDAG
-  ECDAG* ecdag = ec->Encode(); 
+  // create ECDAG
+  ECDAG* ecdag;
+  if (operation == "encode") {
+    ecdag = ec->Encode();
+  } else if (operation == "decode") {
+    int lostidx = loss(ecn);
+    vector<int> availcidx;
+    vector<int> toreccidx;
+    for (int i=0; i<ecn; i++) {
+      if (i == lostidx) {
+        for (int j=0; j<ecw; j++) {
+          toreccidx.push_back(i*ecw+j);
+        }
+      } else {
+        for (int j=0; j<ecw; j++) {
+          availcidx.push_back(i*ecw+j);
+        }
+      }
+    }
+    ecdag = ec->Decode(availcidx, toreccidx);
+  } else {
+    cout << "Unrecognized operation" << endl;
+    return -1;
+  }
+
+  // dump ecdag?
   ecdag->dump();
 
-  // simulate physical information for current stripe
-  unordered_map<int, pair<string, unsigned int>> objlist;
-  unordered_map<int, unsigned int> sid2ip;
-  for (int i=0; i<n; i++) {
-    string objname = "testobj-"+to_string(i);
-    unsigned int ip = conf->_agentsIPs[i];
-    pair<string, unsigned int> curpair = make_pair(objname, ip);
-    objlist.insert(make_pair(i, curpair));
-    sid2ip.insert(make_pair(i, ip));
-    cout << "ECDAG:: sidx: " << i << ", objname: " << objname << ", loc: " << RedisUtil::ip2Str(ip) << endl;
-  }
-
-  // reconstruction/optimization is performed here
-  // opt0: BindX by default
-  // opt1: BindY
-  // opt2: layering or pipelining reconstruction with physical information
-  
   // topological sorting
-  vector<int> sortedList = ecdag->toposort();
-  cout << "ECDAGTest::topological sorting: ";
-  for (int i=0; i<sortedList.size(); i++) cout << sortedList[i] << " ";
+  vector<int> toposeq = ecdag->toposort();
+  cout << "toposort: ";
+  for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
   cout << endl;
 
-  // figure out corresponding ip for each compute node
-  unordered_map<int, unsigned int> cid2ip;
-  for (int i=0; i<sortedList.size(); i++) {
-    int cidx = sortedList[i];
-    ECNode* node = ecdag->getNode(cidx);
-    vector<unsigned int> candidates = node->candidateIps(sid2ip, cid2ip, conf->_agentsIPs, n, k, w, true);
-    // choose from candidates
-    unsigned int curip = candidates[0];
-    cid2ip.insert(make_pair(cidx, curip));
-    cout << "ECDAGTest:: cidx: " << cidx << ", ip: " << RedisUtil::ip2Str(curip) << endl;
+  if (parsetype == "online") {
+    vector<ECTask*> computetasks;
+    for (int i=0; i<toposeq.size(); i++) {
+      ECNode* curnode = ecdag->getNode(toposeq[i]);
+      curnode->parseForClient(computetasks);
+    }
+    for (int i=0; i<computetasks.size(); i++) computetasks[i]->dump();
+  } else {
+    // simulate physical information
+    unordered_map<int, pair<string, unsigned int>> objlist;
+    unordered_map<int, unsigned int> sid2ip;
+    for (int sid=0; sid<ecn; sid++) {
+      string objname = "testobj"+to_string(sid);
+      unsigned int ip = conf->_agentsIPs[sid];
+      objlist.insert(make_pair(sid, make_pair(objname, ip)));
+      sid2ip.insert(make_pair(sid, ip));
+    }
+
+    // cid2ip
+    unordered_map<int, unsigned int> cid2ip;
+    for (int i=0; i<toposeq.size(); i++) {
+      int curcid = toposeq[i];
+      ECNode* cnode = ecdag->getNode(curcid);
+      vector<unsigned int> candidates = cnode->candidateIps(sid2ip, cid2ip, conf->_agentsIPs, ecn, eck, ecw, locality);
+      unsigned int ip = candidates[0];
+      cid2ip.insert(make_pair(curcid, ip));
+    }
+
+    string stripename = "teststripe";
+    int pktnum = 8;
+    vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+    vector<AGCommand*> persistCmds = ecdag->persist(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
   }
-
-  // preassign ip for root?
-
-  // parse for OEC
-  for (int i=0; i<sortedList.size(); i++) {
-    int cidx = sortedList[i];
-    ECNode* node = ecdag->getNode(cidx);
-    unsigned int ip = cid2ip[cidx];
-    node->parseForOEC(ip);
-    node->dumpRawTask();
-  }
-
-  // create commands?
-  
-  // refine ectasks?
-  // type0: no refine
-  // type1: aggregate load tasks for sub-packetization
-  // type2: aggregate load and compute
-  
-
-
-  
 
   return 0;
 }

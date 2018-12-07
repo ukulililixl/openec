@@ -547,16 +547,6 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   // 6. parse for oec
   vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, n, k, w, pktnum, objlist);
 
-//  for (int i=0; i<sortedList.size(); i++) {
-//    int cidx = sortedList[i];
-//    ECNode* node = ecdag->getNode(cidx);
-//    unsigned int ip = cid2ip[cidx];
-//    node->parseForOEC(ip);
-//    AGCommand* cmd = node->parseAGCommand(stripename, n, k, w, pktnum, objlist, cid2ip);
-//    cmd->dump();
-//    agcmds.push_back(cmd);
-////    node->dumpRawTask();
-//  }
   // 7. add persist cmd
   vector<AGCommand*> persistCmds = ecdag->persist(cid2ip, stripename, n, k, w, pktnum, objlist);
 
@@ -566,6 +556,7 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
 
   redisAppendCommand(distCtx, "MULTI");
   for (auto agcmd: agCmds) {
+    if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
     if (agcmd->getShouldSend()) {
@@ -579,6 +570,7 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
     }
   }
   for (auto agcmd: persistCmds) {
+    if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
     if (agcmd->getShouldSend()) {
@@ -619,8 +611,8 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   // free
   delete ecdag;
   delete ec; 
-  for (auto item: agCmds) delete item;
-  for (auto item: persistCmds) delete item;
+  for (auto item: agCmds) if (item) delete item;
+  for (auto item: persistCmds) if (item) delete item;
   for (auto item: todelete) free(item);
 }
 
@@ -943,7 +935,7 @@ void Coordinator::offlineDegradedInst(CoorCommand* coorCmd) {
 
 void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, OfflineECPool* ecpool, ECPolicy* ecpolicy) {
   // return |opt|stripename|num|key-ip|key-ip|...|
-  cout << "Coordinator::nonOptOfflineDegrade" << endl;
+  cout << "Coordinator::optOfflineDegrade" << endl;
   int opt = ecpolicy->getOpt();  
 
   // 0. create ec instances
@@ -1018,7 +1010,7 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
 
   // 6. parse for oec
   vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
-  for (auto item: agCmds) item->dump();
+//  for (auto item: agCmds) if (item) item->dump();
 
   // 7. figure out roots and their ip
   vector<int> headers = ecdag->getHeaders();
@@ -1068,6 +1060,7 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
 
   redisAppendCommand(distCtx, "MULTI");
   for (auto agcmd: agCmds) {
+    if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
     if (agcmd->getShouldSend()) {
@@ -1097,7 +1090,7 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   // delete
   delete ecdag;
   delete ec;
-  for (auto item: agCmds) delete item;
+  for (auto item: agCmds) if(item) delete item;
   for (auto item: todelete) free(item);
 }
 
@@ -1376,6 +1369,7 @@ void Coordinator::recoveryOnline(string lostobj) {
 
   redisAppendCommand(distCtx, "MULTI");
   for (auto agcmd: agCmds) {
+    if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
     if (agcmd->getShouldSend()) {
@@ -1428,8 +1422,8 @@ void Coordinator::recoveryOnline(string lostobj) {
   // delete
   delete ec;
   delete ecdag;
-  for (auto item: agCmds) delete item;
-  for (auto item: persistCmds) delete item;
+  for (auto item: agCmds) if(item) delete item;
+  for (auto item: persistCmds) if(item) delete item;
   for (auto item: todelete) free(item);
 }
 
@@ -1567,6 +1561,7 @@ void Coordinator::recoveryOffline(string lostobj) {
 
   redisAppendCommand(distCtx, "MULTI");
   for (auto agcmd: agCmds) {
+    if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
     if (agcmd->getShouldSend()) {
@@ -1580,6 +1575,7 @@ void Coordinator::recoveryOffline(string lostobj) {
     }
   }
   for (auto agcmd: persistCmds) {
+    if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
     if (agcmd->getShouldSend()) {
@@ -1619,8 +1615,8 @@ void Coordinator::recoveryOffline(string lostobj) {
   // delete
   delete ec;
   delete ecdag;
-  for (auto item: agCmds) delete item;
-  for (auto item: persistCmds) delete item;
+  for (auto item: agCmds) if (item) delete item;
+  for (auto item: persistCmds) if (item) delete item;
   for (auto item: todelete) free(item);
 }
 

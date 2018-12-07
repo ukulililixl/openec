@@ -91,14 +91,90 @@ void ECDAG::Join(int pidx, vector<int> cidx, vector<int> coefs) {
 }
 
 int ECDAG::BindX(vector<int> idxs) {
+  if (idxs.size() <= 1) return -1;
+  // 0. create a bind node
+  int bindid = _bindId++;
+  assert (_ecNodeMap.find(bindid) == _ecNodeMap.end());
+  ECNode* bindNode = new ECNode(bindid);
+  // 1. we need to make sure for each node in idxs, their child are the same
+  vector<int> childids;
+  vector<ECNode*> childnodes; 
+  assert (idxs.size() > 0);
+  assert (_ecNodeMap.find(idxs[0]) != _ecNodeMap.end()); 
+  childnodes = _ecNodeMap[idxs[0]]->getChildren();
+  for (int i=0; i<childnodes.size(); i++) childids.push_back(childnodes[i]->getNodeId());
+  bindNode->setChilds(childnodes);
+  for (int i=1; i<idxs.size(); i++) {
+    assert(_ecNodeMap.find(idxs[i]) != _ecNodeMap.end());
+    ECNode* curnode = _ecNodeMap[idxs[i]];
+    vector<ECNode*> curchildnodes = curnode->getChildren();
+    assert (curchildnodes.size() == childids.size());
+    for (int j=0; j<curchildnodes.size(); j++) {
+      int curNodeID = curchildnodes[j]->getNodeId();
+      assert (find(childids.begin(), childids.end(), curNodeID) != childids.end());
+    }
+  }
+  // now we make sure that for each node in idxs, their child are the same
+  // childids contains the nodeIds, and childnodes contains the child nodes
+  // 2. for each node in idxs, figure out corresponding coef
+  for (int i=0; i<idxs.size(); i++) {
+    int tbid = idxs[i];
+    assert (_ecNodeMap.find(tbid) != _ecNodeMap.end());
+    ECNode* tbnode = _ecNodeMap[tbid];
+    // add the coef of cur node to the bind node
+    for (auto item: tbnode->getCoefmap()) {
+      bindNode->addCoefs(item.first, item.second);
+    }
+    // add the ref of cur node to the bind node
+    bindNode->setRefNum(tbid, tbnode->getRefNumFor(tbid));  // it seems no use here
+    // clean the childs of cur node and add bind node as child
+    tbnode->cleanChilds();
+    vector<ECNode*> newChildNodes = {bindNode};
+    tbnode->setChilds(newChildNodes);
+    tbnode->addCoefs(tbid, {1});
+  }
+  // 3. add tbnode into ecmap
+  _ecNodeMap.insert(make_pair(bindid, bindNode));
+  // 4. deal with cluster
+  int clusterid = findCluster(childids);
+  assert (clusterid != -1);
+  Cluster* cluster = _clusterMap[clusterid];
+  // TODO: set optimization?
+  cluster->setOpt(0); // BindX has opt level 0;
 
+  // update ref for childnodes?
+  for (int i=0; i<childnodes.size(); i++) {
+    int curcid = childids[i];
+    int curref = childnodes[i]->getRefNumFor(curcid);
+    childnodes[i]->setRefNum(curcid, curref-idxs.size()+1);
+  }
+  return bindid;
 }
 
 void ECDAG::BindY(int pidx, int cidx) {
+  unordered_map<int, ECNode*>::const_iterator curNode = _ecNodeMap.find(pidx);
+  assert (curNode != _ecNodeMap.end());
+  ECNode* toaddNode = _ecNodeMap[pidx];
+  vector<ECNode*> childNodes = toaddNode->getChildren();
 
+  vector<int> childids;
+  for (int i=0; i<childNodes.size(); i++) childids.push_back(childNodes[i]->getNodeId());  
+ 
+  curNode = _ecNodeMap.find(cidx);
+  assert (curNode != _ecNodeMap.end());
+  ECNode* consNode = _ecNodeMap[cidx];
+
+  toaddNode->setConstraint(true, cidx);
+
+  // deal with cluster
+  int clusterid = findCluster(childids);
+  assert (clusterid != -1);
+  Cluster* cluster = _clusterMap[clusterid];
+  // TODO: set optimization?
 }
 
 vector<int> ECDAG::toposort() {
+
   vector<int> toret;
   
   // We maintain 3 data-structures for topological sorting
@@ -213,6 +289,13 @@ vector<AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
                                       string stripename, 
                                       int n, int k, int w, int num,
                                       unordered_map<int, pair<string, unsigned int>> objlist) {
+
+  // adjust refnum for heads
+  for (int i=0; i<_ecHeaders.size(); i++) {
+    int nid = _ecHeaders[i];
+    _ecNodeMap[nid]->incRefNumFor(nid);
+  }
+
   vector<AGCommand*> toret;
   vector<int> sortedList = toposort();
   for (int i=0; i<sortedList.size(); i++) {
@@ -221,7 +304,7 @@ vector<AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
     unsigned int ip = cid2ip[cidx];
     node->parseForOEC(ip);
     AGCommand* cmd = node->parseAGCommand(stripename, n, k, w, num, objlist, cid2ip);
-    cmd->dump();
+    if (cmd) cmd->dump();
     toret.push_back(cmd);
 //    node->dumpRawTask();
   }
@@ -244,7 +327,9 @@ vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip,
     vector<unsigned int> prevLocs;
     for (int j=0; j<w; j++) {
       int cid = sid*w+j;
-      unsigned int cip = cid2ip[cid];
+      ECNode* cnode = getNode(cid);
+      //unsigned int cip = cid2ip[cid];
+      unsigned int cip = cnode->getIp();
       prevCids.push_back(cid);
       prevLocs.push_back(cip);
     }

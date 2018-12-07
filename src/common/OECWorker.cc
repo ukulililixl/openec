@@ -1249,7 +1249,6 @@ void OECWorker::clientRead(AGCommand* agcmd) {
 
   freeReplyObject(metareply);
   redisFree(metaCtx);
-
 }
 
 void OECWorker::readOffline(string filename, int filesizeMB, int objnum) {
@@ -1525,6 +1524,7 @@ void OECWorker::readOnline(string filename, int filesizeMB, int ecn, int eck, in
   cout << "OECWorker::readOnline.createInputStream.duration: " << RedisUtil::duration(time1, time2) << endl;
 
   if (!needRecovery) {
+    cout << "OECWorker::readOnline.do not need recovery" << endl;
     // we do not need recovery
     vector<thread> readThreads = vector<thread>(eck);
     for (int i=0; i<eck; i++) {
@@ -1577,6 +1577,7 @@ void OECWorker::readOnline(string filename, int filesizeMB, int ecn, int eck, in
 //    for (int i=0; i<eck; i++) cacheThreads[i].join();
 //    // version 2 end 
   } else {
+    cout << "OECWorker::readOnline.need repair" << endl;
     // need recovery
     // send request to coordinator
     CoorCommand* degradedCmd = new CoorCommand();

@@ -70,6 +70,7 @@ class CoorCommand {
     void writeInt(int value);
     void writeString(string s);
     int readInt();
+    int readRawInt();
     string readString();
 
     int getType();

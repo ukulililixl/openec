@@ -12,6 +12,7 @@ using namespace std;
  * type 2: Compute
  * type 3: Cache
  * type 4: persist
+ * type 5: tell (this is a virtual task)
  */
 class ECTask {
   private:
@@ -33,6 +34,9 @@ class ECTask {
     int _persistDSS; // 0: no 1: yes;
     unordered_map<int, int> _refNum;
 
+//    // for type 5
+//    int _bind; 
+
     // serialized task
     char* _taskCmd;
     int _cmLen;
@@ -48,6 +52,7 @@ class ECTask {
     void setPersistDSS(int pdss);
     void addRef(unordered_map<int, int> ref);
     void addRef(int idx, int ref);
+    //void setBind(int id);
 
     vector<int> getIndices();
     vector<int> getChildren();

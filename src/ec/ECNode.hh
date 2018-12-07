@@ -26,6 +26,7 @@ class ECNode {
     int _consId; 
 
     // oectasks type0:Load; type1:Fetch; type2: Compute; type3: Cache (enabled by default); type4: Persist
+    // virtual task type5: tell fetching from where 
     unsigned int _ip;
     unordered_map<int, ECTask*> _oecTasks;
 
@@ -39,13 +40,19 @@ class ECNode {
     void setChilds(vector<ECNode*> childs);
     int getChildNum();
     vector<ECNode*> getChildren();
+    ECNode* getChildNode(int cid);
 
     void addCoefs(int calfor, vector<int> coefs);
     unordered_map<int, vector<int>> getCoefmap();
 
     void incRefNumFor(int id); // increase refnum for id
     int getRefNumFor(int id);
+    void setRefNum(int nid, int ref);
     unordered_map<int, int> getRefMap();
+
+    void setConstraint(bool cons, int id);
+
+    unsigned int getIp();
 
     // parseForClient compute tasks
     void parseForClient(vector<ECTask*>& tasks);
@@ -58,7 +65,6 @@ class ECNode {
                            int n, int k, int w, bool locality);
     unordered_map<int, ECTask*> getTasks();
     void clearTasks();
-    unsigned int getIp();  
     AGCommand* parseAGCommand(string stripename,
                               int n, int k, int w,
                               int num,

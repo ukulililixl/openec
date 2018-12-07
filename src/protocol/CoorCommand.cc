@@ -59,6 +59,12 @@ int CoorCommand::readInt() {
   return ntohl(tmpint);
 }
 
+int CoorCommand::readRawInt() {
+  int tmpint;
+  memcpy((char*)&tmpint, _coorCmd + _cmLen, 4); _cmLen += 4;
+  return tmpint;
+}
+
 string CoorCommand::readString() {
   string toret;
   int slen = readInt();
@@ -166,7 +172,7 @@ void CoorCommand::resolveType0() {
 }
 
 void CoorCommand::resolveType1() {
-  _clientIp = readInt();
+  _clientIp = readRawInt();  // This ip is sent from DSS, We test HDFS and find that we should just read raw int.
   _filename = readString();
   _numOfReplicas = readInt();
 }

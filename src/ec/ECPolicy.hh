@@ -2,6 +2,7 @@
 #define _ECPOLICY_HH_
 
 #include "ECBase.hh"
+#include "RSBINDX.hh"
 #include "RSCONV.hh"
 #include "../inc/include.hh"
 

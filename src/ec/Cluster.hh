@@ -19,7 +19,7 @@ class Cluster {
     bool childsInCluster(vector<int> childs);
     void addParent(int parent);
 //    void setChilds(vector<int> childs);
-//    void setOpt(int opt);
+    void setOpt(int opt);
 //    void reset(vector<int> childs, vector<int> parents);
     void dump();
 };

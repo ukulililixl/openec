@@ -106,8 +106,8 @@ Config::Config(std::string& filepath) {
         param.push_back(paramtext.substr(start));
         _fsFactory.insert(make_pair(fstype, param));
 //        cout << "fstype: " << fstype << ", param: ";
-        for (int i=0; i<param.size(); i++) cout << param[i] << " ";
-        cout << endl;
+//        for (int i=0; i<param.size(); i++) cout << param[i] << " ";
+//        cout << endl;
       }
      } else if (attName == "ec.policy") {
        for (XMLElement* curval = ele->NextSiblingElement("value");

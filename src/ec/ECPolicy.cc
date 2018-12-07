@@ -15,6 +15,8 @@ ECBase* ECPolicy::createECClass() {
   ECBase* toret;
   if (_classname == "RSCONV") {
     toret = new RSCONV(_n, _k, _w, _locality, _opt, _param);
+  } else if (_classname == "RSBINDX") {
+    toret = new RSBINDX(_n, _k, _w, _locality, _opt, _param);
   } else {
     cout << "unrecognized code, use default RSCONV" << endl;
     toret = new RSCONV(_n, _k, _w, _locality, _opt, _param);

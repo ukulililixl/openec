@@ -153,7 +153,11 @@ for node in cluster:
     attr.append(line)
     line="<value><id>rs_3_2</id><class>RSCONV</class><n>3</n><k>2</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
     attr.append(line)
-    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>1</opt></value>\n"
+    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
+    attr.append(line)
+    line="<value><id>rs_9_6_bindx</id><class>RSBINDX</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>0</opt></value>\n"
+    attr.append(line)
+    line="<value><id>rs_9_6_opt0</id><class>RSCONV</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>0</opt></value>\n"
     attr.append(line)
     line="<value><id>rs_12_8</id><class>RSCONV</class><n>12</n><k>8</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
     attr.append(line)
@@ -186,6 +190,8 @@ for node in cluster:
     line="<attribute><name>offline.pool</name>\n"
     attr.append(line)
     line="<value><poolid>rs_9_6_pool</poolid><ecid>rs_9_6</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_9_6_bindx_pool</poolid><ecid>rs_9_6_bindx</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
     line="<value><poolid>rs_12_8_pool</poolid><ecid>rs_12_8</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
