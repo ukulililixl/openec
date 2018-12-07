@@ -8,6 +8,7 @@ OECAgent
 OECCoordinator
 OECClient
 ECDAGTest
+HDFSClient
 
 conf/
 
