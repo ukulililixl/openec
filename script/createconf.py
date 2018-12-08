@@ -165,10 +165,10 @@ for node in cluster:
     attr.append(line)
     line="<value><id>rspipe_9_6</id><class>RSPIPE</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>0</opt></value>\n"
     attr.append(line)
+    line="<value><id>rsppr_9_6</id><class>RSPPR</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>0</opt></value>\n"
+    attr.append(line)
     
 #    line="<value><id>drc963</id><class>DRC963</class><n>9</n><k>6</k><cps>3</cps><locality>true</locality><param>3</param></value>\n"
-#    attr.append(line)
-#    line="<value><id>rsppr_9_6</id><class>RSPPR</class><n>9</n><k>6</k><cps>1</cps><locality>true</locality></value>\n"
 #    attr.append(line)
 #    line="<value><id>rs_6_4</id><class>RSCONV</class><n>6</n><k>4</k><cps>1</cps><locality>false</locality></value>\n"
 #    attr.append(line)

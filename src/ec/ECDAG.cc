@@ -401,14 +401,6 @@ unordered_map<int, AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned in
   for (auto item: agCmds) item.second->dump();
 
   return agCmds;
-
-//  // finally, we get commands out
-//  for (auto item: agCmds) {
-//    item.second->dump();
-//    toret.push_back(item.second);
-//  }
-//  
-//  return toret;
 }
 
 vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip, 

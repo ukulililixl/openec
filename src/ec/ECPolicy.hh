@@ -5,6 +5,7 @@
 #include "RSBINDX.hh"
 #include "RSCONV.hh"
 #include "RSPIPE.hh"
+#include "RSPPR.hh"
 #include "WASLRC.hh"
 #include "../inc/include.hh"
 
