@@ -4,6 +4,8 @@
 #include "ECBase.hh"
 #include "RSBINDX.hh"
 #include "RSCONV.hh"
+#include "RSPIPE.hh"
+#include "WASLRC.hh"
 #include "../inc/include.hh"
 
 using namespace std;

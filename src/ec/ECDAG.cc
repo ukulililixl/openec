@@ -285,7 +285,8 @@ vector<int> ECDAG::getLeaves() {
   return toret;
 }
 
-vector<AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
+//vector<AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
+unordered_map<int, AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
                                       string stripename, 
                                       int n, int k, int w, int num,
                                       unordered_map<int, pair<string, unsigned int>> objlist) {
@@ -298,17 +299,116 @@ vector<AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
 
   vector<AGCommand*> toret;
   vector<int> sortedList = toposort();
+
+  // we first put commands into a map
+  unordered_map<int, AGCommand*> agCmds;
   for (int i=0; i<sortedList.size(); i++) {
     int cidx = sortedList[i];
     ECNode* node = getNode(cidx);
     unsigned int ip = cid2ip[cidx];
     node->parseForOEC(ip);
     AGCommand* cmd = node->parseAGCommand(stripename, n, k, w, num, objlist, cid2ip);
-    if (cmd) cmd->dump();
-    toret.push_back(cmd);
-//    node->dumpRawTask();
+//    if (cmd) cmd->dump();
+    if (cmd) agCmds.insert(make_pair(cidx, cmd));
+//    toret.push_back(cmd);
   }
-  return toret;
+
+  // we can merge the following commands
+  // 2. load & cache
+  // 3. fetch & compute & cache
+  // when ip of these two commands are the same
+  if (w == 1) {
+    unordered_map<int, int> tomerge;
+    for (auto item: agCmds) {
+      int cid = item.first;
+      int sid = cid/w;
+      AGCommand* cmd = agCmds[cid];
+      if (cmd->getType() != 3) continue;
+      // now we start with a type 3 command
+      unsigned int ip = cmd->getSendIp(); 
+      // check child
+      int childid;
+      AGCommand* childCmd;
+      bool found = false;
+      vector<int> prevCids = cmd->getPrevCids();
+      vector<unsigned int> prevLocs = cmd->getPrevLocs();
+      for (int i=0; i<prevCids.size(); i++) {
+        int childCid = prevCids[i];
+        unsigned int childip = prevLocs[i];
+        AGCommand* cCmd = agCmds[childCid];
+        if (cCmd->getType() != 2) continue;
+        if (childip == ip) {
+          childid = childCid;
+          childCmd = cCmd;
+          found = true;
+          break;
+        }
+      }
+      if (!found) continue;
+      // we find a child that shares the same location with the parent
+      tomerge.insert(make_pair(cid, childid));
+    }
+    // now in tomerge, item.first and item.second are sent to the same node, 
+    // we can merge them into a single command to avoid local redis I/O
+    for (auto item: tomerge) {
+      int cid = item.first;
+      int childid = item.second;
+      cout << "ECDAG::parseForOEC.merge " << cid << " and " << childid << endl;
+      AGCommand* cmd = agCmds[cid];
+      AGCommand* childCmd = agCmds[childid];
+      // get information from existing commands
+      unsigned int ip = cmd->getSendIp();
+      string readObjName = childCmd->getReadObjName();
+      vector<int> readCidList = childCmd->getReadCidList();  // actually, when w=1, there is only one symbol in readCidList
+      unordered_map<int, int> readCidListRef = childCmd->getCacheRefs();
+//      assert (readCidList.size() == 1);
+      int nprev = cmd->getNprevs();
+      vector<int> prevCids = cmd->getPrevCids();
+      vector<unsigned int> prevLocs = cmd->getPrevLocs();
+      unordered_map<int, int> computeCidRef = cmd->getCacheRefs();
+      unordered_map<int, vector<int>> computeCoefs = cmd->getCoefs();
+      // update prevLocs
+      vector<int> reduceList;
+      for (int i=0; i<prevCids.size(); i++) {
+        if (find(readCidList.begin(), readCidList.end(), prevCids[i]) != readCidList.end()) {
+          reduceList.push_back(prevCids[i]);
+          prevLocs[i] = 0; // this means we can get in the same process
+        }
+      }
+      // update refs
+      // considering that if ref in readCidList is larger than 1, we also need to cache it in redis
+      for (auto item: computeCoefs) {
+        for (auto tmpc: reduceList) {
+          readCidListRef[tmpc]--;
+          if (readCidListRef[tmpc] == 0) {
+            readCidListRef.erase(tmpc);
+          }
+        }
+      }
+      // now we can merge childCmd and curCmd into a new command
+      unordered_map<int, int> mergeref;
+      for (auto item: readCidListRef) mergeref.insert(item);
+      for (auto item: computeCidRef) mergeref.insert(item);
+      AGCommand* mergeCmd = new AGCommand();
+      mergeCmd->buildType7(7, ip, stripename, w, num, readObjName, readCidList, nprev, prevCids, prevLocs, computeCoefs, mergeref);
+      // remove cid and childid commands in agCmds and add this command
+      agCmds.erase(cid);
+      agCmds.erase(childid);
+      agCmds.insert(make_pair(cid, mergeCmd));
+    }
+  } 
+
+  for (auto item: agCmds) item.second->dump();
+
+  return agCmds;
+
+//  // finally, we get commands out
+//  for (auto item: agCmds) {
+//    item.second->dump();
+//    toret.push_back(item.second);
+//  }
+//  
+//  return toret;
 }
 
 vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip, 

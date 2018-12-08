@@ -27,6 +27,7 @@ AGCommand::AGCommand(char* reqStr) {
     case 2: resolveType2(); break;
     case 3: resolveType3(); break;
     case 5: resolveType5(); break;
+    case 7: resolveType7(); break;
     case 10: resolveType10(); break;
     case 11: resolveType11(); break;
     default: break;
@@ -380,6 +381,84 @@ void AGCommand::resolveType5() {
   _writeObjName = readString();
 }
 
+void AGCommand::buildType7(int type,
+                    unsigned int sendIp,
+                    string stripename,
+                    int w,
+                    int num,
+                    string readObjName,
+                    vector<int> cidlist,
+                    int prevnum,
+                    vector<int> prevCids,
+                    vector<unsigned int> prevLocs,
+                    unordered_map<int, vector<int>> coefs,
+                    unordered_map<int, int> ref) {
+  _shouldSend = true;
+  _type = type;
+  _sendIp = sendIp;
+  _stripeName = stripename;
+  _ecw = w;
+  _num = num;
+  _nprevs = prevnum;
+  _readObjName = readObjName;
+  _readCidList = cidlist;
+  _nprevs = prevnum;
+  _prevCids = prevCids;
+  _prevLocs = prevLocs;
+  _coefs = coefs;
+  _cacheRefs = ref;
+
+  writeInt(_type);
+  writeString(_stripeName);
+  writeInt(_ecw);
+  writeInt(_num);
+  writeString(_readObjName);
+  writeInt(_readCidList.size());
+  for (int i=0; i<_readCidList.size(); i++) writeInt(_readCidList[i]);
+  writeInt(_nprevs);
+  for (int i=0; i<_nprevs; i++) {
+    writeInt(_prevCids[i]);
+    writeInt(_prevLocs[i]);
+  }
+  writeInt(_coefs.size());
+  for (auto item: _coefs) {
+    writeInt(item.first);
+    for (int i=0; i<_nprevs; i++) writeInt(item.second[i]);
+  }
+  writeInt(ref.size());
+  for (auto item: ref) {
+    writeInt(item.first);
+    writeInt(item.second);
+  }
+}
+
+void AGCommand::resolveType7() {
+  _stripeName = readString();
+  _ecw = readInt();
+  _num = readInt();
+  _readObjName = readString();
+  int readnum = readInt();
+  for (int i=0; i<readnum; i++) _readCidList.push_back(readInt());
+  _nprevs = readInt();
+  for (int i=0; i<_nprevs; i++) {
+    _prevCids.push_back(readInt());
+    _prevLocs.push_back(readInt());
+  }
+  int targetnum = readInt();
+  for (int i=0; i<targetnum; i++) {
+    int target = readInt();
+    vector<int> coef;
+    for (int i=0; i<_nprevs; i++) coef.push_back(readInt());
+    _coefs.insert(make_pair(target, coef));
+  }
+  int refnum = readInt();
+  for (int i=0; i<refnum; i++) {
+    int cid = readInt();
+    int r = readInt();
+    _cacheRefs.insert(make_pair(cid, r));
+  }
+}
+
 void AGCommand::buildType10(int type,
                             int ecn,
                             int eck,
@@ -426,6 +505,8 @@ void AGCommand::resolveType11() {
 void AGCommand::dump() {
   if (_type == 0) {
     cout << "AGCommand::clientWrite: " << _filename << ", ecid: " << _ecid << ", mode: " << _mode << ", size: " << _filesizeMB << endl;
+  } else if (_type == 1) {
+    cout << "AGCommand::clientRead: " << _filename << endl;
   } else if (_type == 2) {
     cout << "AGCommand::Load, ip: " << RedisUtil::ip2Str(_sendIp) << " objname: " << _readObjName << ", cidlist: ";
     for (int i=0; i<_readCidList.size(); i++) cout << _readCidList[i] << " ";
@@ -452,5 +533,22 @@ void AGCommand::dump() {
       cout << "    Fetch: " << _prevCids[i] << " from " << RedisUtil::ip2Str(_prevLocs[i]) << endl;
     }
     cout << "    Persist as " << _writeObjName << endl;
+  } else if (_type == 7) {
+    cout << "AGCommand::ReadFetchComputeAndCache, ip: " << RedisUtil::ip2Str(_sendIp) << endl;
+    cout << "    Read: objname: " << _readObjName << ", cidlist: ";
+    for (int i=0; i<_readCidList.size(); i++) cout << _readCidList[i] << " ";
+    cout << endl;
+    for (int i=0; i<_nprevs; i++) {
+      cout << "    Fetch: " << _prevCids[i] << " from " << RedisUtil::ip2Str(_prevLocs[i]) << endl;
+    }
+    for (auto item: _coefs) {
+      int target = item.first;
+      vector<int> coef = item.second;
+      cout << "    Compute: " << target << ", coef: ";
+      for (int i=0; i<coef.size(); i++) cout << coef[i] << " ";
+    }
+    for (auto item: _cacheRefs) {
+      cout << "    Cache: " << item.first << " : " << item.second << endl;
+    }
   }
 }

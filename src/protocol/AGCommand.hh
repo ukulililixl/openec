@@ -16,7 +16,7 @@ using namespace std;
  *   ? type=4 (fetch->disk) | 
  *    type=5 (persis)
  *   ? type=6 (read disk of a list)
- *   ? type=7 (read disk, fetch remote and compute)
+ *    type=7 (read disk, fetch remote and compute)
  *    type=10: (coor return cmd summary for client to online encoding)| |
  *    type=11: (coor return cmd summary for client to write obj of offline encoding)
  */
@@ -61,6 +61,14 @@ class AGCommand {
 
     // type 5
     string _writeObjName;
+
+    // type 7
+    // _readObjName
+    // _readCidList
+    // _nprevs, count readCidList into nprevs
+    // _prevLocs
+    // _coefs
+    // _cacheRefs
 
     // type 10
     int _ecn;
@@ -148,6 +156,18 @@ class AGCommand {
                     vector<int> prevCids,
                     vector<unsigned int> prevLocs,
                     string writeobjname);
+    void buildType7(int type,
+                    unsigned int sendIp,
+                    string stripename,
+                    int w,
+                    int num,
+                    string readObjName,
+                    vector<int> cidlist,
+                    int prevnum,
+                    vector<int> prevCids,
+                    vector<unsigned int> prevLocs,
+                    unordered_map<int, vector<int>> coefs,
+                    unordered_map<int, int> ref);
     void buildType10(int type,
                      int ecn,
                      int eck,
@@ -162,6 +182,7 @@ class AGCommand {
     void resolveType2();
     void resolveType3();
     void resolveType5();
+    void resolveType7();
     void resolveType10();
     void resolveType11();
 

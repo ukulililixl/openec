@@ -17,6 +17,10 @@ ECBase* ECPolicy::createECClass() {
     toret = new RSCONV(_n, _k, _w, _locality, _opt, _param);
   } else if (_classname == "RSBINDX") {
     toret = new RSBINDX(_n, _k, _w, _locality, _opt, _param);
+  } else if (_classname == "RSPIPE") {
+    toret = new RSPIPE(_n, _k, _w, _locality, _opt, _param);
+  } else if (_classname == "WASLRC") {
+    toret = new WASLRC(_n, _k, _w, _locality, _opt, _param);
   } else {
     cout << "unrecognized code, use default RSCONV" << endl;
     toret = new RSCONV(_n, _k, _w, _locality, _opt, _param);

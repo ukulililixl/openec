@@ -545,7 +545,8 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   }
 
   // 6. parse for oec
-  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, n, k, w, pktnum, objlist);
+//  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, n, k, w, pktnum, objlist);
+  unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, n, k, w, pktnum, objlist);
 
   // 7. add persist cmd
   vector<AGCommand*> persistCmds = ecdag->persist(cid2ip, stripename, n, k, w, pktnum, objlist);
@@ -555,7 +556,9 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   redisContext* distCtx = RedisUtil::createContext(_conf->_coorIp);
 
   redisAppendCommand(distCtx, "MULTI");
-  for (auto agcmd: agCmds) {
+//  for (auto agcmd: agCmds) {
+  for (auto item: agCmds) {
+    auto agcmd = item.second;
     if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
@@ -611,7 +614,7 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   // free
   delete ecdag;
   delete ec; 
-  for (auto item: agCmds) if (item) delete item;
+  for (auto item: agCmds) if (item.second) delete item.second;
   for (auto item: persistCmds) if (item) delete item;
   for (auto item: todelete) free(item);
 }
@@ -864,6 +867,12 @@ void Coordinator::onlineDegradedInst(CoorCommand* coorCmd) {
     int sidx = leaves[i]/ecw;
     if (find(loadidx.begin(), loadidx.end(), sidx) == loadidx.end()) loadidx.push_back(sidx);
   }
+  // as online degraded read need all source data, we need to check index less than k
+  for (int i=0; i<eck; i++) {
+    if (integrity[i] == 0) continue; 
+    else if (find(loadidx.begin(), loadidx.end(), i) == loadidx.end()) loadidx.push_back(i);
+  }
+  sort(loadidx.begin(), loadidx.end());
   
   // loadn
   loadn = loadidx.size();
@@ -1009,8 +1018,8 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   int pktnum = basesizeMB * 1048576/_conf->_pktSize;
 
   // 6. parse for oec
-  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
-//  for (auto item: agCmds) if (item) item->dump();
+//  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+  unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
 
   // 7. figure out roots and their ip
   vector<int> headers = ecdag->getHeaders();
@@ -1021,8 +1030,9 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   vector<pair<int, unsigned int>> rootinfo;
   for (int i=0; i<headers.size(); i++) {
     int cid = headers[i];
-    int sid = cid/ecw;
-    unsigned int loc = stripeips[sid];
+//    int sid = cid/ecw;
+//    unsigned int loc = stripeips[sid];
+    unsigned int loc = agCmds[cid]->getSendIp();
     pair<int, unsigned int> curpair = make_pair(cid, loc);
     rootinfo.push_back(curpair);
   }
@@ -1059,7 +1069,9 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   redisContext* distCtx = RedisUtil::createContext(_conf->_coorIp);
 
   redisAppendCommand(distCtx, "MULTI");
-  for (auto agcmd: agCmds) {
+  //for (auto agcmd: agCmds) {
+  for (auto item: agCmds) {
+    auto agcmd = item.second;
     if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
@@ -1090,7 +1102,7 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   // delete
   delete ecdag;
   delete ec;
-  for (auto item: agCmds) if(item) delete item;
+  for (auto item: agCmds) if(item.second) delete item.second;
   for (auto item: todelete) free(item);
 }
 
@@ -1358,7 +1370,8 @@ void Coordinator::recoveryOnline(string lostobj) {
   int pktnum = 1048576/_conf->_pktSize * objsizeMB;
 
   // 6. parse for oec
-  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+  //vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+  unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
   
   // 7. add persist cmd
   vector<AGCommand*> persistCmds = ecdag->persist(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
@@ -1368,7 +1381,8 @@ void Coordinator::recoveryOnline(string lostobj) {
   redisContext* distCtx = RedisUtil::createContext(_conf->_coorIp);
 
   redisAppendCommand(distCtx, "MULTI");
-  for (auto agcmd: agCmds) {
+  for (auto item: agCmds) {
+    auto agcmd = item.second;
     if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
@@ -1422,7 +1436,7 @@ void Coordinator::recoveryOnline(string lostobj) {
   // delete
   delete ec;
   delete ecdag;
-  for (auto item: agCmds) if(item) delete item;
+  for (auto item: agCmds) if(item.second) delete item.second;
   for (auto item: persistCmds) if(item) delete item;
   for (auto item: todelete) free(item);
 }
@@ -1550,7 +1564,8 @@ void Coordinator::recoveryOffline(string lostobj) {
   int pktnum = 1048576/_conf->_pktSize * objsizeMB;
 
   // 6. parse for oec
-  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+  //vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+  unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
   
   // 7. add persist cmd
   vector<AGCommand*> persistCmds = ecdag->persist(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
@@ -1560,7 +1575,8 @@ void Coordinator::recoveryOffline(string lostobj) {
   redisContext* distCtx = RedisUtil::createContext(_conf->_coorIp);
 
   redisAppendCommand(distCtx, "MULTI");
-  for (auto agcmd: agCmds) {
+  for (auto item: agCmds) {
+    auto agcmd = item.second;
     if (agcmd == NULL) continue;
     unsigned int ip = agcmd->getSendIp();
     ip = htonl(ip);
@@ -1615,7 +1631,7 @@ void Coordinator::recoveryOffline(string lostobj) {
   // delete
   delete ec;
   delete ecdag;
-  for (auto item: agCmds) if (item) delete item;
+  for (auto item: agCmds) if (item.second) delete item.second;
   for (auto item: persistCmds) if (item) delete item;
   for (auto item: todelete) free(item);
 }

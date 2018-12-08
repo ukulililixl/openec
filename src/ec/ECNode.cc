@@ -144,16 +144,17 @@ vector<unsigned int> ECNode::candidateIps(unordered_map<int, unsigned int> sid2i
                                           bool locality) {
   vector<unsigned int> toret;
   int sid = _nodeId/w;
-  // 0. current node is preassigned a location
-  if (sid2ip.find(sid) != sid2ip.end()) {
-    toret.push_back(sid2ip[sid]);
-    return toret;
-  }
 
-  // 1. current node has constraint
+  // 0. current node has constraint
   if (_hasConstraint) {
     assert(cid2ip.find(_consId) != cid2ip.end());
     toret.push_back(cid2ip[_consId]);
+    return toret;
+  }
+
+  // 1. current node is preassigned a location
+  if (sid2ip.find(sid) != sid2ip.end()) {
+    toret.push_back(sid2ip[sid]);
     return toret;
   }
 

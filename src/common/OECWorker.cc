@@ -53,7 +53,7 @@ void OECWorker::doProcess() {
         case 3: fetchCompute(agCmd); break;
         case 5: persist(agCmd); break;
 //        case 6: readDiskList(agCmd); break;
-//        case 7: readFetchCompute(agCmd); break;
+        case 7: readFetchCompute(agCmd); break;
         default:break;
       }
 //      gettimeofday(&time2, NULL);
@@ -993,6 +993,86 @@ void OECWorker::computeWorker(BlockingQueue<OECDataPacket*>** fetchQueue,
   free(matrix);
 }
 
+void OECWorker::computeWorker(BlockingQueue<OECDataPacket*>** fetchQueue,
+                       int nprev,
+                       vector<int> prevCids,
+                       int num,
+                       unordered_map<int, vector<int>> coefs,
+                       vector<int> cfor,
+                       unordered_map<int, BlockingQueue<OECDataPacket*>*> writeQueue,
+                       int slicesize) {
+  // prepare coding matrix
+  int row = cfor.size();
+  int col = nprev;
+  int* matrix = (int*)calloc(row*col, sizeof(int));
+  for (int i=0; i<row; i++) {
+    int cid = cfor[i];
+    vector<int> coef = coefs[cid];
+    for (int j=0; j<col; j++) {
+      matrix[i*col+j] = coef[j];
+    }
+  }
+  cout << "OECWorker::computeWorker.num: " << num << ", row: " << row << ", col: " << col << endl;
+  cout << "-------------------"<< endl;
+  for (int i=0; i<row; i++) {
+    for (int j=0; j<col; j++) {
+      cout << matrix[i*col+j] << " ";
+    }
+    cout << endl;
+  }
+  cout << "-------------------"<< endl;
+
+  OECDataPacket** curstripe = (OECDataPacket**)calloc(row+col, sizeof(OECDataPacket*));
+  char** data = (char**)calloc(col, sizeof(char*));
+  char** code = (char**)calloc(row, sizeof(char*));
+  while(num--) {
+    // prepare data
+    for (int i=0; i<col; i++) {
+      OECDataPacket* curpkt = fetchQueue[i]->pop();
+      curstripe[i] = curpkt;
+      data[i] = curpkt->getData();
+    }
+    for (int i=0; i<row; i++) {
+      curstripe[col+i] = new OECDataPacket(slicesize);
+      code[i] = curstripe[col+i]->getData();
+    }
+    // compute
+    Computation::Multi(code, data, matrix, row, col, slicesize, "Isal");
+
+    // put needed data into writeQueue
+    for (auto item: writeQueue) {
+      int target = item.first;
+      BlockingQueue<OECDataPacket*>* queue = item.second;
+      for (int i=0; i<nprev; i++) {
+        if (prevCids[i] == target) {
+          // curstripe[i] should be cached
+          queue->push(curstripe[i]);
+          curstripe[i] = NULL;
+        }
+      }
+      for (int i=0; i<cfor.size(); i++) {
+        if (cfor[i] == target) {
+          // curstripe[col+i]
+          queue->push(curstripe[col+i]);
+          curstripe[col+i] = NULL;
+        }
+      }
+    }
+    for (int i=0; i<col; i++) {
+      if (curstripe[i]) {
+        delete curstripe[i];
+        curstripe[i] = NULL;
+      }
+    }
+  }
+
+  // free
+  free(code);
+  free(data);
+  free(curstripe);
+  free(matrix);
+}
+
 void OECWorker::cacheWorker(BlockingQueue<OECDataPacket*>* writeQueue,
                             string keybase,
                             int startidx,
@@ -1672,4 +1752,91 @@ void OECWorker::readOnline(string filename, int filesizeMB, int ecn, int eck, in
   free(objstreams);
   gettimeofday(&time3, NULL);
   cout << "OECWorker::readOnline.duration: " << RedisUtil::duration(time1, time3) << endl;
+}
+
+void OECWorker::readFetchCompute(AGCommand* agCmd) {
+  cout << "OECWorker::readFetchCompute" << endl;
+  string stripename = agCmd->getStripeName();
+  int ecw = agCmd->getW();
+  int pktnum = agCmd->getNum();
+  string readObjName = agCmd->getReadObjName();
+  vector<int> readCidList = agCmd->getReadCidList();
+  assert(readCidList.size() == 1);
+  int cid = readCidList[0];
+  int nprevs = agCmd->getNprevs();
+  vector<int> prevCids = agCmd->getPrevCids();
+  vector<unsigned int> prevLocs = agCmd->getPrevLocs();
+  unordered_map<int, vector<int>> coefs = agCmd->getCoefs();
+  unordered_map<int, int> cacheRefs = agCmd->getCacheRefs();
+
+  vector<int> computefor;
+  for (auto item: coefs) computefor.push_back(item.first);
+
+  // create objstream to read data from disk
+  FSObjInputStream* objstream = new FSObjInputStream(_conf, readObjName, _underfs);
+  if (!objstream->exist()) {
+    cout << "OECWorker::readWorker." << readObjName << " does not exist!" << endl;
+    return;
+  }
+  BlockingQueue<OECDataPacket*>* readQueue = objstream->getQueue();
+
+  // create queue to fetch data from remote
+  BlockingQueue<OECDataPacket*>** fetchQueue = (BlockingQueue<OECDataPacket*>**)calloc(nprevs, sizeof(BlockingQueue<OECDataPacket*>*)); 
+  for (int i=0; i<nprevs; i++) {
+    if (prevCids[i] == cid) {
+      fetchQueue[i] = readQueue;
+    } else {
+      fetchQueue[i] = new BlockingQueue<OECDataPacket*>();
+    }
+  }
+
+  // create write queue
+  unordered_map<int, BlockingQueue<OECDataPacket*>*> writeQueue;
+  for (auto item: cacheRefs) {
+    int target = item.first;
+    BlockingQueue<OECDataPacket*>* q= new BlockingQueue<OECDataPacket*>();
+    writeQueue.insert(make_pair(target, q));
+  }
+
+  // create thread to fetch data
+  vector<thread> fetchThreads = vector<thread>(nprevs);
+  int pktsize = _conf->_pktSize;
+  int slicesize = pktsize/ecw;
+  for (int i=0; i<nprevs; i++) {
+    if (prevCids[i] == cid) {
+      fetchThreads[i] = thread([=]{objstream->readObj(pktsize);});
+    } else {
+      string keybase = stripename+":"+to_string(prevCids[i]);
+      fetchThreads[i] = thread([=]{fetchWorker(fetchQueue[i], keybase, prevLocs[i], pktnum);});
+    }
+  }
+
+  // create compute thread
+  thread computeThread = thread([=]{computeWorker(fetchQueue, nprevs, prevCids, pktnum, coefs, computefor, writeQueue, slicesize);});
+
+  // create cache thread
+  vector<thread> cacheThreads = vector<thread>(cacheRefs.size());
+  int cacheid=0;
+  for (auto item: cacheRefs) {
+    int cid = item.first;
+    int ref = item.second;
+    string keybase = stripename+":"+to_string(cid);
+    BlockingQueue<OECDataPacket*>* queue = writeQueue[cid];
+    cacheThreads[cacheid++] = thread([=]{cacheWorker(queue, keybase, pktnum, ref);});
+  }
+
+  // join
+  for (int i=0; i<nprevs; i++) {
+    fetchThreads[i].join();
+  }
+  computeThread.join();
+  for (int i=0; i<cacheid; i++) cacheThreads[i].join();
+
+  // delete
+  for (int i=0; i<nprevs; i++) {
+    if (prevCids[i] == cid) delete objstream;
+    else delete fetchQueue[i];
+  }
+  free(fetchQueue);
+  for (auto item: writeQueue) if (item.second) delete item.second;
 }

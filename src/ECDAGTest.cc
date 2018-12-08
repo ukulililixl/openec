@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
 
     string stripename = "teststripe";
     int pktnum = 8;
-    vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+    unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
     vector<AGCommand*> persistCmds = ecdag->persist(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
   }
 

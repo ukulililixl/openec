@@ -37,7 +37,11 @@ class ECDAG {
     vector<int> getLeaves();
 
     // parse cmd
-    vector<AGCommand*> parseForOEC(unordered_map<int, unsigned int> cid2ip,
+//    vector<AGCommand*> parseForOEC(unordered_map<int, unsigned int> cid2ip,
+//                                   string stripename, 
+//                                   int n, int k, int w, int num,
+//                                   unordered_map<int, pair<string, unsigned int>> objlist);
+    unordered_map<int, AGCommand*> parseForOEC(unordered_map<int, unsigned int> cid2ip,
                                    string stripename, 
                                    int n, int k, int w, int num,
                                    unordered_map<int, pair<string, unsigned int>> objlist);

@@ -78,6 +78,7 @@ class OECWorker {
     void readDisk(AGCommand* agCmd);
     void fetchCompute(AGCommand* agCmd);
     void persist(AGCommand* agCmd);
+    void readFetchCompute(AGCommand* agCmd);
 
     void selectCacheWorker(BlockingQueue<OECDataPacket*>* cacheQueue,
                            int pktnum,
@@ -95,6 +96,14 @@ class OECWorker {
                        unordered_map<int, vector<int>> coefs,
                        vector<int> cfor,
                        BlockingQueue<OECDataPacket*>** writeQueue,
+                       int slicesize);
+    void computeWorker(BlockingQueue<OECDataPacket*>** fetchQueue,
+                       int nprev,
+                       vector<int> prevCids,
+                       int num,
+                       unordered_map<int, vector<int>> coefs,
+                       vector<int> cfor,
+		       unordered_map<int, BlockingQueue<OECDataPacket*>*> writeQueue,
                        int slicesize);
     void cacheWorker(BlockingQueue<OECDataPacket*>* writeQueue,
                      string keybase,
