@@ -89,7 +89,7 @@ void FSObjInputStream::readObj() {
     if (hasread <= 0) break;
   }
   gettimeofday(&time2, NULL);
-  cout << "FSObjInputStream.readObj.duration = " << RedisUtil::duration(time1, time2) << " for " << _objname << endl;
+  cout << "FSObjInputStream.readObj.duration = " << RedisUtil::duration(time1, time2) << " for " << _objname << ", pktnum: " << _dataPktNum << endl;
 }
 
 void FSObjInputStream::readObj(int w, vector<int> list, int slicesize) {

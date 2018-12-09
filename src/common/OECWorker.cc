@@ -104,7 +104,7 @@ void OECWorker::onlineWrite(string filename, string ecid, int filesizeMB) {
   int computen = agCmd->getComputen();
   delete agCmd;
 
-  int totalNumPkt = 1048576/_conf->_pktSize * filesizeMB;
+  int totalNumPkt = filesizeMB * 1048576/_conf->_pktSize;
   int totalNumRounds = totalNumPkt / eck;
   int lastNum = totalNumPkt % eck;
   bool zeropadding = false;
@@ -235,7 +235,7 @@ void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {
     } else {
       sizeMB = filesizeMB - basesizeMB * (objnum-1);
     }
-    int pktnum = 1048576/_conf->_pktSize * sizeMB;
+    int pktnum = sizeMB * 1048576/_conf->_pktSize;
     pktnums.push_back(pktnum);
   }
   // 2. create outputstream for each obj

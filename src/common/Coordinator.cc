@@ -1381,7 +1381,7 @@ void Coordinator::recoveryOnline(string lostobj) {
 
   int filesizeMB = ssentry->getFilesizeMB();
   int objsizeMB = filesizeMB / eck;
-  int pktnum = 1048576/_conf->_pktSize * objsizeMB;
+  int pktnum = objsizeMB * 1048576/_conf->_pktSize;
 
   // 6. parse for oec
   //vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
@@ -1575,7 +1575,7 @@ void Coordinator::recoveryOffline(string lostobj) {
 
   int filesizeMB = ssentry->getFilesizeMB();
   int objsizeMB = filesizeMB / eck;
-  int pktnum = 1048576/_conf->_pktSize * objsizeMB;
+  int pktnum = objsizeMB * 1048576/_conf->_pktSize;
 
   // 6. parse for oec
   //vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);

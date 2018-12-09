@@ -72,7 +72,7 @@ void OECInputStream::output2file(string saveas) {
   ofs.close();
   ofs.open(saveas, ios::app);
 
-  int num = 1048576 / _conf->_pktSize * _filesizeMB;
+  int num = _filesizeMB * 1048576 / _conf->_pktSize;
 
   for (int i=0; i<num; i++) {
     OECDataPacket* curPkt = _readQueue->pop();

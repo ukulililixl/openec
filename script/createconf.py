@@ -171,20 +171,11 @@ for node in cluster:
     attr.append(line)
     line="<value><id>butterfly_6_4</id><class>BUTTERFLY64</class><n>6</n><k>4</k><w>8</w><locality>false</locality><opt>0</opt></value>\n"
     attr.append(line)
-    
-#    line="<value><id>drc963</id><class>DRC963</class><n>9</n><k>6</k><cps>3</cps><locality>true</locality><param>3</param></value>\n"
-#    attr.append(line)
+    line="<value><id>drc643</id><class>DRC643</class><n>6</n><k>4</k><w>2</w><locality>true</locality><param>0</param></value>\n"
+    attr.append(line)
+    line="<value><id>drc963</id><class>DRC963</class><n>9</n><k>6</k><w>3</w><locality>true</locality><param>-1</param></value>\n"
+    attr.append(line)
 #    line="<value><id>rs_6_4</id><class>RSCONV</class><n>6</n><k>4</k><cps>1</cps><locality>false</locality></value>\n"
-#    attr.append(line)
-#    line="<value><id>ia_8_4</id><class>IA</class><n>8</n><k>4</k><cps>4</cps><locality>false</locality></value>\n"
-#    attr.append(line)
-#    line="<value><id>drc643</id><class>DRC643</class><n>6</n><k>4</k><cps>2</cps><locality>true</locality><param>3</param></value>\n"
-#    attr.append(line)
-#    line="<value><id>rsppr_6_4</id><class>RSPPR</class><n>6</n><k>4</k><cps>1</cps><locality>true</locality></value>\n"
-#    attr.append(line)
-#    line="<value><id>rspipe_6_4</id><class>RSPIPE</class><n>6</n><k>4</k><cps>1</cps><locality>false</locality></value>\n"
-#    attr.append(line)
-#    line="<value><id>rawrs</id><class>RAWRS</class><n>10</n><k>8</k><cps>1</cps><locality>false</locality><opt>2</opt></value>\n"
 #    attr.append(line)
 #    line="<value><id>clay_6_4</id><class>CLAY</class><n>6</n><k>4</k><cps>8</cps><locality>false</locality></value>\n"
 #    attr.append(line)
