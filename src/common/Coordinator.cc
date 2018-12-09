@@ -801,7 +801,7 @@ void Coordinator::getFileMeta(CoorCommand* coorCmd) {
 // }
 
 void Coordinator::onlineDegradedInst(CoorCommand* coorCmd) {
-  cout << "COordinator::onlineDegradedInst" << endl;
+  cout << "Coordinator::onlineDegradedInst" << endl;
   struct timeval time1, time2, time3, time4;
   gettimeofday(&time1, NULL);
   string filename = coorCmd->getFilename();
@@ -982,6 +982,7 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   // create ecdag
   ECDAG* ecdag = ec->Decode(availcidx, toreccidx);
   vector<int> toposeq = ecdag->toposort();
+  ecdag->dump();
 
   // prepare sid2ip, for cip2ip
   // prepare stripeips for client info
@@ -1018,7 +1019,6 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   int pktnum = basesizeMB * 1048576/_conf->_pktSize;
 
   // 6. parse for oec
-//  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
   unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
 
   // 7. figure out roots and their ip
@@ -1030,9 +1030,8 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   vector<pair<int, unsigned int>> rootinfo;
   for (int i=0; i<headers.size(); i++) {
     int cid = headers[i];
-//    int sid = cid/ecw;
-//    unsigned int loc = stripeips[sid];
-    unsigned int loc = agCmds[cid]->getSendIp();
+    //unsigned int loc = agCmds[cid]->getSendIp();
+    unsigned int loc = ecdag->getNode(cid)->getIp();
     pair<int, unsigned int> curpair = make_pair(cid, loc);
     rootinfo.push_back(curpair);
   }
@@ -1047,9 +1046,9 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   int tmpstripenamelen = htonl(stripename.length());
   memcpy(instruction + offset, (char*)&tmpstripenamelen, 4); offset += 4;
   memcpy(instruction + offset, stripename.c_str(), stripename.length()); offset += stripename.length();
-  int tmpnum = htonl(numblks);
+  int tmpnum = htonl(rootinfo.size());
   memcpy(instruction + offset, (char*)&tmpnum, 4); offset += 4;
-  for (int i=0; i<numblks; i++) {
+  for (int i=0; i<rootinfo.size(); i++) {
     pair<int, unsigned int> curpair = rootinfo[i];
     int tmpcidx = htonl(curpair.first);
     unsigned int tmpip = htonl(curpair.second);
@@ -1149,11 +1148,16 @@ void Coordinator::nonOptOfflineDegrade(string lostobj, unsigned int clientIp, Of
   vector<int> leaves = ecdag->getLeaves();
   vector<int> loadidx;
   vector<string> loadobjs;
+  unordered_map<int, vector<int>> sid2Cids;
   for (int i=0; i<leaves.size(); i++) {
     int sidx = leaves[i]/ecw;
-    if (find(loadidx.begin(), loadidx.end(), sidx) == loadidx.end()) { 
+    if (sid2Cids.find(sidx) == sid2Cids.end()) {
+      vector<int> curlist = {leaves[i]};
+      sid2Cids.insert(make_pair(sidx, curlist));
       loadidx.push_back(sidx);
       loadobjs.push_back(stripeobjs[sidx]);
+    } else {
+      sid2Cids[sidx].push_back(leaves[i]);
     }
   }
   // obtain computetask
@@ -1168,7 +1172,7 @@ void Coordinator::nonOptOfflineDegrade(string lostobj, unsigned int clientIp, Of
   int offset = 0; 
 
   // we need to return 
-  // |opt|lostidx|ecn|eck|ecw|loadn|loadidx-objname|..|computen|computetask|..|
+  // |opt|lostidx|ecn|eck|ecw|loadn|loadidx-objname|cidnum|cidxs|..|computen|computetask|..|
   int tmpopt = htonl(opt);
   memcpy(instruction + offset, (char*)&tmpopt, 4); offset += 4;
   int tmplostidx = htonl(lostidx);
@@ -1190,6 +1194,16 @@ void Coordinator::nonOptOfflineDegrade(string lostobj, unsigned int clientIp, Of
     int tmpobjlen = htonl(len);
     memcpy(instruction + offset, (char*)&tmpobjlen, 4); offset += 4;
     memcpy(instruction + offset, loadobjname.c_str(), len); offset += len;
+    vector<int> curlist = sid2Cids[loadidx[i]];
+    // num cids
+    int numcids = curlist.size();
+    int tmpnumcids = htonl(numcids);
+    memcpy(instruction + offset, (char*)&tmpnumcids, 4); offset += 4;
+    for (int j=0; j<numcids; j++) {
+      int curcid = curlist[j];
+      int tmpcid = htonl(curcid);
+      memcpy(instruction + offset, (char*)&tmpcid, 4); offset += 4;
+    }
   }
   int computen = computetasks.size();
   int tmpcomputen = htonl(computen);

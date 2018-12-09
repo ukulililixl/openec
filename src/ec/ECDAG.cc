@@ -411,8 +411,11 @@ vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip,
   // sort headers
   sort(_ecHeaders.begin(), _ecHeaders.end());
   int numblks = _ecHeaders.size()/w;
+  cout << "ECDAG:: persist. numblks: " << numblks << endl;
   for (int i=0; i<numblks; i++) {
-    int sid = _ecHeaders[i*w];
+//    int sid = _ecHeaders[i*w];
+    int cid = _ecHeaders[i*w];
+    int sid = cid/w;
     string objname = objlist[sid].first;
     unsigned int ip = objlist[sid].second;
     vector<int> prevCids;
@@ -420,7 +423,6 @@ vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip,
     for (int j=0; j<w; j++) {
       int cid = sid*w+j;
       ECNode* cnode = getNode(cid);
-      //unsigned int cip = cid2ip[cid];
       unsigned int cip = cnode->getIp();
       prevCids.push_back(cid);
       prevLocs.push_back(cip);

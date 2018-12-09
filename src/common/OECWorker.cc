@@ -354,6 +354,7 @@ void OECWorker::loadWorker(BlockingQueue<OECDataPacket*>* readQueue,
 
 void OECWorker::computeWorkerDegradedOffline(FSObjInputStream** readStreams,
                                       vector<int> idlist,
+                                      unordered_map<int, vector<int>> sid2Cids,
                                       BlockingQueue<OECDataPacket*>* writeQueue,
                                       int lostidx,
                                       vector<ECTask*> computeTasks,
@@ -364,27 +365,33 @@ void OECWorker::computeWorkerDegradedOffline(FSObjInputStream** readStreams,
   // In this method, we read available data from readStreams, whose stripeidx is in idlist
   // Then we perform compute task one by one in computeTakss for each stripe
   // Finally, we put pkt for lostidx in writeQueue
-  OECDataPacket** curStripe = (OECDataPacket**)calloc(ecn, sizeof(OECDataPacket*));
-  for (int i=0; i<ecn; i++) curStripe[i] = NULL; 
   int splitsize = _conf->_pktSize / ecw;
+  for (int i=0; i<idlist.size(); i++) {
+    int sid=idlist[i];
+    vector<int> cidlist = sid2Cids[sid];
+    cout << "OECWorker::computeWDO.sid: " << sid << ", cidlist: ";
+    for (int j=0; j<cidlist.size(); j++) cout << cidlist[j] << " ";
+    cout << endl;
+  }
   for (int stripeid = 0; stripeid < stripenum; stripeid++) {
     unordered_map<int, char*> bufMap;
+    unordered_map<int, OECDataPacket*> sliceMap;
+    
     // read from readStreams
     for (int i=0; i<idlist.size(); i++) {
       int sid = idlist[i];
-      OECDataPacket* curpkt = readStreams[i]->dequeue();
-      curStripe[sid] = curpkt;
-      char* pktbuf = curpkt->getData();
-      for (int j=0; j<ecw; j++) {
-        int ecidx = sid * ecw + j;
-        char* bufaddr = pktbuf + j*splitsize;
-        bufMap.insert(make_pair(ecidx, bufaddr));
+      vector<int> cidlist = sid2Cids[sid];
+      for (int j=0; j<cidlist.size(); j++) {
+        int cid = cidlist[j];
+        OECDataPacket* curslice = readStreams[i]->dequeue();
+        sliceMap.insert(make_pair(cid, curslice));
+        char* slicebuf = curslice->getData();
+        bufMap.insert(make_pair(cid, slicebuf));
       }
     }
     // prepare for lostidx
-    OECDataPacket* curpkt = new OECDataPacket(_conf->_pktSize);
-    curStripe[lostidx] = curpkt;
-    char* pktbuf = curpkt->getData();
+    OECDataPacket* lostpkt = new OECDataPacket(_conf->_pktSize);
+    char* pktbuf = lostpkt->getData();
     for (int j=0; j<ecw; j++) {
       int ecidx = lostidx*ecw+j;
       char* bufaddr = pktbuf + j*splitsize;
@@ -437,35 +444,22 @@ void OECWorker::computeWorkerDegradedOffline(FSObjInputStream** readStreams,
       }
       // check whether there is a need to discuss about row*col = 1
     }
-    // now computation is finished, we take out pkt from stripe and put into outputstream
-    for (int i=0; i<ecn; i++) {
-      if (i == lostidx) {
-        writeQueue->push(curStripe[lostidx]);
-        curStripe[lostidx] = NULL;
-      } else if (curStripe[i] != NULL) {
-        delete curStripe[i];
-        curStripe[i] = NULL;
-      }
-    }
-    // clear data in bufMap
-    unordered_map<int, char*>::iterator it = bufMap.begin();
-    while (it != bufMap.end()) {
-      int sidx = it->first/ecw;
-      if (sidx < ecn) {
-        curStripe[sidx] = NULL;
+    // now computation is finished, we get lost pkt
+    writeQueue->push(lostpkt);
+    for (auto item: bufMap) {
+      int cid = item.first;
+      int sid = cid/ecw;
+      if (sid == lostidx) continue;
+      if (sliceMap.find(cid) != sliceMap.end()) {
+        item.second = nullptr;
+        sliceMap.erase(sliceMap.find(cid));
       } else {
-        if (it->second) free(it->second);
+        free(item.second);
       }
-      it++;
     }
     bufMap.clear();
+    sliceMap.clear();
   }
- 
-  // delete
-  for (int i=0; i<ecn; i++) {
-    if (curStripe[i] != NULL) delete curStripe[i];
-  }
-  if (curStripe) free(curStripe);
 }
 
 void OECWorker::computeWorker(FSObjInputStream** readStreams,
@@ -754,15 +748,28 @@ void OECWorker::readDisk(AGCommand* agcmd) {
     return;
   }
 
-  // read data in serial from disk
-  thread readThread = thread([=]{objstream->readObj(slicesize);});
-  BlockingQueue<OECDataPacket*>* readQueue = objstream->getQueue();
-  // cacheThread
-  thread cacheThread = thread([=]{selectCacheWorker(readQueue, num, stripename, w, cidlist, refs);});
+  if (w == 1 || w == cidlist.size()) {
+    // serail read
+    // read data in serial from disk
+    thread readThread = thread([=]{objstream->readObj(slicesize);});
+    BlockingQueue<OECDataPacket*>* readQueue = objstream->getQueue();
+    // cacheThread
+    thread cacheThread = thread([=]{selectCacheWorker(readQueue, num, stripename, w, cidlist, refs);});
 
-  //join
-  readThread.join();
-  cacheThread.join();
+    //join
+    readThread.join();
+    cacheThread.join();
+  } else {
+    // random read
+    thread readThread = thread([=]{objstream->readObj(w, cidlist, slicesize);});
+    BlockingQueue<OECDataPacket*>* readQueue = objstream->getQueue();
+    // cacheThrad
+    thread cacheThread = thread([=]{partialCacheWorker(readQueue, num, stripename, w, cidlist, refs);});
+    
+    // join
+    readThread.join();
+    cacheThread.join();
+  }
 
   // delete
   if (objstream) delete objstream;
@@ -800,6 +807,53 @@ void OECWorker::selectCacheWorker(BlockingQueue<OECDataPacket*>* cacheQueue,
         continue;
       }
       int curidx = unit2idx[j];
+      string key = keybase+":"+to_string(curidx)+":"+to_string(i);
+      // we write data into redis
+      int refnum = refs[curidx];
+      //cout << "curidx = " << curidx << ", refnum = " << refnum << endl;
+      int len = curslice->getDatalen();
+      //cout << "len = "  << len << ", key = " << key << endl;
+      char* raw = curslice->getRaw();
+      int rawlen = len + 4;
+      for (int k=0; k<refnum; k++) {
+        redisAppendCommand(writeCtx, "RPUSH %s %b", key.c_str(), raw, rawlen); count++;
+      }
+      delete curslice;
+      if (i>1) {
+        redisGetReply(writeCtx, (void**)&rReply); replyid++;
+        freeReplyObject(rReply);
+      }
+    }
+  }
+  for (int i=replyid; i<count; i++)  {
+    redisGetReply(writeCtx, (void**)&rReply); replyid++;
+    freeReplyObject(rReply);
+  }
+
+  gettimeofday(&time2, NULL);
+  cout << "OECWorker::selectCacheWorker.duration: " << RedisUtil::duration(time1, time2) << " for " << keybase << endl;
+  redisFree(writeCtx);
+}
+
+void OECWorker::partialCacheWorker(BlockingQueue<OECDataPacket*>* cacheQueue,
+                                  int pktnum,
+                                  string keybase,
+                                  int w,
+                                  vector<int> idxlist,
+                                  unordered_map<int, int> refs) {
+  redisContext* writeCtx = RedisUtil::createContext(_conf->_localIp);
+  redisReply* rReply;
+  
+  struct timeval time1, time2;
+  gettimeofday(&time1, NULL);
+
+  int count=0;
+  int replyid=0;
+ 
+  for (int i=0; i<pktnum; i++) {
+    for (int j=0; j<idxlist.size(); j++) {
+      OECDataPacket* curslice = cacheQueue->pop();
+      int curidx = idxlist[j];
       string key = keybase+":"+to_string(curidx)+":"+to_string(i);
       // we write data into redis
       int refnum = refs[curidx];
@@ -1403,7 +1457,7 @@ void OECWorker::readOfflineObj(string filename, string objname, int objsizeMB, F
       memcpy((char*)&lostidx, inststr, 4); inststr += 4;
       lostidx = ntohl(lostidx);
       cout << "lostidx = " << lostidx << endl;
-      // |ecn|eck|ecw|loadn|loadidx-objname|..|computen|computetask|..|
+      // |ecn|eck|ecw|loadn|loadidx-objname-numcids-cidlist|..|computen|computetask|..|
       cout << "OfflineDegradedRead without technique" << endl;
       // 0.1 ecn
       int ecn;
@@ -1424,11 +1478,14 @@ void OECWorker::readOfflineObj(string filename, string objname, int objsizeMB, F
       loadn = ntohl(loadn);
       vector<int> loadidx;
       vector<string> loadobj;
+      unordered_map<int, vector<int>> sid2Cids;
       for (int loadi=0; loadi<loadn; loadi++) {
+        // sid
         int curidx;
         memcpy((char*)&curidx, inststr, 4); inststr += 4;
         curidx = ntohl(curidx);
         loadidx.push_back(curidx);
+        // objname
         int len;
         memcpy((char*)&len, inststr, 4); inststr += 4;
         len = ntohl(len);
@@ -1436,10 +1493,30 @@ void OECWorker::readOfflineObj(string filename, string objname, int objsizeMB, F
         memcpy(objstr, inststr, len); inststr += len;
         loadobj.push_back(string(objstr));
         free(objstr);
+        // curlist
+        int listsize;
+        memcpy((char*)&listsize, inststr, 4); inststr += 4;
+        listsize = ntohl(listsize);
+        vector<int> curlist;
+        for (int ii=0; ii<listsize; ii++) {
+          int curcid;
+          memcpy((char*)&curcid, inststr, 4); inststr += 4;
+          curcid = ntohl(curcid);
+          curlist.push_back(curcid);
+        }
+        sort(curlist.begin(), curlist.end());
+        sid2Cids.insert(make_pair(curidx, curlist));
       }
-      cout << "loadobj: ";
-      for (int loadi=0; loadi<loadn; loadi++) cout << loadobj[loadi] << " ";
-      cout << endl;
+      for (int loadi=0; loadi<loadn; loadi++) {
+        int cursid = loadidx[loadi];
+        cout << "loadsid: " << cursid << ", ";
+        string curobjname = loadobj[loadi];
+        cout << "objname: " << curobjname << ", ";
+        vector<int> curlist = sid2Cids[cursid];
+        cout << "cidlist: ";
+        for (int ii=0; ii<curlist.size(); ii++) cout << curlist[ii] << " ";
+        cout << endl;
+      }
       // 0.5 computen
       int computen;
       memcpy((char*)&computen, inststr, 4); inststr += 4;
@@ -1471,7 +1548,9 @@ void OECWorker::readOfflineObj(string filename, string objname, int objsizeMB, F
 
       vector<thread> readThreads = vector<thread>(loadn);
       for (int loadi=0; loadi<loadn; loadi++) {
-        readThreads[loadi] = thread([=]{readStreams[loadi]->readObj();});
+        int sid = loadidx[loadi];
+        vector<int> curlist = sid2Cids[sid];
+        readThreads[loadi] = thread([=]{readStreams[loadi]->readObj(ecw, curlist, _conf->_pktSize / ecw);});
       }
 
       // 2. create cache queue and cache thread
@@ -1479,7 +1558,7 @@ void OECWorker::readOfflineObj(string filename, string objname, int objsizeMB, F
       thread cacheThread = thread([=]{cacheWorker(writeQueue, filename, pktnum * idx, pktnum, 1);});
 
       // 3. computeThread
-      thread computeThread = thread([=]{computeWorkerDegradedOffline(readStreams, loadidx, writeQueue, lostidx, computeTasks, pktnum, ecn, eck, ecw);});
+      thread computeThread = thread([=]{computeWorkerDegradedOffline(readStreams, loadidx, sid2Cids, writeQueue, lostidx, computeTasks, pktnum, ecn, eck, ecw);});
 
 
       // join
@@ -1518,6 +1597,7 @@ void OECWorker::readOfflineObj(string filename, string objname, int objsizeMB, F
         memcpy((char*)&ip, inststr, 4); inststr += 4;
         ip = ntohl(ip);
         iplist.push_back(ip);
+        cout << "Fetch " << stripename << ":" << to_string(cidx) << " from " << RedisUtil::ip2Str(ip) << endl;
       }
 
       // create fetch queue

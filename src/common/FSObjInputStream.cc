@@ -92,6 +92,55 @@ void FSObjInputStream::readObj() {
   cout << "FSObjInputStream.readObj.duration = " << RedisUtil::duration(time1, time2) << " for " << _objname << endl;
 }
 
+void FSObjInputStream::readObj(int w, vector<int> list, int slicesize) {
+  if (w == 1) {
+    readObj();
+    return;
+  }
+
+  struct timeval time1, time2;
+  gettimeofday(&time1, NULL);
+  // we first transfer items in list %w
+  vector<int> offsetlist;
+  for (int i=0; i<list.size(); i++) offsetlist.push_back(list[i]%w);
+  sort(offsetlist.begin(), offsetlist.end());
+
+  // for each w slices, we put those slice whose index is in offsetlist
+  int stripeid=0;
+  int pktsize = _conf->_pktSize;
+  int stripenum = _objbytes / pktsize;
+  cout << "FSObjInputStream::readObj.stripenum:  " << stripenum << endl;
+  int slicenum = 0;
+  while (stripeid < stripenum) {
+    int start = stripeid * pktsize;
+    for (int i=0; i<offsetlist.size(); i++) {
+      int offidx = offsetlist[i];
+      int slicestart = start + offidx * slicesize;
+      char* buf = (char*)calloc(slicesize+4, sizeof(char));
+  
+      int hasread = 0;
+      while(hasread < slicesize) {
+        int len = _underfs->pReadFile(_underfile, slicestart + hasread, buf+4 + hasread, slicesize - hasread);
+        if (len == 0)break;
+        hasread += len;
+      }
+
+      // set hasread in the first 4 bytes of buf
+      int tmplen = htonl(hasread);
+      memcpy(buf, (char*)&tmplen, 4);
+
+      if (hasread) {
+        OECDataPacket* curPkt = new OECDataPacket();
+        curPkt->setRaw(buf);
+        _queue->push(curPkt); slicenum++;
+      }
+    }
+    stripeid++;
+  }
+  gettimeofday(&time2, NULL);
+  cout << "FSObjInputStream.readObj.duration = " << RedisUtil::duration(time1, time2) << " for " << _objname << ", totally " << slicenum << "slices" << endl;
+}
+
 void FSObjInputStream::readObj(int slicesize, int unitIdx) {
 
   if (slicesize == _conf->_pktSize) {

@@ -27,6 +27,7 @@ class FSObjInputStream {
     void readObj();
     void readObj(int slicesize, int unitIdx);
     void readObj(int slicesize);
+    void readObj(int w, vector<int> list, int slicesize);
     OECDataPacket* dequeue();
     bool exist();
     bool hasNext();

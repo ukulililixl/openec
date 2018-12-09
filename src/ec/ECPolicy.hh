@@ -2,6 +2,7 @@
 #define _ECPOLICY_HH_
 
 #include "ECBase.hh"
+#include "IA.hh"
 #include "RSBINDX.hh"
 #include "RSCONV.hh"
 #include "RSPIPE.hh"

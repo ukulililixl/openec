@@ -66,6 +66,7 @@ class OECWorker {
                               int ecw);
     void computeWorkerDegradedOffline(FSObjInputStream** readStreams,
                                       vector<int> idlist,
+                                      unordered_map<int, vector<int>> sid2Cids,
                                       BlockingQueue<OECDataPacket*>* writeQueue,
                                       int lostidx,
                                       vector<ECTask*> computeTasks,
@@ -81,6 +82,12 @@ class OECWorker {
     void readFetchCompute(AGCommand* agCmd);
 
     void selectCacheWorker(BlockingQueue<OECDataPacket*>* cacheQueue,
+                           int pktnum,
+                           string keybase,
+                           int w,
+                           vector<int> idxlist,
+                           unordered_map<int, int> refs);
+    void partialCacheWorker(BlockingQueue<OECDataPacket*>* cacheQueue,
                            int pktnum,
                            string keybase,
                            int w,

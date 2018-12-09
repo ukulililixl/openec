@@ -110,3 +110,4 @@ void RSPIPE::generate_matrix(int* matrix, int rows, int cols, int w) {
     }
   }
 }
+
