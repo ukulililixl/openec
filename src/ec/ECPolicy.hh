@@ -1,6 +1,7 @@
 #ifndef _ECPOLICY_HH_
 #define _ECPOLICY_HH_
 
+#include "BUTTERFLY64.hh"
 #include "ECBase.hh"
 #include "IA.hh"
 #include "RSBINDX.hh"

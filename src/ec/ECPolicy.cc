@@ -13,7 +13,9 @@ ECPolicy::ECPolicy(string id, string classname, int n, int k, int w, bool locali
 
 ECBase* ECPolicy::createECClass() {
   ECBase* toret;
-  if (_classname == "IA") {
+  if (_classname == "BUTTERFLY64") {
+    toret = new BUTTERFLY64(_n, _k, _w, _locality, _opt, _param);
+  } else if (_classname == "IA") {
     toret = new IA(_n, _k, _w, _locality, _opt, _param);
   } else if (_classname == "RSCONV") {
     toret = new RSCONV(_n, _k, _w, _locality, _opt, _param);

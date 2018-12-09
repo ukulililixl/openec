@@ -169,6 +169,8 @@ for node in cluster:
     attr.append(line)
     line="<value><id>ia_8_4</id><class>IA</class><n>8</n><k>4</k><w>4</w><locality>false</locality><opt>0</opt></value>\n"
     attr.append(line)
+    line="<value><id>butterfly_6_4</id><class>BUTTERFLY64</class><n>6</n><k>4</k><w>8</w><locality>false</locality><opt>0</opt></value>\n"
+    attr.append(line)
     
 #    line="<value><id>drc963</id><class>DRC963</class><n>9</n><k>6</k><cps>3</cps><locality>true</locality><param>3</param></value>\n"
 #    attr.append(line)
@@ -233,6 +235,8 @@ for node in cluster:
     line="<value><poolid>rspipe_6_4_pool</poolid><ecid>rspipe_6_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
     line="<value><poolid>clay_6_4_pool</poolid><ecid>clay_6_4</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>butterfly_6_4_pool</poolid><ecid>butterfly_6_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
     line="</attribute>\n"
     attr.append(line)
