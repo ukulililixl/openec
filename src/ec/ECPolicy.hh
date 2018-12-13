@@ -29,6 +29,7 @@ class ECPolicy {
   public:
     ECPolicy(string id, string classname, int n, int k, int w, bool locality, int opt, vector<string> param);
     ECBase* createECClass();
+    string getPolicyId();
     int getN();
     int getK();
     int getW();

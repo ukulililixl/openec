@@ -20,6 +20,7 @@ class SSEntry {
 
   public:
     SSEntry(string filename, int type, int filesizeMB, string ecidpool, vector<string> objname, vector<unsigned int> loc);
+    SSEntry(string raw);
 
     string getFilename();
     int getType();
@@ -29,6 +30,7 @@ class SSEntry {
     vector<unsigned int> getObjloc();
     int getIdxOfObj(string objname);
     unsigned int getLocOfObj(string objname);
+    string toString();
 
     // for debug
     void dump();

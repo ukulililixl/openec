@@ -38,6 +38,10 @@ ECBase* ECPolicy::createECClass() {
   return toret;
 }
 
+string ECPolicy::getPolicyId() {
+  return _id;
+}
+
 int ECPolicy::getN() {
   return _n;
 }

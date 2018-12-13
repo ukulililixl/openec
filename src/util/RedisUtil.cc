@@ -67,3 +67,17 @@ double RedisUtil::duration(struct timeval t1, struct timeval t2) {
   return (t2.tv_sec-t1.tv_sec) * 1000.0 + (t2.tv_usec-t1.tv_usec) / 1000.0;
 }
 
+vector<string> RedisUtil::str2container(string line) {
+  int start = 0;
+  int pos = line.find_first_of(";");
+  vector<string> entryitems;
+  while (pos != string::npos) {
+    string item = line.substr(start, pos - start);
+    start = pos + 1;
+    pos = line.find_first_of(";", start);
+    entryitems.push_back(item);
+  }
+  string item = line.substr(start, pos - start);
+  entryitems.push_back(item);
+  return entryitems;
+}

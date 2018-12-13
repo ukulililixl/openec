@@ -36,6 +36,17 @@ class ECDAG {
     vector<int> getHeaders();
     vector<int> getLeaves();
 
+    // ecdag reconstruction
+    void optimize(int opt, 
+                  unordered_map<int, pair<string, unsigned int>> objlist,
+                  unordered_map<unsigned int, string> ip2Rack,
+                  int ecn,
+                  int eck,
+                  int ecw);
+    void Opt0();
+    void Opt1();
+    void Opt2(unordered_map<int, string> n2Rack);
+
     // parse cmd
     unordered_map<int, AGCommand*> parseForOEC(unordered_map<int, unsigned int> cid2ip,
                                    string stripename, 

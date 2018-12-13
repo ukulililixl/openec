@@ -44,6 +44,7 @@ class ECNode {
 
     void addCoefs(int calfor, vector<int> coefs);
     unordered_map<int, vector<int>> getCoefmap();
+    int getCoefOfChildForParent(int child, int parent);
 
     void incRefNumFor(int id); // increase refnum for id
     int getRefNumFor(int id);

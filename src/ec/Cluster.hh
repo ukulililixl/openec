@@ -21,6 +21,10 @@ class Cluster {
 //    void setChilds(vector<int> childs);
     void setOpt(int opt);
 //    void reset(vector<int> childs, vector<int> parents);
+
+    int getOpt();
+    vector<int> getParents();
+    vector<int> getChilds();
     void dump();
 };
 

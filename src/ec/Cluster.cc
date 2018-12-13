@@ -39,3 +39,15 @@ void Cluster::dump() {
   for (int i=0; i<_parents.size(); i++) cout << _parents[i] << " ";
   cout << ") , opted: " << _opted << endl;
 }
+
+int Cluster::getOpt() {
+  return _opted;
+}
+
+vector<int> Cluster::getParents() {
+  return _parents;
+}
+
+vector<int> Cluster::getChilds() {
+  return _childs;
+}

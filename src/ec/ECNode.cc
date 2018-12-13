@@ -78,6 +78,17 @@ unordered_map<int, vector<int>> ECNode::getCoefmap() {
   return _coefMap;
 }
 
+int ECNode::getCoefOfChildForParent(int child, int parent) {
+  assert (_coefMap.find(parent) != _coefMap.end());
+  vector<int> coefs = _coefMap[parent];
+  
+  for (int i=0; i<_childNodes.size(); i++) {
+    if (_childNodes[i]->_nodeId == child) return coefs[i];
+  }
+
+  return -1;
+}
+
 void ECNode::setConstraint(bool cons, int id) {
   _hasConstraint = cons;
   if (_hasConstraint) _consId = id;
@@ -376,3 +387,4 @@ void ECNode::dumpRawTask() {
     }
   }
 }
+

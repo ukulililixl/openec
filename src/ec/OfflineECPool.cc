@@ -96,3 +96,35 @@ void OfflineECPool::unlock() {
   _lockECPool.unlock();
 }
 
+string OfflineECPool::stripe2String(string stripename) {
+  string toret = "";
+  toret += _ecpoolid+";";
+  toret += stripename+";";
+  vector<string> objlist = _stripe2objs[stripename];
+  for (int i=0; i<objlist.size(); i++) {
+    toret += objlist[i]+";";
+  }
+
+  return toret;
+}
+
+void OfflineECPool::constructPool(vector<string> items) {
+  // we skip items[0], which is poolid
+  // only used when stripestore initialize
+  _lockECPool.lock();
+  string stripename = items[1];
+  cout << stripename << endl;
+  _stripes.push_back(stripename);
+  int objnum = (items.size() - 2);
+  vector<string> stripelist;
+  for (int i=0; i<objnum; i++) {
+    int idx = 2+i;
+    string objname = items[idx];
+    _objs.insert(make_pair(objname, true));
+    _obj2stripe.insert(make_pair(objname, stripename));
+    stripelist.push_back(objname);
+    cout << objname << endl;
+  }
+  _stripe2objs.insert(make_pair(stripename, stripelist));
+  _lockECPool.unlock();
+}

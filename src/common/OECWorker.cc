@@ -197,6 +197,12 @@ void OECWorker::onlineWrite(string filename, string ecid, int filesizeMB) {
   for (int i=0; i<ecn; i++) delete objstreams[i];
   free(objstreams);
   for (auto compute: computeTasks) delete compute;
+
+  // finalize writing offline-encoded file
+  CoorCommand* coorCmd1 = new CoorCommand();
+  coorCmd1->buildType2(2, _conf->_localIp, filename); 
+  coorCmd1->sendTo(_coorCtx);
+  delete coorCmd1;
 }
 
 void OECWorker::offlineWrite(string filename, string ecpoolid, int filesizeMB) {

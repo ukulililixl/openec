@@ -34,6 +34,10 @@ class OfflineECPool {
     ECPolicy* getEcpolicy();
     void lock();
     void unlock();
+
+    // backup
+    string stripe2String(string stripename);
+    void constructPool(vector<string> items);
 };
 
 #endif

@@ -9,6 +9,42 @@ SSEntry::SSEntry(string filename, int type, int filesizeMB, string ecidpool, vec
   _objLoc = loc;
 }
 
+SSEntry::SSEntry(string line) {
+//  int start = 0;
+//  int pos = line.find_first_of(";");
+//  vector<string> entryitems;
+//  while (pos != string::npos) {
+//    string item = line.substr(start, pos - start);
+//    start = pos + 1;
+//    pos = line.find_first_of(";", start);
+//    entryitems.push_back(item);
+//  }
+//  string item = line.substr(start, pos - start);
+//  entryitems.push_back(item);
+//  for (int i=0; i<entryitems.size(); i++) cout << entryitems[i] << endl;
+  vector<string> entryitems = RedisUtil::str2container(line);
+  
+  // entryitems[0]:filename
+  _filename = entryitems[0];
+  // entryitems[1]:type
+  _type = stoi(entryitems[1]);
+  // entryitems[2]:filesizeMB
+  _filesizeMB = stoi(entryitems[2]);
+  // entryitems[3]:ecidpool
+  _ecidpool = entryitems[3];
+  // remain: objs
+  int objnum = (entryitems.size() - 4) / 2;
+  for (int i=0; i<objnum; i++) {
+    int idx = 4 + i * 2;
+    string objname = entryitems[idx];
+    string objlocstr = entryitems[idx+1];
+    _objList.push_back(objname);
+    unsigned long loc = stoul(objlocstr, nullptr, 0);
+    unsigned int objloc = (unsigned int)loc;
+    _objLoc.push_back(objloc);
+  }
+}
+
 string SSEntry::getFilename() {
   return _filename;
 }
@@ -71,6 +107,23 @@ void SSEntry::updateObjLoc(string objname, unsigned int loc) {
   if (idx != -1) _objLoc[idx] = loc;
   _updateLock.unlock();
   assert(idx != -1);
+}
+
+string SSEntry::toString() {
+  string toret = "";
+  toret += _filename+";";
+  toret += to_string(_type)+";";
+  toret += to_string(_filesizeMB)+";";
+  toret += _ecidpool+";";
+  int num = _objList.size();
+  for (int i=0; i<num; i++) {
+    string obj = _objList[i];
+    toret += obj+";";
+    unsigned int loc = _objLoc[i];
+    toret += to_string(loc)+";";
+  }
+  toret += "\n";
+  return toret;
 }
 
 void SSEntry::dump() {

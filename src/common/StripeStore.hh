@@ -55,6 +55,16 @@ class StripeStore {
     struct timeval _startEnc, _endEnc; 
 
     bool _enableRepair;
+
+    // backup
+    string _entryStorePath = "entryStore";
+    ofstream _entryStore;
+    mutex _lockEntryStore;
+
+    string _poolStorePath = "poolStore";
+    ofstream _poolStore;
+    mutex _lockPoolStore;
+    
   public:
     StripeStore(Config* conf);
 
@@ -65,6 +75,7 @@ class StripeStore {
 
     OfflineECPool* getECPool(string ecpoolid, ECPolicy* ecpolicy, int basesize);
     OfflineECPool* getECPool(string ecpoolid);
+    void insertECPool(string ecpoolid, OfflineECPool* pool);
 
 //    int getSize();
     void increaseDataLoadMap(unsigned int ip, int load);
@@ -91,7 +102,7 @@ class StripeStore {
     int getECInProgressNum();
     void startECStripe(string stripename);
 //    void setScan(bool status);
-    void finishECStripe(string stripename);
+    void finishECStripe(OfflineECPool* ecpool, string stripename);
     
     // repair
     void scanRepair();
@@ -101,6 +112,9 @@ class StripeStore {
     void finishRepair(string objname);
     int getRPInProgressNum();
   
+    // backup
+    void backupEntry(string entrystr);
+    void backupPoolStripe(string stripename);
 };
 
 #endif

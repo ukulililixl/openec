@@ -22,6 +22,7 @@ class RedisUtil {
     static int blpopContent(redisContext*, const char* key, char* dst, int length);
     static void rpushContent(redisContext*, const char* key, const char* src, int length);
     static double duration(struct timeval t1, struct timeval t2);
+    static vector<string> str2container(string line);
 };
 
 

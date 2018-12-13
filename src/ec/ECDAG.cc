@@ -171,6 +171,7 @@ void ECDAG::BindY(int pidx, int cidx) {
   assert (clusterid != -1);
   Cluster* cluster = _clusterMap[clusterid];
   // TODO: set optimization?
+  cluster->setOpt(1);
 }
 
 vector<int> ECDAG::toposort() {
@@ -285,7 +286,251 @@ vector<int> ECDAG::getLeaves() {
   return toret;
 }
 
-//vector<AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
+void ECDAG::optimize(int opt, 
+                     unordered_map<int, pair<string, unsigned int>> objlist,                            
+                     unordered_map<unsigned int, string> ip2Rack,                            
+                     int ecn,
+                     int eck,
+                     int ecw) {
+  if (opt == 0) {
+    // enable BindX automatically to reduce network traffic
+    Opt0();
+  }
+}
+
+void ECDAG::Opt0() {
+  // check all the clusters and enforce Bind
+  for (auto curCluster: _clusterMap) {
+    if (curCluster->getOpt() == -1) {
+      BindX(curCluster->getParents());
+      curCluster->setOpt(0);
+    }
+  } 
+}
+
+void ECDAG::Opt1() {
+  // add constraint for computation nodes;
+  for (auto curCluster: _clusterMap) {
+    if (curCluster->getOpt() == -1) {
+      vector<int> childs = curCluster->getChilds();
+      vector<int> parents = curCluster->getParents();
+      if (parents.size() == 1) {
+        // addConstraint? 
+        BindY(parents[0], childs[0]);
+      } else if (parents.size() > 1) {
+        int bindnodeid = BindX(parents);
+        BindY(bindnodeid, childs[0]);
+      }
+    }
+  }
+}
+
+void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
+  // 1. now we have all cids corresponding racks, iterate through all clusters
+  vector<int> deletelist;
+  for (int clusteridx = 0; clusteridx < _clusterMap.size(); clusteridx++) {
+    Cluster* curCluster = _clusterMap[clusteridx];
+    if (curCluster->getOpt() != -1) continue;
+    if (ECDAG_DEBUG_ENABLE) cout << "ECDAG::Opt2.deal with ";
+    if (ECDAG_DEBUG_ENABLE) curCluster->dump();
+    vector<int> curChilds = curCluster->getChilds();
+    vector<int> curParents = curCluster->getParents();
+    int numoutput = curParents.size();
+
+    // 1.1 sort the childs into racks
+    unordered_map<string, vector<int>> subchilds;
+    for (int i=0; i<curChilds.size(); i++) {
+      string r = n2Rack[curChilds[i]];
+      if (subchilds.find(r) == subchilds.end()) {
+        vector<int> tmp={curChilds[i]};
+        subchilds.insert(make_pair(r, tmp));
+      } else subchilds[r].push_back(curChilds[i]);
+    }
+    if (ECDAG_DEBUG_ENABLE) cout << "ECDAG::childs are sorted into " << subchilds.size() << " racks" << endl;
+
+    if (numoutput == 1) {
+      // we deploy pipelining technique for current cluster
+      if (ECDAG_DEBUG_ENABLE) cout << "numoutput == 1, deploy pipelining optimization" << endl;
+      int parent = curParents[0];
+      ECNode* parentnode = _ecNodeMap[parent];
+      bool isProot = false;
+      if (find(_ecHeaders.begin(), _ecHeaders.end(), parent) != _ecHeaders.end()) isProot = true;
+      string prack = n2Rack[parent];
+
+      deque<int> dataqueue;
+      deque<int> coefqueue;
+
+      // version 1
+      for (auto group: subchilds) {
+        string crack = group.first;
+        if (crack == prack) continue;
+        for (auto c: group.second) {
+          dataqueue.push_back(c);
+          int curcoef = parentnode->getCoefOfChildForParent(c, parent);
+          coefqueue.push_back(curcoef);
+        }
+      }
+
+      // for version 1 and version 2
+      if (subchilds.find(prack) != subchilds.end()) {
+        for (auto c: subchilds[prack]) {
+          dataqueue.push_back(c);
+          int curcoef = parentnode->getCoefOfChildForParent(c, parent);
+          coefqueue.push_back(curcoef);
+        }
+      }
+      while (dataqueue.size() >= 2) {
+        vector<int> datav;
+        vector<int> coefv;
+        for (int j=0; j<2; j++) {
+          int tmpd(dataqueue.front()); dataqueue.pop_front();
+          int tmpc(coefqueue.front()); coefqueue.pop_front();
+          datav.push_back(tmpd);
+          coefv.push_back(tmpc);
+        }
+        int tmpid;
+        if (dataqueue.size() > 0) tmpid = _optId++;
+        else {
+          tmpid = parent;
+        }
+        Join(tmpid, datav, coefv);
+        BindY(tmpid, datav[1]);
+        dataqueue.push_front(tmpid);
+        coefqueue.push_front(1);
+      }
+      // add curCluster to delete list
+      deletelist.push_back(clusteridx);
+      
+      if (!isProot) {
+        // delete parent from root
+        vector<int>::iterator p = find(_ecHeaders.begin(), _ecHeaders.end(), parent);
+        if (p != _ecHeaders.end()) _ecHeaders.erase(p);
+      }
+    } else {
+  
+      if (subchilds.size() == 1) continue;  // there is no space for current group to optimize
+  
+      // 1.2 globalChilds and globalCoefs maintains the outer cluster.
+      vector<int> globalChilds;
+      unordered_map<int, vector<int>> globalCoefs;
+  
+      bool update = false;
+      // 1.3 check for each group of subchilds for subcluster
+      for (auto item: subchilds) {
+        vector<int> itemchilds = item.second;
+        vector<int> subparents;
+        
+        if (ECDAG_DEBUG_ENABLE) {
+          cout << "deal with subgroup ( ";
+          for (auto cid: itemchilds) cout << cid <<" ";
+          cout << "), rack: " << item.first << endl;
+        }
+  
+        if (itemchilds.size() > numoutput) {
+          update = true;
+          if (ECDAG_DEBUG_ENABLE) cout << "inputsize = " << itemchilds.size() << ", outputsize = " << numoutput << ", there is space for optimization" << endl;
+          // we can create a new subcluster for this group of childs, add subparents
+          for (int i=0; i<numoutput; i++) {
+            int tmpid = _optId++;
+            subparents.push_back(tmpid);
+            globalChilds.push_back(tmpid);        // update globalChilds here
+          }
+  
+          if (ECDAG_DEBUG_ENABLE) {
+            cout << "updated subparents: ( ";
+            for (auto cid: subparents) cout << cid << " ";
+            cout << ")" << endl;
+            cout << "updated globalchilds: ( ";
+            for (auto cid: globalChilds) cout << cid << " ";
+            cout << ")" << endl;
+          }
+  
+          // for each global parent, we need to figure out corresponding coefs to create tmpparent
+          for (int i=0; i<numoutput; i++) {
+            int parent = curParents[i];
+            ECNode* parentnode = _ecNodeMap[parent];
+            int tmpparent = subparents[i];
+  
+            vector<int> tmpcoef;
+            // find corresponding coefs to calculate tmpparent 
+            for (int i=0; i<itemchilds.size(); i++) {
+              int tmpchild = itemchilds[i];
+              int tmpc = parentnode->getCoefOfChildForParent(tmpchild, parent);
+              tmpcoef.push_back(tmpc);
+            }
+            Join(tmpparent, itemchilds, tmpcoef);
+            if (ECDAG_DEBUG_ENABLE) {
+              cout << tmpparent << " = ( ";
+              for (auto c: tmpcoef) cout << c << " ";
+              cout << ") * ( ";
+              for (auto c: itemchilds) cout << c << " ";
+              cout << ")" << endl;
+              cout << "current cluster.size = " << _clusterMap.size() << endl;
+            }
+
+            // update globalCoefs here
+            if (globalCoefs.find(parent) == globalCoefs.end()) {
+              vector<int> tmp;
+              globalCoefs.insert(make_pair(parent, tmp));
+            }
+            for (int j=0; j<numoutput; j++) {
+              if (j == i) globalCoefs[parent].push_back(1);
+              else globalCoefs[parent].push_back(0);
+            }
+          }
+          int bindid=BindX(subparents);
+          BindY(bindid, itemchilds[0]);
+        } else {
+          // we just pass itemchilds and corresponding coefs for parent
+          for (int i=0; i<itemchilds.size(); i++) globalChilds.push_back(itemchilds[i]);
+          for (int i=0; i<numoutput; i++) {
+            int parent = curParents[i];
+            ECNode* parentnode = _ecNodeMap[parent];
+            // find corresponding coefs to calculate parent
+            for (int j=0; j<itemchilds.size(); j++) {
+              int tmpchild = itemchilds[j];
+              int tmpc = parentnode->getCoefOfChildForParent(tmpchild, parent);
+              if (globalCoefs.find(parent) == globalCoefs.end()) {
+                vector<int> tmp;
+                globalCoefs.insert(make_pair(parent, tmp));
+              }
+              globalCoefs[parent].push_back(tmpc);
+            }
+          }
+        }
+      } 
+      // 1.4 update globalChilds and globalCoefs for current cluster
+      if (update) {
+        for (int i=0; i<curParents.size(); i++) {
+          int parent = curParents[i];
+          assert (globalCoefs.find(parent) != globalCoefs.end());
+          vector<int> coefs = globalCoefs[parent];
+          Join(parent, globalChilds, coefs);
+        }
+        BindX(curParents);
+        deletelist.push_back(clusteridx);
+      } else {
+        BindX(curParents);
+      }
+  
+      // check whether global Childs are in roots
+      for (auto c: globalChilds) {
+        vector<int>::iterator inroot = find(_ecHeaders.begin(), _ecHeaders.end(), c);
+        if (inroot != _ecHeaders.end()) _ecHeaders.erase(inroot);
+      }
+    }
+  }
+//  // delete cluster in deletelist
+//  vector<Cluster*>::iterator it;;
+//  sort(deletelist.begin(), deletelist.end());
+//  for (int i=deletelist.size()-1; i >= 0; i--) {
+//    it = _clusterMap.begin();
+//    int idx = deletelist[i];
+//    it += idx;
+//    _clusterMap.erase(it);
+//  }
+}
+
 unordered_map<int, AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
                                       string stripename, 
                                       int n, int k, int w, int num,
@@ -308,9 +553,7 @@ unordered_map<int, AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned in
     unsigned int ip = cid2ip[cidx];
     node->parseForOEC(ip);
     AGCommand* cmd = node->parseAGCommand(stripename, n, k, w, num, objlist, cid2ip);
-//    if (cmd) cmd->dump();
     if (cmd) agCmds.insert(make_pair(cidx, cmd));
-//    toret.push_back(cmd);
   }
 
   // we can merge the following commands

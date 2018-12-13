@@ -9,6 +9,38 @@ StripeStore::StripeStore(Config* conf) {
 //   if (_conf->_repair_scheduling == "delay") _enableRepair = false;
 //   else if (_conf->_repair_scheduling == "threshold") _enableRepair = false;
 //   else _enableRepair = true;
+
+  // TODO: if metaStore exists, we need to load metadata into memory
+  //       if not, we need to create a metaStore 
+  // check whether entryStore exists, and read data from entryStore
+  ifstream entryStore(_entryStorePath);
+  if (entryStore.is_open()) {
+    cout << "StripeStore::read entryStore" << endl;
+    string line;
+    while (getline(entryStore, line)) {
+      SSEntry* ssentry = new SSEntry(line);
+      ssentry->dump();
+      // insert ssentry into stripestore
+      insertEntry(ssentry);
+    }
+    entryStore.close();
+  }
+  // check whether poolStore exists, and read data from poolStore
+  ifstream poolStore(_poolStorePath);
+  if (poolStore.is_open()) {
+    cout << "StripeStore::read poolStore" << endl;
+    string line;
+    while (getline(poolStore, line)) {
+      vector<string> entryitems = RedisUtil::str2container(line);
+      string ecpoolid = entryitems[0];
+      string ecid = _conf->_offlineECMap[ecpoolid];
+      int basesizeMB = _conf->_offlineECBase[ecpoolid];
+      ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];
+      OfflineECPool* ecpool = getECPool(ecpoolid, ecpolicy, basesizeMB);
+      ecpool->constructPool(entryitems);
+    }
+    poolStore.close();
+  }
 }
 
 bool StripeStore::existEntry(string filename) {
@@ -38,6 +70,11 @@ void StripeStore::insertEntry(SSEntry* entry) {
 //     // need to delete the old entry?
 //     delete oldEntry;
   }
+
+  // TODO: add it to metaStore
+//  string entrystr = entry->toString();
+//  backupEntry(entrystr);
+//  cout << "StripeStore::insertEntry.entrystr: " << entrystr << endl;
 }
 
 SSEntry* StripeStore::getEntry(string filename) {
@@ -48,6 +85,13 @@ SSEntry* StripeStore::getEntry(string filename) {
 SSEntry* StripeStore::getEntryFromObj(string objname) {
   if (_objEntryMap.find(objname) != _objEntryMap.end()) return _objEntryMap[objname];
   else return NULL;
+}
+
+void StripeStore::insertECPool(string ecpoolid, OfflineECPool* pool) {
+  assert (_offlineECPoolMap.find(ecpoolid) == _offlineECPoolMap.end());
+  _lockECPoolMap.lock();
+  _offlineECPoolMap.insert(make_pair(ecpoolid, pool));
+  _lockECPoolMap.unlock();
 }
 
 OfflineECPool* StripeStore::getECPool(string ecpoolid, ECPolicy* ecpolicy, int basesize) {
@@ -206,7 +250,7 @@ void StripeStore::startECStripe(string stripename) {
   _lockECInProgress.unlock();
 }
 
-void StripeStore::finishECStripe(string stripename) {
+void StripeStore::finishECStripe(OfflineECPool* pool, string stripename) {
   _lockECInProgress.lock();
   vector<string>::iterator pos = find(_ECInProgress.begin(), _ECInProgress.end(), stripename);
   if (pos != _ECInProgress.end()) _ECInProgress.erase(pos);
@@ -215,6 +259,9 @@ void StripeStore::finishECStripe(string stripename) {
     cout << "StripeStore::finishECStripe.encodeTime = " << RedisUtil::duration(_startEnc, _endEnc) << endl;
   }
   _lockECInProgress.unlock();
+
+  // we need to backup offlineecpool
+  backupPoolStripe(pool->stripe2String(stripename));
 }
 
 // int StripeStore::getSize() {
@@ -352,4 +399,28 @@ void StripeStore::finishRepair(string objname) {
   vector<string>::iterator pos = find(_RPInProgress.begin(), _RPInProgress.end(), objname);
   if (pos != _RPInProgress.end()) _RPInProgress.erase(pos);
   _lockRPInProgress.unlock();
+}
+
+void StripeStore::backupEntry(string entrystr) {
+  struct timeval time1, time2;
+  gettimeofday(&time1, NULL);
+  _lockEntryStore.lock();
+  _entryStore.open(_entryStorePath, ios::out | ios::app);
+  _entryStore << entrystr;
+  _entryStore.close();
+  _lockEntryStore.unlock();
+  gettimeofday(&time2, NULL);
+  cout << "StripeStore::backupEntry.duration = " << RedisUtil::duration(time1, time2) << endl;
+}
+
+void StripeStore::backupPoolStripe(string poolstr) {
+  struct timeval time1, time2;
+  gettimeofday(&time1, NULL);
+  _lockPoolStore.lock();
+  _poolStore.open(_poolStorePath, ios::out | ios::app);
+  _poolStore << poolstr;
+  _poolStore.close();
+  _lockPoolStore.unlock();
+  gettimeofday(&time2, NULL);
+  cout << "StripeStore::backupPool.duration = " << RedisUtil::duration(time1, time2) << endl;
 }

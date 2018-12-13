@@ -415,24 +415,29 @@ void Coordinator::finalizeFile(CoorCommand* coorCmd) {
   SSEntry* ssentry = _stripeStore->getEntry(filename);
   assert(ssentry != NULL);
   int type = ssentry->getType();
-  assert(type == 1); // offline encoding
-  string ecpoolid = ssentry->getEcidpool();
-  vector<string> objlist = ssentry->getObjlist();
-
-  // 1. for each obj in objlist, check whether corresponding stripe can be a candidate for offline encoding
-  OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
-  ecpool->lock();
-  for (int i=0; i<objlist.size(); i++) {
-    string objname = objlist[i];
-    // finalize objname
-    ecpool->finalizeObj(objname);
-    string stripename = ecpool->getStripeForObj(objname);
-    if (ecpool->isCandidateForEC(stripename)) {
-      cout << "Coordinator::finalizeFile. stripe " << stripename << "is candidate for ec " << endl;
-      _stripeStore->addEncodeCandidate(ecpoolid, stripename);
+  if (type == 1) {
+     // offline encoding
+    string ecpoolid = ssentry->getEcidpool();
+    vector<string> objlist = ssentry->getObjlist();
+  
+    // 1. for each obj in objlist, check whether corresponding stripe can be a candidate for offline encoding
+    OfflineECPool* ecpool = _stripeStore->getECPool(ecpoolid);
+    ecpool->lock();
+    for (int i=0; i<objlist.size(); i++) {
+      string objname = objlist[i];
+      // finalize objname
+      ecpool->finalizeObj(objname);
+      string stripename = ecpool->getStripeForObj(objname);
+      if (ecpool->isCandidateForEC(stripename)) {
+        cout << "Coordinator::finalizeFile. stripe " << stripename << "is candidate for ec " << endl;
+        _stripeStore->addEncodeCandidate(ecpoolid, stripename);
+      }
     }
+    ecpool->unlock();
   }
-  ecpool->unlock();
+
+  // backup this ssentry
+  _stripeStore->backupEntry(ssentry->toString());
 }
 
 void Coordinator::offlineEnc(CoorCommand* coorCmd) {
@@ -496,8 +501,10 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
     stripeplaced.push_back(i);
   }
   // 2.2 prepare physical information for m parity objs
+  vector<string> parityobj;
   for (int i=k; i<n; i++) {
     string objname = "/"+ecpoolid+"-"+stripename+"-"+to_string(i);
+    parityobj.push_back(objname);
     vector<int> colocWith;
     if (idx2group.find(i) != idx2group.end()) colocWith = idx2group[i];
     vector<unsigned int> candidates = getCandidates(stripeips, stripeplaced, colocWith);
@@ -545,7 +552,6 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   }
 
   // 6. parse for oec
-//  vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, n, k, w, pktnum, objlist);
   unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, n, k, w, pktnum, objlist);
 
   // 7. add persist cmd
@@ -609,7 +615,13 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
     redisFree(waitCtx);
   }
   cout << "Coordinator::offlineEnc for " << stripename << " finishes" << endl;
-  _stripeStore->finishECStripe(stripename);
+  _stripeStore->finishECStripe(ecpool, stripename);
+
+  // backup entry for parity obj
+  for (int i=0; i<parityobj.size(); i++) {
+    SSEntry* curentry = _stripeStore->getEntryFromObj(parityobj[i]);
+    _stripeStore->backupEntry(curentry->toString());
+  }
   
   // free
   delete ecdag;
