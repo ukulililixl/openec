@@ -9,6 +9,7 @@ OECCoordinator
 OECClient
 ECDAGTest
 HDFSClient
+CodeTest
 
 conf/
 
