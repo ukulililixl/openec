@@ -16,7 +16,9 @@ class NativeRS {
     int _m;
     uint8_t _encode_matrix[NativeRS_N_MAX * NativeRS_N_MAX];
     uint8_t _gftbl[NativeRS_N_MAX * NativeRS_N_MAX * 32];
+    uint8_t tmp_gftbl[NativeRS_N_MAX * NativeRS_N_MAX * 32];
     uint8_t fmat[NativeRS_N_MAX * NativeRS_N_MAX];
+
   public:
     NativeRS();
     bool initialize(int n, int k);

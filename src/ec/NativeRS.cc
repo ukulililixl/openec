@@ -52,12 +52,13 @@ bool NativeRS::check(int fidx) {
   	}
   	//      printf("%d ", fmat[i*_k+j]);
   }
+  ec_init_tables(_k, 1, fmat, tmp_gftbl);
   return true;
 }
 
 bool NativeRS::decode(uint8_t** avail, int32_t anum, uint8_t** toret, int32_t tnum, int32_t dataLen) {
-  uint8_t tmp_gftbl[32 * tnum * anum];
-  ec_init_tables(anum, tnum, fmat, tmp_gftbl);
+//  uint8_t tmp_gftbl[32 * tnum * anum];
+//  ec_init_tables(anum, tnum, fmat, tmp_gftbl);
   ec_encode_data(dataLen, anum, tnum, tmp_gftbl, avail, toret);
   return true;
 }

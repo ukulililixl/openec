@@ -11,11 +11,10 @@ using namespace std;
 void usage() {
   cout << "Usage: ./CodeTest " << endl;
   cout << "	1, systype (native/openec)" << endl;
-  cout << "	2, operation (encode/decode)" << endl;
-  cout << "	3, n" << endl;
-  cout << "	4, k" << endl;
-  cout << "	5, blocksizeB" << endl;
-  cout << "	6, pktsizeB" << endl;
+  cout << "	2, n" << endl;
+  cout << "	3, k" << endl;
+  cout << "	4, blocksizeB" << endl;
+  cout << "	5, pktsizeB" << endl;
 }
 
 double getCurrentTime() {
@@ -25,29 +24,36 @@ double getCurrentTime() {
 }
 
 int main(int argc, char** argv) {
-  if (argc < 7) {
+  if (argc < 6) {
     usage();
     return 0;
   }
 
   string systype = string(argv[1]);
-  string operation = string(argv[2]);
-  int n = atoi(argv[3]);
-  int k = atoi(argv[4]);
-  int blocksizeB = atoi(argv[5]);
-  int pktsizeB = atoi(argv[6]);
+  int n = atoi(argv[2]);
+  int k = atoi(argv[3]);
+  int blocksizeB = atoi(argv[4]);
+  int pktsizeB = atoi(argv[5]);
 
   string confpath = "conf/sysSetting.xml";
   Config* conf = new Config(confpath);
 
+  // this is used for native impl
   NativeRS* rscode = nullptr;
+   
+  // this is used for openec impl
   ECPolicy* ecpolicy = nullptr;
   ECBase* ec = nullptr;
   ECDAG* ecdag = nullptr;
 
+  double overallEncodeTime=0, initEncodeTime=0;
+  overallEncodeTime -= getCurrentTime();
+  initEncodeTime -= getCurrentTime();
+
   if (systype == "native") {
     rscode = new NativeRS();
   } else {
+    //string ecid = "rs_"+to_string(n)+"_"+to_string(k)+"_bindx";
     string ecid = "rs_"+to_string(n)+"_"+to_string(k);
     cout << ecid << endl;
     ecpolicy = conf->_ecPolicyMap[ecid];
@@ -57,7 +63,7 @@ int main(int argc, char** argv) {
   // initialize
   // native: create matrix
   // openec: create ecdag and parse ecdag
-  vector<ECTask*> computetasks;
+  vector<ECTask*> encodetasks;
   if (systype == "native") {
     rscode->initialize(n, k);
   } else {
@@ -65,9 +71,10 @@ int main(int argc, char** argv) {
     vector<int> toposeq = ecdag->toposort();
     for (int i=0; i<toposeq.size(); i++) {
       ECNode* curnode = ecdag->getNode(toposeq[i]);
-      curnode->parseForClient(computetasks);
+      curnode->parseForClient(encodetasks);
     }
   }
+  initEncodeTime += getCurrentTime();
 
   // prepare data buffer
   uint8_t** databuffers = (uint8_t**)calloc(k, sizeof(uint8_t*));
@@ -96,9 +103,9 @@ int main(int argc, char** argv) {
     if (systype == "native") {
       rscode->construct(databuffers, codebuffers, pktsizeB);
     } else {
-      // perform computation in computetasks one by one
-      for (int taskid = 0; taskid < computetasks.size(); taskid++) {
-        ECTask* compute = computetasks[taskid];
+      // perform computation in encodetasks one by one
+      for (int taskid = 0; taskid < encodetasks.size(); taskid++) {
+        ECTask* compute = encodetasks[taskid];
 	vector<int> children = compute->getChildren();
 	unordered_map<int, vector<int>> coefMap = compute->getCoefMap();
 	int col = children.size();
@@ -134,7 +141,132 @@ int main(int argc, char** argv) {
     }
     encodeTime += getCurrentTime();
   }
-  cout << "Encode throughput: (MB/s): " << blocksizeB*k/1.048576 / encodeTime << endl;
+  overallEncodeTime += getCurrentTime();
+  cout << "=============================" << endl;
+  cout << "InitEncodeTime: " << initEncodeTime/1000 << " ms" << endl;
+  cout << "EncodeTime: " << encodeTime/1000 << " ms" << endl;
+  cout << "OverallEncodeTime: " << overallEncodeTime/1000 << " ms" << endl;
+  cout << "EncodeThroughput: (MB/s): " << blocksizeB*k/1.048576 / encodeTime << endl;
+  cout << "OverallThroughput: (MB/s): " << blocksizeB*k/1.048576 / overallEncodeTime << endl;
+
+  // clean encode
+  if (systype == "openec") {
+    delete ecdag;
+    for (auto item: encodetasks) delete item;
+  }
+  cout << "-----------------------------" << endl;
+
+  // simulate failure
+  int fidx = 0;
+
+  double overallDecodeTime = 0, initDecodeTime = 0;
+  overallDecodeTime -= getCurrentTime();
+  initDecodeTime -= getCurrentTime();
+
+  // take out fidx buffer
+  uint8_t* oribuf = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
+  if (fidx < k) memcpy(oribuf, databuffers[fidx], pktsizeB);
+  else memcpy(oribuf, codebuffers[fidx-k], pktsizeB);
+  // prepare torec buf for native code
+  uint8_t** availbuffers = (uint8_t**)calloc(k, sizeof(uint8_t*));
+  uint8_t** toretbuffers = (uint8_t**)calloc(1, sizeof(uint8_t*));
+  int icount=0;
+  for (int i=0; i<k && icount<k; i++) {
+    if (i!=fidx) availbuffers[icount++] = databuffers[i];
+  }
+  for (int i=0; i<(n-k) && icount<k; i++) {
+    if ((k+i)!=fidx) availbuffers[icount++] = codebuffers[i];
+    if (icount >= k) break;
+  }
+  toretbuffers[0] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
+  memset(toretbuffers[0], 0, pktsizeB);
+
+  unordered_map<int, char*> decBufMap;
+  if (systype == "openec") {
+    for (int i=0; i<n; i++) {
+      if (i == fidx) decBufMap.insert(make_pair(i, (char*)toretbuffers[0]));
+      else {
+        if (i<k) decBufMap.insert(make_pair(i, (char*)databuffers[i]));
+	else decBufMap.insert(make_pair(i, (char*)codebuffers[i-k]));
+      }
+    }
+  }
+
+  // prepare indices for openec
+  vector<int> availIdx;
+  vector<int> torecIdx;
+  vector<ECTask*> decodetasks;
+  for (int i=0; i<n; i++) {
+    if (i == fidx) torecIdx.push_back(i);
+    else availIdx.push_back(i);
+  }
+
+  if (systype == "native") {
+    rscode->check(fidx);
+  } else {
+    ecdag = ec->Decode(availIdx, torecIdx);
+    vector<int> toposeq = ecdag->toposort();
+    for (int i=0; i<toposeq.size(); i++) {
+      ECNode* curnode = ecdag->getNode(toposeq[i]);
+      curnode->parseForClient(decodetasks);
+    }
+  }
+  initDecodeTime += getCurrentTime();
+
+  // decode
+  double decodeTime=0;
+  for (int i=0; i<stripenum; i++) {
+    decodeTime -= getCurrentTime();
+    if (systype == "native") {
+      rscode->decode(availbuffers, k, toretbuffers, 1, pktsizeB);
+    } else {
+      for (int taskid=0; taskid<decodetasks.size(); taskid++) {
+        ECTask* compute = decodetasks[taskid];
+	vector<int> children = compute->getChildren();
+	unordered_map<int, vector<int>> coefMap = compute->getCoefMap();
+	int col = children.size();
+	int row = coefMap.size();
+	vector<int> targets;
+	int* matrix = (int*)calloc(row*col, sizeof(int));
+	char** data = (char**)calloc(col, sizeof(char*));
+	char** code = (char**)calloc(row, sizeof(char*));
+	// prepare the data buf
+	// actually, data buf should always exist
+	for (int bufIdx = 0; bufIdx < children.size(); bufIdx++) {
+	  int child = children[bufIdx];
+	  assert (decBufMap.find(child) != decBufMap.end());
+	  data[bufIdx] = decBufMap[child];
+	}
+	// prepare the code buf
+	int codeBufIdx = 0;
+	for (auto it: coefMap) {
+	  int target = it.first;
+	  char* codebuf;
+	  if (decBufMap.find(target) == decBufMap.end()) {
+	    codebuf = (char*)calloc(pktsizeB, sizeof(char));
+	    decBufMap.insert(make_pair(target, codebuf));
+	  } else {
+	    codebuf = decBufMap[target];
+	  }
+	  code[codeBufIdx] = codebuf;
+	  targets.push_back(target);
+	  vector<int> curcoef = it.second;
+	  for (int j=0; j<col; j++) {
+	    matrix[codeBufIdx * col + j] = curcoef[j];
+	  }
+	  codeBufIdx++;
+        }
+	Computation::Multi(code, data, matrix, row, col, pktsizeB, "Isal");
+      }
+    }
+    decodeTime += getCurrentTime();
+  }
+  overallDecodeTime += getCurrentTime();
+  cout << "InitDecodeTime: " << initDecodeTime/1000 << " ms" << endl;
+  cout << "DecodeTime: " <<  decodeTime/1000 << " ms" << endl;
+  cout << "OverallDecodeTime: " << overallDecodeTime/1000 << " ms" << endl;
+  cout << "DecodeThroughput: " << blocksizeB/1.048576/decodeTime << endl;
+  cout << "OverallDecodeThroughput: " << blocksizeB/1.048576/overallDecodeTime << endl;
   
   // free
   for (int i=0; i<k; i++) free(databuffers[i]);
@@ -143,4 +275,10 @@ int main(int argc, char** argv) {
   free(codebuffers);
    
   if (systype == "native") delete rscode;
+  else {
+    delete ecdag;
+    delete ec;
+  }
+
+  delete conf;
 }
