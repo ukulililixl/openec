@@ -13,8 +13,7 @@ bool NativeRS::initialize(int n, int k) {
   _k = k;
   _m = n - k;
   
-  gf_gen_rs_matrix(this->_encode_matrix, _n,
-  		_k); // vandermonde matrix, aplpha=2
+  gf_gen_rs_matrix((unsigned char*)this->_encode_matrix, _n, _k); // vandermonde matrix, aplpha=2
   ec_init_tables(_k, _m, &this->_encode_matrix[_k * _k], this->_gftbl);
   
   return true;
@@ -22,7 +21,6 @@ bool NativeRS::initialize(int n, int k) {
 
 bool NativeRS::construct(uint8_t **data, uint8_t **code, int32_t dataLen) {
   ec_encode_data(dataLen, _k, _m, this->_gftbl, data, code);
-  
   return true;
 }
 
@@ -52,13 +50,18 @@ bool NativeRS::check(int fidx) {
   	}
   	//      printf("%d ", fmat[i*_k+j]);
   }
-  ec_init_tables(_k, 1, fmat, tmp_gftbl);
+  //ec_init_tables(_k, 1, fmat, tmp_gftbl);
   return true;
 }
 
 bool NativeRS::decode(uint8_t** avail, int32_t anum, uint8_t** toret, int32_t tnum, int32_t dataLen) {
-//  uint8_t tmp_gftbl[32 * tnum * anum];
-//  ec_init_tables(anum, tnum, fmat, tmp_gftbl);
+  ec_init_tables(_k, 1, fmat, tmp_gftbl);
   ec_encode_data(dataLen, anum, tnum, tmp_gftbl, avail, toret);
   return true;
 }
+
+//bool NativeRS::decode(uint8_t** avail, int32_t anum, uint8_t** toret, int32_t tnum, int32_t dataLen, uint8_t* matrix) {
+//  ec_init_tables(_k, 1, matrix, tmp_gftbl);
+//  ec_encode_data(dataLen, anum, tnum, tmp_gftbl, avail, toret);
+//  return true;
+//}
