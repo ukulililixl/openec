@@ -45,24 +45,21 @@ int main(int argc, char** argv) {
   uint8_t** databuffers = (uint8_t**)calloc(k, sizeof(uint8_t*));
   for (int i=0; i<k; i++) {
     databuffers[i] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
-    uint8_t initv = (uint8_t)i;
-    memset(databuffers[i], initv, pktsizeB);
   }
   uint8_t** codebuffers = (uint8_t**)calloc((n-k), sizeof(uint8_t*));
   for (int i=0; i<(n-k); i++) {
     codebuffers[i] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
-    memset(codebuffers[i], 0, pktsizeB);
   }
+  uint8_t* oribuffer = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
 
   NativeRS* rscode = nullptr;
   ECPolicy* ecpolicy = nullptr;
   ECBase* ec = nullptr;
 
-  double overallEncodeTime=0, initEncodeTime=0;
-  overallEncodeTime -= getCurrentTime();
+  double initEncodeTime=0;
   initEncodeTime -= getCurrentTime();
 
-  // we first perform encode
+  // prepare for encode
   ECDAG* encdag = nullptr;
   vector<ECTask*> encodetasks;
   unordered_map<int, char*> encodeBufMap;
@@ -83,10 +80,47 @@ int main(int argc, char** argv) {
   }
   initEncodeTime += getCurrentTime();
 
-  // encode
-  double encodeTime = 0;
-  encodeTime -= getCurrentTime();
-  for (int i=0; i<stripenum; i++) {
+  // prepare for decode
+  double initDecodeTime=0;
+  initDecodeTime -= getCurrentTime();
+  int fidx=0;
+  ECDAG* decdag = nullptr;
+  vector<ECTask*> decodetasks;
+  unordered_map<int, char*> decodeBufMap;
+  vector<int> availidx;
+  vector<int> torecidx;
+
+  if (systype == "native") {
+    rscode->check(fidx);
+  } else {
+    for(int i=0; i<n; i++) {
+      if (i == fidx) torecidx.push_back(i);
+      else availidx.push_back(i);
+    }
+    decdag = ec->Decode(availidx, torecidx);
+    vector<int> toposeq = decdag->toposort();
+    for (int i=0; i<toposeq.size(); i++) {
+      ECNode* curnode = decdag->getNode(toposeq[i]);
+      curnode->parseForClient(decodetasks);
+    }
+  }
+  initDecodeTime += getCurrentTime();
+
+
+  // test
+  double encodeTime = 0, decodeTime = 0;
+  srand((unsigned)1234);
+  for (int stripei=0; stripei<stripenum; stripei++) {
+    // clean codebuffers
+    for (int i=0;i<(n-k); i++) {
+      memset(codebuffers[i], 0, pktsizeB);
+    }
+    // initialize databuffers
+    for (int i=0; i<k; i++) {
+      for (int j=0; j<pktsizeB; j++) databuffers[i][j] = rand();
+    }
+    // encode test
+    encodeTime -= getCurrentTime();
     if (systype == "native") rscode->construct(databuffers, codebuffers, pktsizeB);
     else {
       for (int taskid = 0; taskid < encodetasks.size(); taskid++) {
@@ -127,78 +161,36 @@ int main(int argc, char** argv) {
 	free(code);
       }
     }
-  }
-  encodeTime += getCurrentTime();
-  overallEncodeTime += getCurrentTime();
-  cout << "============================================" << endl;
-  cout << "OverallEncodeTime: " << overallEncodeTime/1000 << " ms" << endl;
-  cout << "InitEncodeTime: " << initEncodeTime/1000 << " ms" << endl;
-  cout << "PureEncodeTIme: " << encodeTime/1000 << " ms" << endl;
-  cout << "OverallEncodeThroughput: " << blocksizeB*k/1.048576/overallEncodeTime << endl;
-  cout << "PureEncodeThroughput: " << blocksizeB*k/1.048576/encodeTime << endl;
+    encodeTime += getCurrentTime();
 
-  // simulate a loss
-  int fidx = 0;
+    // take out fidx buffer
+    uint8_t* cpybuf;
+    if (fidx < k) cpybuf = databuffers[fidx];
+    else cpybuf = codebuffers[fidx-k];
+    memcpy(oribuffer, cpybuf, pktsizeB);
 
-  // take out original data
-  uint8_t* oribuf = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
-  if (fidx<k) memcpy(oribuf, databuffers[fidx], pktsizeB);
-  else memcpy(oribuf, codebuffers[fidx-k], pktsizeB);
-
-  // prepare avail buffer and torec buffer
-  uint8_t** availbuffers = (uint8_t**)calloc(k, sizeof(uint8_t*));
-  uint8_t** toretbuffers = (uint8_t**)calloc(1, sizeof(uint8_t*));
-  int aidx=0;
-  for (int i=0; i<k && aidx<k; i++) {
-    if (i == fidx) continue;
-    availbuffers[aidx] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
-    memcpy(availbuffers[aidx], databuffers[i], pktsizeB);
-    aidx++;
-  }
-  for (int i=0; i<(n-k) && aidx<k; i++) {
-    if (i+k == fidx) continue;
-    availbuffers[aidx] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
-    memcpy(availbuffers[aidx], codebuffers[i], pktsizeB);
-    aidx++;
-  }
-  toretbuffers[0] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
-  memset(toretbuffers[0], 0, pktsizeB);
-
-  double overallDecodeTime=0, initDecodeTime=0;
-  overallDecodeTime -= getCurrentTime();
-  initDecodeTime -= getCurrentTime();
-
-  // we first perform encode
-  ECDAG* decdag = nullptr;
-  vector<ECTask*> decodetasks;
-  unordered_map<int, char*> decodeBufMap;
-  vector<int> availidx;
-  vector<int> torecidx;
-  if (systype == "native") {
-    rscode->check(fidx);
-  } else {
-    for(int i=0; i<n; i++) {
-      if (i == fidx) torecidx.push_back(i);
-      else availidx.push_back(i);
+    // prepare avail buffer and torec buffer
+    // and decodeBufMap
+    decodeBufMap.clear();
+    uint8_t* availbuffers[k];
+    int aidx=0;
+    for (int i=0; i<k && aidx<k; i++) {
+      if (i == fidx) continue;
+      availbuffers[aidx++] = databuffers[i];
+      decodeBufMap.insert(make_pair(i, (char*)databuffers[i]));
     }
-    for (int i=0; i<k; i++) {
-      int idx = availidx[i];
-      decodeBufMap.insert(make_pair(idx, (char*)availbuffers[i]));
+    for (int i=0; i<(n-k) && aidx<k; i++) {
+      if (i+k == fidx) continue;
+      availbuffers[aidx++] = codebuffers[i];
+      decodeBufMap.insert(make_pair(i+k, (char*)codebuffers[i]));
     }
-    decodeBufMap.insert(make_pair(fidx, (char*)toretbuffers[0]));
-    decdag = ec->Decode(availidx, torecidx);
-    vector<int> toposeq = decdag->toposort();
-    for (int i=0; i<toposeq.size(); i++) {
-      ECNode* curnode = decdag->getNode(toposeq[i]);
-      curnode->parseForClient(decodetasks);
-    }
-  }
-  initDecodeTime += getCurrentTime();
+    uint8_t* toretbuffers[1];
+    uint8_t repairbuf[pktsizeB];
+    toretbuffers[0] = repairbuf;
+    decodeBufMap.insert(make_pair(0, (char*)repairbuf));
 
-  // perform decode
-  double decodeTime = 0;
-  decodeTime -= getCurrentTime();
-  for (int i=0; i<stripenum; i++) {
+    // decode
+    decodeTime -= getCurrentTime();
     if (systype == "native")    {
       rscode->decode(availbuffers, k, toretbuffers, 1, pktsizeB);
     } else {
@@ -240,44 +232,159 @@ int main(int argc, char** argv) {
 	free(code);
       }
     }
-  }
-  decodeTime += getCurrentTime();
-  overallDecodeTime += getCurrentTime();
-  cout << "--------------------------------------------" << endl;
-  cout << "OverallDecodeTime: " << overallDecodeTime/1000 << " ms" << endl;
-  cout << "InitDecodeTime: " << initDecodeTime/1000 << " ms" << endl;
-  cout << "PureDecodeTIme: " << decodeTime/1000 << " ms" << endl;
-  cout << "OverallDecodeThroughput: " << blocksizeB/1.048576/overallDecodeTime << endl;
-  cout << "PureDecodeThroughput: " << blocksizeB/1.048576/decodeTime << endl;
+    decodeTime += getCurrentTime();
 
-  char* repairedbuf = (char*)toretbuffers[0];
-  bool repaired=true;
-  for (int i=0; i<pktsizeB; i++) {
-    if (oribuf[i] != repairedbuf[i]) {
-      repaired = false;
+    // check correcness
+    bool success = true;
+    for(int i=0; i<pktsizeB; i++) {
+      if (oribuffer[i] != repairbuf[i]) {
+        success = false;
+	break;
+      }
+    }
+    if (!success) {
+      cout << "repair error!" << endl;
       break;
     }
   }
-  if (repaired) {
-    cout << "repaired!" << endl;
-  } else {
-    cout << "repair error!" << endl;
-  }
+  cout << "============================================" << endl;
+  cout << "InitEncodeTime: " << initEncodeTime/1000 << " ms" << endl;
+  cout << "PureEncodeTime: " << encodeTime/1000 << " ms" << endl;
+  cout << "PureEncodeThroughput: " << blocksizeB*k/1.048576/encodeTime << endl;
+  cout << "InitDecodeTime: " << initDecodeTime/1000 << " ms" << endl;
+  cout << "PureDecodeTime: " << decodeTime/1000 << " ms" << endl;
+  cout << "PureDecodeThroughput: " << blocksizeB/1.048576/decodeTime << endl;
 
-  // free data buffers
-  for (int i=0; i<k; i++) free(databuffers[i]);
-  free(databuffers);
-  for (int i=0; i<(n-k); i++) free(codebuffers[i]);
-  free(codebuffers);
 
-  free(oribuf);
-  for (int i=0; i<k; i++) free(availbuffers[i]);
-  free(availbuffers);
-  free(toretbuffers[0]);
+//  // take out original data
+//  uint8_t* oribuf = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
+//  if (fidx<k) memcpy(oribuf, databuffers[fidx], pktsizeB);
+//  else memcpy(oribuf, codebuffers[fidx-k], pktsizeB);
+//
+//  // prepare avail buffer and torec buffer
+//  uint8_t** availbuffers = (uint8_t**)calloc(k, sizeof(uint8_t*));
+//  uint8_t** toretbuffers = (uint8_t**)calloc(1, sizeof(uint8_t*));
+//  int aidx=0;
+//  for (int i=0; i<k && aidx<k; i++) {
+//    if (i == fidx) continue;
+//    availbuffers[aidx] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
+//    memcpy(availbuffers[aidx], databuffers[i], pktsizeB);
+//    aidx++;
+//  }
+//  for (int i=0; i<(n-k) && aidx<k; i++) {
+//    if (i+k == fidx) continue;
+//    availbuffers[aidx] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
+//    memcpy(availbuffers[aidx], codebuffers[i], pktsizeB);
+//    aidx++;
+//  }
+//  toretbuffers[0] = (uint8_t*)calloc(pktsizeB, sizeof(uint8_t));
+//  memset(toretbuffers[0], 0, pktsizeB);
 
-  if (rscode) delete rscode;
-  if (ec) delete ec;
-  if (encdag) delete encdag;
-  for (auto task: encodetasks) delete task;
-  encodeBufMap.clear();
+//  if (systype == "native") {
+//    rscode->check(fidx);
+//  } else {
+//    for(int i=0; i<n; i++) {
+//      if (i == fidx) torecidx.push_back(i);
+//      else availidx.push_back(i);
+//    }
+//    for (int i=0; i<k; i++) {
+//      int idx = availidx[i];
+//      decodeBufMap.insert(make_pair(idx, (char*)availbuffers[i]));
+//    }
+//    decodeBufMap.insert(make_pair(fidx, (char*)toretbuffers[0]));
+//    decdag = ec->Decode(availidx, torecidx);
+//    vector<int> toposeq = decdag->toposort();
+//    for (int i=0; i<toposeq.size(); i++) {
+//      ECNode* curnode = decdag->getNode(toposeq[i]);
+//      curnode->parseForClient(decodetasks);
+//    }
+//  }
+//  initDecodeTime += getCurrentTime();
+
+//  // perform decode
+//  double decodeTime = 0;
+//  decodeTime -= getCurrentTime();
+//  for (int i=0; i<stripenum; i++) {
+//    if (systype == "native")    {
+//      rscode->decode(availbuffers, k, toretbuffers, 1, pktsizeB);
+//      //rscode->decode2(availbuffers, k, toretbuffers, 1, pktsizeB, mat);
+//    } else {
+//      for (int taskid=0; taskid<decodetasks.size(); taskid++) {
+//        ECTask* compute = decodetasks[taskid];
+//	vector<int> children = compute->getChildren();
+//	unordered_map<int, vector<int>> coefMap = compute->getCoefMap();
+//	int col = children.size();
+//	int row = coefMap.size();
+//	vector<int> targets;
+//	int* matrix = (int*)calloc(row*col, sizeof(int));
+//	char** data = (char**)calloc(col, sizeof(char*));
+//	char** code = (char**)calloc(row, sizeof(char*));
+//	for (int bufIdx=0; bufIdx<children.size(); bufIdx++) {
+//          int child = children[bufIdx];
+//	  data[bufIdx] = decodeBufMap[child];
+//	}
+//	int codeBufIdx = 0;
+//	for (auto it: coefMap) {
+//          int target = it.first;
+//	  char* codebuf;
+//	  if (decodeBufMap.find(target) == decodeBufMap.end()) {
+//            codebuf = (char*)calloc(pktsizeB, sizeof(char));
+//	    decodeBufMap.insert(make_pair(target, codebuf));
+//	  } else {
+//            codebuf = decodeBufMap[target];
+//	  }
+//	  code[codeBufIdx] = codebuf;
+//	  targets.push_back(target);
+//	  vector<int> coef = it.second;
+//	  for (int j=0; j<col; j++) {
+//            matrix[codeBufIdx * col + j] = coef[j];
+//	  }
+//	  codeBufIdx++;
+//        }
+//	Computation::Multi(code, data, matrix, row, col, pktsizeB, "Isal");
+//	free(matrix);
+//	free(data);
+//	free(code);
+//      }
+//    }
+//  }
+//  decodeTime += getCurrentTime();
+//  overallDecodeTime += getCurrentTime();
+//  cout << "--------------------------------------------" << endl;
+//  cout << "OverallDecodeTime: " << overallDecodeTime/1000 << " ms" << endl;
+//  cout << "InitDecodeTime: " << initDecodeTime/1000 << " ms" << endl;
+//  cout << "PureDecodeTIme: " << decodeTime/1000 << " ms" << endl;
+//  cout << "OverallDecodeThroughput: " << blocksizeB/1.048576/overallDecodeTime << endl;
+//  cout << "PureDecodeThroughput: " << blocksizeB/1.048576/decodeTime << endl;
+//
+//  char* repairedbuf = (char*)toretbuffers[0];
+//  bool repaired=true;
+//  for (int i=0; i<pktsizeB; i++) {
+//    if (oribuf[i] != repairedbuf[i]) {
+//      repaired = false;
+//      break;
+//    }
+//  }
+//  if (repaired) {
+//    cout << "repaired!" << endl;
+//  } else {
+//    cout << "repair error!" << endl;
+//  }
+//
+//  // free data buffers
+//  for (int i=0; i<k; i++) free(databuffers[i]);
+//  free(databuffers);
+//  for (int i=0; i<(n-k); i++) free(codebuffers[i]);
+//  free(codebuffers);
+//
+//  free(oribuf);
+//  for (int i=0; i<k; i++) free(availbuffers[i]);
+//  free(availbuffers);
+//  free(toretbuffers[0]);
+//
+//  if (rscode) delete rscode;
+//  if (ec) delete ec;
+//  if (encdag) delete encdag;
+//  for (auto task: encodetasks) delete task;
+//  encodeBufMap.clear();
 }
