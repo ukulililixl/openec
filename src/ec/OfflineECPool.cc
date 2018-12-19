@@ -7,7 +7,6 @@ OfflineECPool::OfflineECPool(string ecpoolid, ECPolicy* ecpolicy, int basesize) 
 }
 
 void OfflineECPool::addObj(string objname, string stripename) {
-//  _objs.push_back(objname);
   _objs.insert(make_pair(objname, false));
   if (find(_stripes.begin(), _stripes.end(), stripename) == _stripes.end())
     _stripes.push_back(stripename);

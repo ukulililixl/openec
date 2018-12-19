@@ -264,30 +264,6 @@ void StripeStore::finishECStripe(OfflineECPool* pool, string stripename) {
   backupPoolStripe(pool->stripe2String(stripename));
 }
 
-// int StripeStore::getSize() {
-//   return _ssEntryMap.size();
-// }
-// 
-// bool StripeStore::poolExists(string poolname) {
-//   bool toret;
-//   _lockECPoolMap.lock(); 
-//   unordered_map<string, OfflineECPool*>::iterator it = _offlineECPoolMap.find(poolname);
-//   if (it != _offlineECPoolMap.end()) toret = true;
-//   else toret = false;
-//   _lockECPoolMap.unlock();
-//   return toret;
-// }
-// 
-// void StripeStore::addECPool(OfflineECPool* ecpool) {
-//   _offlineECPoolMap.insert(make_pair(ecpool->_poolName, ecpool));
-// }
-// 
-// void StripeStore::addToECQueue(string poolname, string stripename) {
-//   _lockPECQueue.lock();
-//   _pendingECQueue.push(make_pair(poolname, stripename));
-//   _lockPECQueue.unlock();
-// }
- 
 int StripeStore::getRPInProgressNum() {
   _lockRPInProgress.lock();
   int toret = _RPInProgress.size();
@@ -365,29 +341,6 @@ void StripeStore::scanRepair() {
   }
 }
 
-// int StripeStore::getECInProgressNum() {
-//   _lockECInProgress.lock();
-//   int toret = _ECInProgress.size();
-//   _lockECInProgress.unlock();
-//   return toret;
-// }
-// 
-
-// int StripeStore::getRandomInt(int size) {
-//   _lockRandom.lock();
-//   int toret = rand() % size;
-//   _lockRandom.unlock();
-//   return toret;
-// }
-// 
-// void StripeStore::setScan(bool status) {
-//   _enableScan = status;
-// }
-// 
-// void StripeStore::setRepair(bool status) {
-//   _enableRepair = status;
-// }
-// 
 void StripeStore::startRepair(string objname) {
   _lockRPInProgress.lock();
   _RPInProgress.push_back(objname);
@@ -410,7 +363,7 @@ void StripeStore::backupEntry(string entrystr) {
   _entryStore.close();
   _lockEntryStore.unlock();
   gettimeofday(&time2, NULL);
-  cout << "StripeStore::backupEntry.duration = " << RedisUtil::duration(time1, time2) << endl;
+//  cout << "StripeStore::backupEntry.duration = " << RedisUtil::duration(time1, time2) << endl;
 }
 
 void StripeStore::backupPoolStripe(string poolstr) {
@@ -422,5 +375,5 @@ void StripeStore::backupPoolStripe(string poolstr) {
   _poolStore.close();
   _lockPoolStore.unlock();
   gettimeofday(&time2, NULL);
-  cout << "StripeStore::backupPool.duration = " << RedisUtil::duration(time1, time2) << endl;
+//  cout << "StripeStore::backupPool.duration = " << RedisUtil::duration(time1, time2) << endl;
 }

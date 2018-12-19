@@ -45,7 +45,7 @@ void OECWorker::doProcess() {
       AGCommand* agCmd = new AGCommand(reqStr);
       int type = agCmd->getType();
       cout << "OECWorker::doProcess() receive a request of type " << type << endl;
-      agCmd->dump();
+      //agCmd->dump();
       switch (type) {
         case 0: clientWrite(agCmd); break;
         case 1: clientRead(agCmd); break;

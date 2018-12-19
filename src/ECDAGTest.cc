@@ -68,16 +68,23 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  // dump ecdag?
-  ecdag->dump();
-
-  // topological sorting
-  vector<int> toposeq = ecdag->toposort();
-  cout << "toposort: ";
-  for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
-  cout << endl;
+//  // dump ecdag?
+//  ecdag->dump();
+//
+//  // topological sorting
+//  vector<int> toposeq = ecdag->toposort();
+//  cout << "toposort: ";
+//  for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
+//  cout << endl;
 
   if (parsetype == "online") {
+    ecdag->dump();
+    // topological sorting
+    vector<int> toposeq = ecdag->toposort();
+    cout << "toposort: ";
+    for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
+    cout << endl;
+
     vector<ECTask*> computetasks;
     for (int i=0; i<toposeq.size(); i++) {
       ECNode* curnode = ecdag->getNode(toposeq[i]);
@@ -95,12 +102,21 @@ int main(int argc, char** argv) {
       sid2ip.insert(make_pair(sid, ip));
     }
 
+    ecdag->optimize(opt, objlist, conf->_ip2Rack, ecn, eck, ecw);
+    ecdag->dump();
+
+    // topological sorting
+    vector<int> toposeq = ecdag->toposort();
+    cout << "toposort: ";
+    for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
+    cout << endl;
+
     // cid2ip
     unordered_map<int, unsigned int> cid2ip;
     for (int i=0; i<toposeq.size(); i++) {
       int curcid = toposeq[i];
       ECNode* cnode = ecdag->getNode(curcid);
-      vector<unsigned int> candidates = cnode->candidateIps(sid2ip, cid2ip, conf->_agentsIPs, ecn, eck, ecw, locality);
+      vector<unsigned int> candidates = cnode->candidateIps(sid2ip, cid2ip, conf->_agentsIPs, ecn, eck, ecw, locality || (opt>0));
       unsigned int ip = candidates[0];
       cid2ip.insert(make_pair(curcid, ip));
     }

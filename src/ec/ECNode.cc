@@ -243,6 +243,7 @@ void ECNode::parseForOEC(unsigned int ip) {
       //tell->setBind(childnode->getNodeId());
       //_oecTasks.insert(make_pair(5, tell));
       _ip = childnode->getIp();  // ?? Not sure
+      cache = false;
     } else {
       // child node is not bind node
       vector<int> childrenIdx;

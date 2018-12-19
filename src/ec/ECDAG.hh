@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define ECDAG_DEBUG_ENABLE true
+#define ECDAG_DEBUG_ENABLE false
 #define BINDSTART 200
 #define OPTSTART 300
 
@@ -56,9 +56,6 @@ class ECDAG {
                                   string stripename,
                                   int n, int k, int w, int num,
                                   unordered_map<int, pair<string, unsigned int>> objlist);
-
-    // refine tasks
-    void refineTasks(int n, int k, int w);
 
     // for debug
     void dump();

@@ -295,6 +295,18 @@ void ECDAG::optimize(int opt,
   if (opt == 0) {
     // enable BindX automatically to reduce network traffic
     Opt0();
+  } else if (opt == 1) {
+    Opt1();
+  } else if (opt == 2) {
+    unordered_map<int, string> cid2Rack;
+    for (auto item: _ecNodeMap) {
+      ECNode* curnode = item.second;
+      unsigned int curip = curnode->getIp();
+      string rack = ip2Rack[curip];
+      int cid = item.first;
+      cid2Rack.insert(make_pair(cid, rack));
+    }
+    Opt2(cid2Rack);
   }
 }
 
@@ -319,7 +331,9 @@ void ECDAG::Opt1() {
         BindY(parents[0], childs[0]);
       } else if (parents.size() > 1) {
         int bindnodeid = BindX(parents);
-        BindY(bindnodeid, childs[0]);
+        srand((unsigned)time(0)); 
+        int randomidx = randomidx = rand() % childs.size();
+        BindY(bindnodeid, childs[randomidx]);
       }
     }
   }
@@ -520,15 +534,15 @@ void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
       }
     }
   }
-//  // delete cluster in deletelist
-//  vector<Cluster*>::iterator it;;
-//  sort(deletelist.begin(), deletelist.end());
-//  for (int i=deletelist.size()-1; i >= 0; i--) {
-//    it = _clusterMap.begin();
-//    int idx = deletelist[i];
-//    it += idx;
-//    _clusterMap.erase(it);
-//  }
+  // delete cluster in deletelist
+  vector<Cluster*>::iterator it;;
+  sort(deletelist.begin(), deletelist.end());
+  for (int i=deletelist.size()-1; i >= 0; i--) {
+    it = _clusterMap.begin();
+    int idx = deletelist[i];
+    it += idx;
+    _clusterMap.erase(it);
+  }
 }
 
 unordered_map<int, AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned int> cid2ip,
@@ -596,7 +610,7 @@ unordered_map<int, AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned in
     for (auto item: tomerge) {
       int cid = item.first;
       int childid = item.second;
-      cout << "ECDAG::parseForOEC.merge " << cid << " and " << childid << endl;
+      if (ECDAG_DEBUG_ENABLE) cout << "ECDAG::parseForOEC.merge " << cid << " and " << childid << endl;
       AGCommand* cmd = agCmds[cid];
       AGCommand* childCmd = agCmds[childid];
       // get information from existing commands
@@ -654,7 +668,7 @@ vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip,
   // sort headers
   sort(_ecHeaders.begin(), _ecHeaders.end());
   int numblks = _ecHeaders.size()/w;
-  cout << "ECDAG:: persist. numblks: " << numblks << endl;
+  if (ECDAG_DEBUG_ENABLE) cout << "ECDAG:: persist. numblks: " << numblks << endl;
   for (int i=0; i<numblks; i++) {
 //    int sid = _ecHeaders[i*w];
     int cid = _ecHeaders[i*w];
@@ -686,82 +700,4 @@ void ECDAG::dump() {
   for (auto cluster: _clusterMap) {
     cluster->dump();
   }
-}
-
-void ECDAG::refineTasks(int n, int k, int w) {
-//  // check for type0: no refine
-//  vector<int> toposortres = toposort();
-//  for (auto cidx : toposortres) {
-//    ECNode* node = _ecNodeMap[cidx];
-//    for (auto item: node->getRefMap()) {
-//      if (item.second > 1) return;
-//    }
-//  }
-//
-//  // check for type1: aggregate load tasks for sub-packetization
-//  if (w > 1) {
-//    unordered_map<int, vector<int>> sid2cids;
-//    for (auto cidx: toposortres) {
-//      ECNode* node = _ecNodeMap[cidx];
-//      unordered_map<int, ECTask*> tasks = node->getTasks();
-//      if (tasks.find(0) != tasks.end()) {
-//        int sid = cidx/w;
-//        if (sid2cids.find(sid) == sid2cids.end()) {
-//          vector<int> curcidlist = {cidx};
-//          sid2cids.insert(make_pair(sid, curcidlist));
-//        } else {
-//          sid2cids[sid].push_back(cidx);
-//        }
-//      }
-//    }
-//    // now we aggregate all load tasks to one node and remove load tasks from others
-//    for (auto item: sid2cids) {
-//      int sid = item.first;
-//      vector<int> cidlist = item.second;
-//      sort(cidlist.begin(), cidlist.end());
-//      if (cidlist.size() > 1) {
-//        int cid = cidlist[0];
-//        unordered_map<int, ECTask*> tasks = _ecNodeMap[cid]->getTasks();
-//        ECTask* load = tasks[0];
-//        for (int i=1; i<cidlist.size(); i++) {
-//          int curcid = cidlist[i];
-//          int ref = _ecNodeMap[curcid]->getRefNumFor(curcid);
-//          load->addIdx(curcid) ;
-//          load->addRef(curcid, ref);
-//          _ecNodeMap[curcid]->clearTasks();
-//        }
-//      }
-//    }
-//  } else {
-//    // aggregate load, fetch and compute
-//    unordered_map<int, int> tomerge;
-//    for (auto cidx: toposortres) {
-//      ECNode* node = _ecNodeMap[cidx];
-//      unordered_map<int, ECTask*> tasks = node->getTasks();
-//      unsigned int ip = node->getIp();
-//      if (tasks.find(2) == tasks.end()) continue;
-//      vector<int> children = tasks[2]->getChildren();
-//      // check whether children is load task
-//      int childid;
-//      bool found = false;
-//      for (auto childidx: children) {
-//        ECNode* childnode = _ecNodeMap[childidx];
-//        unordered_map<int, ECTask*> childtasks = childnode->getTasks();
-//        if (childtasks.find(0) == childtasks.end()) continue; 
-//        else {
-//          if (childnode->getIp() == ip) {
-//            childid = childidx;
-//            break;
-//          }
-//        }
-//      }
-//      if (found) {
-//        // add load task for cidx
-//        // clear load task for childid
-//        unordered_map<int, ECTask*> tasks = _ecNodeMap[childid]->getTasks(); 
-//        ECTask* load = tasks[0];
-//        
-//      }
-//    }
-//  }
 }

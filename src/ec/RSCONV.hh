@@ -10,7 +10,7 @@ using namespace std;
 
 #define RS_N_MAX (32)
 
-#define RSCONV_DEBUG_ENABLE true
+#define RSCONV_DEBUG_ENABLE false
 
 class RSCONV : public ECBase {
   private:

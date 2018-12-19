@@ -35,9 +35,9 @@ cluster=[
 "192.168.10.53",
 "192.168.10.54",
 "192.168.10.55",
-#"192.168.10.56",
+"192.168.10.56",
 "192.168.10.57",
-"192.168.10.58",
+#"192.168.10.58",
 "192.168.10.59",
 "192.168.10.60",
 "192.168.10.61",
@@ -55,9 +55,9 @@ networkMap={
 "192.168.10.53":"/rack1",
 "192.168.10.54":"/rack1",
 "192.168.10.55":"/rack1",
-#"192.168.10.56":"/rack1",
+"192.168.10.56":"/rack1",
 "192.168.10.57":"/rack1",
-"192.168.10.58":"/rack1",
+#"192.168.10.58":"/rack1",
 "192.168.10.59":"/rack1",
 "192.168.10.60":"/rack1",
 "192.168.10.61":"/rack1",
@@ -92,7 +92,7 @@ for node in cluster:
     line="</attribute>\n"
     attr.append(line)
 
-    line="<attribute><name>oec.coor.thread.num</name><value>10</value></attribute>\n"
+    line="<attribute><name>oec.coor.thread.num</name><value>20</value></attribute>\n"
     attr.append(line)
     
     line="<attribute><name>oec.agent.thread.num</name><value>10</value></attribute>\n"
@@ -180,6 +180,42 @@ for node in cluster:
 #    line="<value><id>clay_6_4</id><class>CLAY</class><n>6</n><k>4</k><cps>8</cps><locality>false</locality></value>\n"
 #    attr.append(line)
 
+    line="<value><id>rs_6_4_opt-1</id><class>RSCONV</class><n>6</n><k>4</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_6_4_opt0</id><class>RSCONV</class><n>6</n><k>4</k><w>1</w><locality>false</locality><opt>0</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_6_4_opt1</id><class>RSCONV</class><n>6</n><k>4</k><w>1</w><locality>false</locality><opt>1</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_6_4_opt2</id><class>RSCONV</class><n>6</n><k>4</k><w>1</w><locality>false</locality><opt>2</opt></value>\n" 
+    attr.append(line)
+
+    line="<value><id>rs_8_6_opt-1</id><class>RSCONV</class><n>8</n><k>6</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_8_6_opt0</id><class>RSCONV</class><n>8</n><k>6</k><w>1</w><locality>false</locality><opt>0</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_8_6_opt1</id><class>RSCONV</class><n>8</n><k>6</k><w>1</w><locality>false</locality><opt>1</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_8_6_opt2</id><class>RSCONV</class><n>8</n><k>6</k><w>1</w><locality>false</locality><opt>2</opt></value>\n" 
+    attr.append(line)
+
+    line="<value><id>rs_10_8_opt-1</id><class>RSCONV</class><n>10</n><k>8</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_10_8_opt0</id><class>RSCONV</class><n>10</n><k>8</k><w>1</w><locality>false</locality><opt>0</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_10_8_opt1</id><class>RSCONV</class><n>10</n><k>8</k><w>1</w><locality>false</locality><opt>1</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_10_8_opt2</id><class>RSCONV</class><n>10</n><k>8</k><w>1</w><locality>false</locality><opt>2</opt></value>\n" 
+    attr.append(line)
+
+    line="<value><id>rs_12_10_opt-1</id><class>RSCONV</class><n>12</n><k>10</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_12_10_opt0</id><class>RSCONV</class><n>12</n><k>10</k><w>1</w><locality>false</locality><opt>0</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_12_10_opt1</id><class>RSCONV</class><n>12</n><k>10</k><w>1</w><locality>false</locality><opt>1</opt></value>\n" 
+    attr.append(line)
+    line="<value><id>rs_12_10_opt2</id><class>RSCONV</class><n>12</n><k>10</k><w>1</w><locality>false</locality><opt>2</opt></value>\n" 
+    attr.append(line)
+
     line="</attribute>\n"
     attr.append(line)
 
@@ -229,6 +265,43 @@ for node in cluster:
     attr.append(line)
     line="<value><poolid>butterfly_6_4_pool</poolid><ecid>butterfly_6_4</ecid><base>"+BASEMB+"</base></value>\n"
     attr.append(line)
+
+    line="<value><poolid>rs_6_4_opt-1_pool</poolid><ecid>rs_6_4_opt-1</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_6_4_opt0_pool</poolid><ecid>rs_6_4_opt0</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_6_4_opt1_pool</poolid><ecid>rs_6_4_opt1</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_6_4_opt2_pool</poolid><ecid>rs_6_4_opt2</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+
+    line="<value><poolid>rs_8_6_opt-1_pool</poolid><ecid>rs_8_6_opt-1</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_8_6_opt0_pool</poolid><ecid>rs_8_6_opt0</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_8_6_opt1_pool</poolid><ecid>rs_8_6_opt1</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_8_6_opt2_pool</poolid><ecid>rs_8_6_opt2</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+
+    line="<value><poolid>rs_10_8_opt-1_pool</poolid><ecid>rs_10_8_opt-1</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_10_8_opt0_pool</poolid><ecid>rs_10_8_opt0</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_10_8_opt1_pool</poolid><ecid>rs_10_8_opt1</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_10_8_opt2_pool</poolid><ecid>rs_10_8_opt2</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+
+    line="<value><poolid>rs_12_10_opt-1_pool</poolid><ecid>rs_12_10_opt-1</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_10_opt0_pool</poolid><ecid>rs_12_10_opt0</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_10_opt1_pool</poolid><ecid>rs_12_10_opt1</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+    line="<value><poolid>rs_12_10_opt2_pool</poolid><ecid>rs_12_10_opt2</ecid><base>"+BASEMB+"</base></value>\n"
+    attr.append(line)
+
     line="</attribute>\n"
     attr.append(line)
     
