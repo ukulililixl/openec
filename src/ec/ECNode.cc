@@ -55,6 +55,22 @@ void ECNode::incRefNumFor(int id) {
   }
 }
 
+void ECNode::decRefNumFor(int id) {
+  assert (_refNumFor.find(id) != _refNumFor.end());
+  _refNumFor[id]--;
+
+  // if current node is linked to a bind node, we also need to update bind node
+  if (_childNodes.size() == 1 && _childNodes[0]->getCoefmap().size() > 1) {
+    _childNodes[0]->decRefNumFor(id);
+  }
+}
+
+void ECNode::cleanRefNumFor(int id) {
+  assert (_refNumFor.find(id) != _refNumFor.end());
+  _refNumFor[id] = 0;
+  // TODO: is there any chain?
+}
+
 int ECNode::getRefNumFor(int id) {
 //  assert (_refNumFor.find(id) != _refNumFor.end());
   if (_refNumFor.find(id) != _refNumFor.end()) return _refNumFor[id];
@@ -64,6 +80,11 @@ int ECNode::getRefNumFor(int id) {
 
 void ECNode::setRefNum(int nid, int ref) {
   _refNumFor[nid] = ref;
+
+  // if current node is lined to a bind node, we also need to update bind node
+  if (_childNodes.size() == 1 && _childNodes[0]->getCoefmap().size() > 1) {
+    _childNodes[0]->setRefNum(nid, ref);
+  }
 }
 
 unordered_map<int, int> ECNode::getRefMap() {
@@ -188,6 +209,12 @@ vector<unsigned int> ECNode::candidateIps(unordered_map<int, unsigned int> sid2i
     for (auto ip: allIps) {
       if (find(childIps.begin(), childIps.end(), ip) == childIps.end())
         toret.push_back(ip);
+    }
+    if (toret.size() == 0) {
+      // choose randomly
+      srand((unsigned)time(0));
+      int randomidx = rand() % childIps.size();
+      toret.push_back(childIps[randomidx]);
     }
     return toret;
   }

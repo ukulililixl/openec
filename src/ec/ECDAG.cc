@@ -286,6 +286,15 @@ vector<int> ECDAG::getLeaves() {
   return toret;
 }
 
+void ECDAG::reconstruct(int opt) {
+  if (opt == 0) {
+    // enable BindX automatically
+    Opt0();
+  } else if (opt == 1) {
+    Opt1();
+  }
+}
+
 void ECDAG::optimize(int opt, 
                      unordered_map<int, pair<string, unsigned int>> objlist,                            
                      unordered_map<unsigned int, string> ip2Rack,                            
@@ -300,15 +309,48 @@ void ECDAG::optimize(int opt,
   } else if (opt == 2) {
     unordered_map<int, string> cid2Rack;
     for (auto item: _ecNodeMap) {
-      ECNode* curnode = item.second;
-      unsigned int curip = curnode->getIp();
-      string rack = ip2Rack[curip];
-      int cid = item.first;
-      cid2Rack.insert(make_pair(cid, rack));
+//      ECNode* curnode = item.second;
+//      unsigned int curip = curnode->getIp();
+//      string rack = ip2Rack[curip];
+//      int cid = item.first;
+//      cout << "cid: " << cid << ", ip: " << RedisUtil::ip2Str(curip) << endl;
+//      cid2Rack.insert(make_pair(cid, rack));
     }
     Opt2(cid2Rack);
   }
 }
+
+void ECDAG::optimize2(int opt, 
+                     unordered_map<int, unsigned int>& cid2ip,   
+                     unordered_map<unsigned int, string> ip2Rack,                            
+                     int ecn, int eck, int ecw,
+                     unordered_map<int, unsigned int> sid2ip,
+                     vector<unsigned int> allIps,
+                     bool locality) {
+  if (opt == 2) {
+    unordered_map<int, string> cid2Rack;
+    for (auto item: _ecNodeMap) {
+      int cid = item.first;
+      unsigned int curip = cid2ip[cid];
+      string rack = ip2Rack[curip];
+      cid2Rack.insert(make_pair(cid, rack));
+    }
+    Opt2(cid2Rack);
+
+    // after we run Opt2, we need to recheck ip in cid2ip
+    vector<int> toposeq = toposort();
+    for (int i=0; i<toposeq.size(); i++) {
+      int curcid = toposeq[i];
+      ECNode* cnode = getNode(curcid);
+      vector<unsigned int> candidates = cnode->candidateIps(sid2ip, cid2ip, allIps, ecn, eck, ecw, locality);
+      srand((unsigned)time(0));
+      int randomidx = randomidx % candidates.size();
+      unsigned int ip = candidates[randomidx];
+      cid2ip.insert(make_pair(curcid, ip));
+    }
+  }
+}
+
 
 void ECDAG::Opt0() {
   // check all the clusters and enforce Bind
@@ -332,7 +374,7 @@ void ECDAG::Opt1() {
       } else if (parents.size() > 1) {
         int bindnodeid = BindX(parents);
         srand((unsigned)time(0)); 
-        int randomidx = randomidx = rand() % childs.size();
+        int randomidx = rand() % childs.size();
         BindY(bindnodeid, childs[randomidx]);
       }
     }
@@ -370,6 +412,12 @@ void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
       bool isProot = false;
       if (find(_ecHeaders.begin(), _ecHeaders.end(), parent) != _ecHeaders.end()) isProot = true;
       string prack = n2Rack[parent];
+
+      // clean ref for child
+      for (auto curcid: curChilds) {
+        ECNode* curcnode = _ecNodeMap[curcid];
+        curcnode->cleanRefNumFor(curcid);
+      }
 
       deque<int> dataqueue;
       deque<int> coefqueue;
@@ -443,6 +491,11 @@ void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
         if (itemchilds.size() > numoutput) {
           update = true;
           if (ECDAG_DEBUG_ENABLE) cout << "inputsize = " << itemchilds.size() << ", outputsize = " << numoutput << ", there is space for optimization" << endl;
+          // we will reconstruct this group, clean ref for all itemchilds
+          for (int i=0; i<itemchilds.size(); i++) {
+            ECNode* itemchildnode = _ecNodeMap[itemchilds[i]];
+            itemchildnode->cleanRefNumFor(itemchilds[i]);
+          }
           // we can create a new subcluster for this group of childs, add subparents
           for (int i=0; i<numoutput; i++) {
             int tmpid = _optId++;
@@ -472,6 +525,7 @@ void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
               int tmpc = parentnode->getCoefOfChildForParent(tmpchild, parent);
               tmpcoef.push_back(tmpc);
             }
+            // for each itemchid, ref-=1
             Join(tmpparent, itemchilds, tmpcoef);
             if (ECDAG_DEBUG_ENABLE) {
               cout << tmpparent << " = ( ";
@@ -493,10 +547,14 @@ void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
             }
           }
           int bindid=BindX(subparents);
-          BindY(bindid, itemchilds[0]);
+          BindY(bindid, itemchilds[0]); // we also need to update in cid2ip
         } else {
           // we just pass itemchilds and corresponding coefs for parent
-          for (int i=0; i<itemchilds.size(); i++) globalChilds.push_back(itemchilds[i]);
+          for (int i=0; i<itemchilds.size(); i++) {
+            globalChilds.push_back(itemchilds[i]);
+            ECNode* itemchildnode = _ecNodeMap[itemchilds[i]];
+            itemchildnode->cleanRefNumFor(itemchilds[i]);
+          }
           for (int i=0; i<numoutput; i++) {
             int parent = curParents[i];
             ECNode* parentnode = _ecNodeMap[parent];
@@ -592,6 +650,7 @@ unordered_map<int, AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned in
       for (int i=0; i<prevCids.size(); i++) {
         int childCid = prevCids[i];
         unsigned int childip = prevLocs[i];
+        if (agCmds.find(childCid) == agCmds.end()) continue;
         AGCommand* cCmd = agCmds[childCid];
         if (cCmd->getType() != 2) continue;
         if (childip == ip) {
@@ -636,9 +695,11 @@ unordered_map<int, AGCommand*> ECDAG::parseForOEC(unordered_map<int, unsigned in
       // considering that if ref in readCidList is larger than 1, we also need to cache it in redis
       for (auto item: computeCoefs) {
         for (auto tmpc: reduceList) {
-          readCidListRef[tmpc]--;
-          if (readCidListRef[tmpc] == 0) {
-            readCidListRef.erase(tmpc);
+          if (readCidListRef.find(tmpc) != readCidListRef.end()) {
+            readCidListRef[tmpc]--;
+            if (readCidListRef[tmpc] == 0) {
+              readCidListRef.erase(tmpc);
+            }
           }
         }
       }

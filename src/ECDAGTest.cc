@@ -68,15 +68,6 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-//  // dump ecdag?
-//  ecdag->dump();
-//
-//  // topological sorting
-//  vector<int> toposeq = ecdag->toposort();
-//  cout << "toposort: ";
-//  for (int i=0; i<toposeq.size(); i++) cout << toposeq[i] << " ";
-//  cout << endl;
-
   if (parsetype == "online") {
     ecdag->dump();
     // topological sorting
@@ -92,6 +83,10 @@ int main(int argc, char** argv) {
     }
     for (int i=0; i<computetasks.size(); i++) computetasks[i]->dump();
   } else {
+
+    // first optimize without physical information
+    ecdag->reconstruct(opt);
+
     // simulate physical information
     unordered_map<int, pair<string, unsigned int>> objlist;
     unordered_map<int, unsigned int> sid2ip;
@@ -101,9 +96,6 @@ int main(int argc, char** argv) {
       objlist.insert(make_pair(sid, make_pair(objname, ip)));
       sid2ip.insert(make_pair(sid, ip));
     }
-
-    ecdag->optimize(opt, objlist, conf->_ip2Rack, ecn, eck, ecw);
-    ecdag->dump();
 
     // topological sorting
     vector<int> toposeq = ecdag->toposort();
@@ -119,6 +111,19 @@ int main(int argc, char** argv) {
       vector<unsigned int> candidates = cnode->candidateIps(sid2ip, cid2ip, conf->_agentsIPs, ecn, eck, ecw, locality || (opt>0));
       unsigned int ip = candidates[0];
       cid2ip.insert(make_pair(curcid, ip));
+    }
+    
+    ecdag->optimize2(opt, cid2ip, conf->_ip2Rack, ecn, eck, ecw, sid2ip, conf->_agentsIPs, locality || (opt>0));
+    ecdag->dump();
+
+    for (auto item: cid2ip) {
+      cout << "cid: " << item.first << ", ip: " << RedisUtil::ip2Str(item.second) << ", ";
+      ECNode* cnode = ecdag->getNode(item.first);
+      unordered_map<int, int> map = cnode->getRefMap();
+      for (auto iitem: map) {
+        cout << "ref["<<iitem.first<<"]: " << iitem.second << ", ";
+      }
+      cout << endl;
     }
 
     string stripename = "teststripe";

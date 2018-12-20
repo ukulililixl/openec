@@ -47,6 +47,8 @@ class ECNode {
     int getCoefOfChildForParent(int child, int parent);
 
     void incRefNumFor(int id); // increase refnum for id
+    void decRefNumFor(int id);
+    void cleanRefNumFor(int id);
     int getRefNumFor(int id);
     void setRefNum(int nid, int ref);
     unordered_map<int, int> getRefMap();

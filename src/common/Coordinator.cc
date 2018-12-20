@@ -467,6 +467,7 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
 
   // 1. encode ecdag
   ECDAG* ecdag = ec->Encode();
+  ecdag->reconstruct(opt);
 
   // 2. collect physical information
   // stripeidx -> {objname, location}
@@ -534,13 +535,6 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
     cout << "stripe physical info: idx: " << sid << ", objname: " << objname << ", ip: " << RedisUtil::ip2Str(ip) << endl;
   }
   
-  // 3. TODO:reconstruction/optimization is performed here
-  // opt0: BindX by default
-  // opt1: BindY
-  // opt2: layering or pipelining reconstruction with physical information
-  ecdag->optimize(opt, objlist, _conf->_ip2Rack, n, k, w);
-  //ecdag->dump();
-  
   // 4. topological sorting
   vector<int> sortedList = ecdag->toposort();
 
@@ -553,6 +547,14 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
     // choose from candidates
     unsigned int curip = chooseFromCandidates(candidates, _conf->_encode_policy, "encode");
     cid2ip.insert(make_pair(cidx, curip));
+  }
+
+  // optimize
+  ecdag->optimize2(opt, cid2ip, _conf->_ip2Rack, n, k, w, sid2ip, _conf->_agentsIPs, locality);
+  ecdag->dump();
+
+  for (auto item: cid2ip) {
+    cout << "cid: " << item.first << ", ip: " << RedisUtil::ip2Str(item.second) << endl;
   }
 
   // 6. parse for oec
@@ -881,6 +883,7 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
 
   // create ecdag
   ECDAG* ecdag = ec->Decode(availcidx, toreccidx);
+  ecdag->reconstruct(opt);
 
   // prepare sid2ip, for cip2ip
   // prepare stripeips for client info
@@ -901,7 +904,6 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
     stripeips.push_back(loc);
   }
 
-  ecdag->optimize(opt, objlist, _conf->_ip2Rack, ecn, eck, ecw);
   vector<int> toposeq = ecdag->toposort();
   ecdag->dump();
 
@@ -919,6 +921,9 @@ void Coordinator::optOfflineDegrade(string lostobj, unsigned int clientIp, Offli
   // prepare pktnum for parseForOEC
   int basesizeMB = ecpool->getBasesize();
   int pktnum = basesizeMB * 1048576/_conf->_pktSize;
+
+  // optimize
+  ecdag->optimize2(opt, cid2ip, _conf->_ip2Rack, ecn, eck, ecw, sid2ip, _conf->_agentsIPs, locality);
 
   // 6. parse for oec
   unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
@@ -1205,6 +1210,7 @@ void Coordinator::recoveryOnline(string lostobj) {
 
   // create ecdag
   ECDAG* ecdag = ec->Decode(availcidx, toreccidx);
+  ecdag->reconstruct(opt);
 
   // prepare sid2ip, for cip2ip
   // prepare stripeips for client info
@@ -1270,7 +1276,6 @@ void Coordinator::recoveryOnline(string lostobj) {
     }
   }
 
-  ecdag->optimize(opt, objlist, _conf->_ip2Rack, ecn, eck, ecw);
   vector<int> toposeq = ecdag->toposort();
 
   // prepare cid2ip, for parseForOEC
@@ -1287,6 +1292,9 @@ void Coordinator::recoveryOnline(string lostobj) {
   int filesizeMB = ssentry->getFilesizeMB();
   int objsizeMB = filesizeMB / eck;
   int pktnum = objsizeMB * 1048576/_conf->_pktSize;
+
+  // optimize
+  ecdag->optimize2(opt, cid2ip, _conf->_ip2Rack, ecn, eck, ecw, sid2ip, _conf->_agentsIPs, locality);
 
   // 6. parse for oec
   //vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
@@ -1404,6 +1412,7 @@ void Coordinator::recoveryOffline(string lostobj) {
 
   // create ecdag
   ECDAG* ecdag = ec->Decode(availcidx, toreccidx);
+  ecdag->reconstruct(opt);
 
   // prepare sid2ip, for cip2ip
   // prepare stripeips for client info
@@ -1469,7 +1478,6 @@ void Coordinator::recoveryOffline(string lostobj) {
     }
   }
  
-  ecdag->optimize(opt, objlist, _conf->_ip2Rack, ecn, eck, ecw);
   vector<int> toposeq = ecdag->toposort();
 
   // prepare cid2ip, for parseForOEC
@@ -1486,6 +1494,9 @@ void Coordinator::recoveryOffline(string lostobj) {
   int filesizeMB = ssentry->getFilesizeMB();
   int objsizeMB = filesizeMB / eck;
   int pktnum = objsizeMB * 1048576/_conf->_pktSize;
+
+  // optimize 
+  ecdag->optimize2(opt, cid2ip, _conf->_ip2Rack, ecn, eck, ecw, sid2ip, _conf->_agentsIPs, locality);
 
   // 6. parse for oec
   //vector<AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);

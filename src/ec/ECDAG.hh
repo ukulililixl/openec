@@ -37,12 +37,20 @@ class ECDAG {
     vector<int> getLeaves();
 
     // ecdag reconstruction
+    void reconstruct(int opt);
     void optimize(int opt, 
                   unordered_map<int, pair<string, unsigned int>> objlist,
                   unordered_map<unsigned int, string> ip2Rack,
                   int ecn,
                   int eck,
                   int ecw);
+    void optimize2(int opt, 
+                  unordered_map<int, unsigned int>& cid2ip,
+                  unordered_map<unsigned int, string> ip2Rack,
+                  int ecn, int eck, int ecw,
+                  unordered_map<int, unsigned int> sid2ip,
+                  vector<unsigned int> allIps,
+                  bool locality);
     void Opt0();
     void Opt1();
     void Opt2(unordered_map<int, string> n2Rack);
