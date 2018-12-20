@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define ECDAG_DEBUG_ENABLE false
+#define ECDAG_DEBUG_ENABLE true
 #define BINDSTART 200
 #define OPTSTART 300
 

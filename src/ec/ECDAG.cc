@@ -470,7 +470,10 @@ void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
       }
     } else {
   
-      if (subchilds.size() == 1) continue;  // there is no space for current group to optimize
+      if (subchilds.size() == 1) {
+        BindX(curParents);
+        continue;  // there is no space for current group to optimize
+      }
   
       // 1.2 globalChilds and globalCoefs maintains the outer cluster.
       vector<int> globalChilds;
@@ -572,7 +575,7 @@ void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
         }
       } 
       // 1.4 update globalChilds and globalCoefs for current cluster
-      if (update) {
+//      if (update) {
         for (int i=0; i<curParents.size(); i++) {
           int parent = curParents[i];
           assert (globalCoefs.find(parent) != globalCoefs.end());
@@ -581,9 +584,9 @@ void ECDAG::Opt2(unordered_map<int, string> n2Rack) {
         }
         BindX(curParents);
         deletelist.push_back(clusteridx);
-      } else {
-        BindX(curParents);
-      }
+//      } else {
+//        BindX(curParents);
+//      }
   
       // check whether global Childs are in roots
       for (auto c: globalChilds) {

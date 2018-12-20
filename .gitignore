@@ -11,6 +11,9 @@ ECDAGTest
 HDFSClient
 CodeTest
 
+entryStore
+poolStore
+
 conf/
 
 hadoop-3.0-helper/*.jar
