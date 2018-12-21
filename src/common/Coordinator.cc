@@ -45,6 +45,7 @@ void Coordinator::doProcess() {
         case 8: repairReqFromSS(coorCmd); break;
         case 9: onlineDegradedInst(coorCmd); break;
         case 11: reportRepaired(coorCmd); break;
+        case 12: coorBenchmark(coorCmd); break;
         default: break;
       }
       delete coorCmd;
@@ -1571,3 +1572,78 @@ void Coordinator::recoveryOffline(string lostobj) {
   for (auto item: todelete) free(item);
 }
 
+void Coordinator::coorBenchmark(CoorCommand* coorCmd) {
+  string benchname = coorCmd->getBenchName();
+  unsigned int clientIp = coorCmd->getClientip();
+  // plan to do simple ECDAG parsing in benchmark
+  string ecid="rs_9_6";
+  ECPolicy* ecpolicy = _conf->_ecPolicyMap[ecid];
+  ECBase* ec=ecpolicy->createECClass();
+  int ecn = ecpolicy->getN();
+  int eck = ecpolicy->getK();
+  int ecw = ecpolicy->getW();
+  int opt = ecpolicy->getOpt();
+  bool locality = ecpolicy->getLocality();
+
+  ECDAG* ecdag;
+  ecdag = ec->Encode();
+  // first optimize without physical information
+  ecdag->reconstruct(opt);
+
+  // simulate physical information
+  unordered_map<int, pair<string, unsigned int>> objlist;
+  unordered_map<int, unsigned int> sid2ip;
+  for (int sid=0; sid<ecn; sid++) {
+    string objname = "testobj"+to_string(sid);
+    unsigned int ip = _conf->_agentsIPs[sid];
+    objlist.insert(make_pair(sid, make_pair(objname, ip)));
+    sid2ip.insert(make_pair(sid, ip));
+  }
+
+  // topological sorting
+  vector<int> toposeq = ecdag->toposort();
+
+  // cid2ip
+  unordered_map<int, unsigned int> cid2ip;
+  for (int i=0; i<toposeq.size(); i++) {
+    int curcid = toposeq[i];
+    ECNode* cnode = ecdag->getNode(curcid);
+    vector<unsigned int> candidates = cnode->candidateIps(sid2ip, cid2ip, _conf->_agentsIPs, ecn, eck, ecw, locality || (opt>0));
+    unsigned int ip = candidates[0];
+    cid2ip.insert(make_pair(curcid, ip));
+  }
+
+  ecdag->optimize2(opt, cid2ip, _conf->_ip2Rack, ecn, eck, ecw, sid2ip, _conf->_agentsIPs, locality || (opt>0));
+  ecdag->dump();
+
+  for (auto item: cid2ip) {
+//    cout << "cid: " << item.first << ", ip: " << RedisUtil::ip2Str(item.second) << ", ";
+    ECNode* cnode = ecdag->getNode(item.first);
+    unordered_map<int, int> map = cnode->getRefMap();
+//    for (auto iitem: map) {
+//      cout << "ref["<<iitem.first<<"]: " << iitem.second << ", ";
+//    }
+//    cout << endl;
+  }
+
+  string stripename = "teststripe";
+  int pktnum = 8;
+  unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist);
+  vector<AGCommand*> persistCmds = ecdag->persist(cid2ip, stripename, ecn, eck, ecw, pktnum, objlist); 
+
+  // send back response to client
+  // benchfinish:benchname
+  redisReply* rReply;
+  redisContext* waitCtx = RedisUtil::createContext(clientIp);
+  string wkey = "benchfinish:" + benchname;
+  int tmpval = htonl(1);
+  rReply = (redisReply*)redisCommand(waitCtx, "rpush %s %b", wkey.c_str(), (char*)&tmpval, sizeof(tmpval));
+  freeReplyObject(rReply);
+  redisFree(waitCtx);
+
+  // free
+  for (auto item: persistCmds) delete item;
+  for (auto item: agCmds) delete item.second;
+  delete ecdag;
+  delete ec;
+}

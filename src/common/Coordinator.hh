@@ -44,6 +44,7 @@ class Coordinator {
     void onlineDegradedInst(CoorCommand* coorCmd);
     void repairReqFromSS(CoorCommand* coorCmd);
     void reportRepaired(CoorCommand* coorCmd);
+    void coorBenchmark(CoorCommand* coorCmd);
 
     void registerOnlineEC(unsigned int clientIp, string filename, string ecid, int filesizeMB);
     void registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB);

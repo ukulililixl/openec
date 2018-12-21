@@ -1,3 +1,4 @@
+#include "common/CoorBench.hh"
 #include "common/Config.hh"
 #include "common/OECInputStream.hh"
 #include "common/OECOutputStream.hh"
@@ -13,6 +14,7 @@ void usage() {
   cout << "       ./OECClient read filename saveas" << endl;
   cout << "       ./OECClient startEncode" << endl;
   cout << "       ./OECClient startRepair" << endl;
+  cout << "       ./OECClient coorBench id number" << endl;
 }
 
 void read(string filename, string saveas) {
@@ -121,6 +123,7 @@ int main(int argc, char** argv) {
     cmd->sendTo(conf->_coorIp);
     
     delete cmd;
+    delete conf;
   } else if (reqType == "startRepair") {
     string confpath("./conf/sysSetting.xml");
     Config* conf = new Config(confpath);
@@ -128,6 +131,21 @@ int main(int argc, char** argv) {
     CoorCommand* cmd = new CoorCommand();
     cmd->buildType7(7, 1, "repair");
     cmd->sendTo(conf->_coorIp);
+    delete cmd;
+    delete conf;
+  } else if (reqType == "coorBench") {
+    if (argc != 4) {
+      usage();
+      return -1;
+    }
+    int id = atoi(argv[2]);
+    int number = atoi(argv[3]);
+    string confpath("./conf/sysSetting.xml");
+    Config* conf = new Config(confpath);
+    CoorBench* benchClient = new CoorBench(conf, id, number);
+
+    delete benchClient;
+    delete conf;
   } else {
     cout << "ERROR: un-recognized request!" << endl;
     usage();

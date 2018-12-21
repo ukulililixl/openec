@@ -22,6 +22,7 @@ using namespace std;
  *   type = 9: clientip | filename | corrupnum | idx1-idx2..| // 
  *  ? type = 10: clientip| filename |  // update lostmap in stripestore
  *   type = 11: clientip| filename |   // report successfully repair
+ *   type = 12: clientip | benchname | 
  */
 
 
@@ -61,6 +62,9 @@ class CoorCommand {
     // _filename
     vector<int> _corruptIdx;
 
+    // type12
+    string _benchname;
+
   public:
     CoorCommand();
     ~CoorCommand();
@@ -85,6 +89,7 @@ class CoorCommand {
     int getOp();
     string getECType();
     vector<int> getCorruptIdx();
+    string getBenchName();
 
     // send method
     void sendTo(unsigned int ip);
@@ -120,6 +125,9 @@ class CoorCommand {
                     unsigned int ip,
                     string filename,
                     vector<int> corruptIdx);
+    void buildType12(int type,
+                     unsigned int ip,
+                     string benchname);
     // resolve CoorCommand
     void resolveType0();
     void resolveType1();
@@ -132,6 +140,7 @@ class CoorCommand {
     void resolveType8();
     void resolveType9();
     void resolveType11();
+    void resolveType12();
 
     // for debug
     void dump();

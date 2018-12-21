@@ -33,6 +33,7 @@ CoorCommand::CoorCommand(char* reqStr) {
     case 8: resolveType8(); break;
     case 9: resolveType9(); break;
     case 11: resolveType11(); break;
+    case 12: resolveType12(); break;
     default: break;
   }
   _coorCmd = nullptr;
@@ -121,6 +122,10 @@ string CoorCommand::getECType() {
 
 vector<int> CoorCommand::getCorruptIdx() {
   return _corruptIdx;
+}
+
+string CoorCommand::getBenchName() {
+  return _benchname;
 }
 
 void CoorCommand::sendTo(unsigned int ip) {
@@ -306,6 +311,23 @@ void CoorCommand::resolveType9() {
 void CoorCommand::resolveType11() {
   _clientIp = readInt();
   _filename = readString();
+}
+
+void CoorCommand::buildType12(int type,
+                              unsigned int ip,
+                              string benchname) {
+  _type = type;
+  _clientIp = ip;
+  _benchname = benchname;
+
+  writeInt(_type);
+  writeInt(_clientIp);
+  writeString(_benchname);
+}
+
+void CoorCommand::resolveType12() {
+  _clientIp = readInt();
+  _benchname = readString();
 }
 
 void CoorCommand::dump() {
