@@ -220,6 +220,59 @@ vector<unsigned int> ECNode::candidateIps(unordered_map<int, unsigned int> sid2i
   }
 }
 
+vector<unsigned int> ECNode::candidateIps(unordered_map<int, unsigned int> sid2ip,
+                                          unordered_map<int, unsigned int> cid2ip,
+                                          vector<unsigned int> allIps,
+                                          int n,
+                                          int k,
+                                          int w,
+                                          bool locality, int lostid) {
+  vector<unsigned int> toret;
+  int sid = _nodeId/w;
+
+  // 0. current node has constraint
+  if (_hasConstraint) {
+    assert(cid2ip.find(_consId) != cid2ip.end());
+    toret.push_back(cid2ip[_consId]);
+    return toret;
+  }
+
+  // 1. current node is preassigned a location
+  if (sid2ip.find(sid) != sid2ip.end() && sid != lostid) {
+    toret.push_back(sid2ip[sid]);
+    return toret;
+  }
+
+  // 2. if locality is enabled prepare candidate from children
+  if (locality) {
+    for (int i=0; i<_childNodes.size(); i++) {
+      int cidx = _childNodes[i]->getNodeId();
+      assert (cid2ip.find(cidx) != cid2ip.end());
+      toret.push_back(cid2ip[cidx]);
+    }
+    return toret;
+  } else {
+    // prepare candidate without child
+    vector<unsigned int> childIps;
+    for (int i=0; i<_childNodes.size(); i++) {
+      int cidx = _childNodes[i]->getNodeId();
+      assert (cid2ip.find(cidx) != cid2ip.end());
+      childIps.push_back(cid2ip[cidx]);
+    }
+    for (auto ip: allIps) {
+      if (find(childIps.begin(), childIps.end(), ip) == childIps.end())
+        toret.push_back(ip);
+    }
+    if (toret.size() == 0) {
+      // choose randomly
+      srand((unsigned)time(0));
+      int randomidx = rand() % childIps.size();
+      toret.push_back(childIps[randomidx]);
+    }
+    return toret;
+  }
+}
+
 void ECNode::parseForOEC(unsigned int ip) {
   _ip = ip;
   bool cache = true;

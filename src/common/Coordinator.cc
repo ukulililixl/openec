@@ -1284,7 +1284,7 @@ void Coordinator::recoveryOnline(string lostobj) {
   for (int i=0; i<toposeq.size(); i++) {
     int cidx = toposeq[i];
     ECNode* node = ecdag->getNode(cidx);
-    vector<unsigned int> candidates = node->candidateIps(sid2ip, cid2ip, _conf->_agentsIPs, ecn, eck, ecw, locality);
+    vector<unsigned int> candidates = node->candidateIps(sid2ip, cid2ip, _conf->_agentsIPs, ecn, eck, ecw, locality, lostidx);
     // choose from candidates
     unsigned int curip = chooseFromCandidates(candidates, _conf->_repair_policy, "repair");
     cid2ip.insert(make_pair(cidx, curip));
@@ -1486,7 +1486,7 @@ void Coordinator::recoveryOffline(string lostobj) {
   for (int i=0; i<toposeq.size(); i++) {
     int cidx = toposeq[i];
     ECNode* node = ecdag->getNode(cidx);
-    vector<unsigned int> candidates = node->candidateIps(sid2ip, cid2ip, _conf->_agentsIPs, ecn, eck, ecw, locality);
+    vector<unsigned int> candidates = node->candidateIps(sid2ip, cid2ip, _conf->_agentsIPs, ecn, eck, ecw, locality, lostidx);
     // choose from candidates
     unsigned int curip = chooseFromCandidates(candidates, _conf->_repair_policy, "repair");
     cid2ip.insert(make_pair(cidx, curip));

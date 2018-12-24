@@ -66,6 +66,10 @@ class ECNode {
                            unordered_map<int, unsigned int> cid2ip,
                            vector<unsigned int> allIps,
                            int n, int k, int w, bool locality);
+    vector<unsigned int> candidateIps(unordered_map<int, unsigned int> sid2ip,
+                           unordered_map<int, unsigned int> cid2ip,
+                           vector<unsigned int> allIps,
+                           int n, int k, int w, bool locality, int lostid);
     unordered_map<int, ECTask*> getTasks();
     void clearTasks();
     AGCommand* parseAGCommand(string stripename,

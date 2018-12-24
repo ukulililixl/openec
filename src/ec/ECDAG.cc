@@ -734,7 +734,6 @@ vector<AGCommand*> ECDAG::persist(unordered_map<int, unsigned int> cid2ip,
   int numblks = _ecHeaders.size()/w;
   if (ECDAG_DEBUG_ENABLE) cout << "ECDAG:: persist. numblks: " << numblks << endl;
   for (int i=0; i<numblks; i++) {
-//    int sid = _ecHeaders[i*w];
     int cid = _ecHeaders[i*w];
     int sid = cid/w;
     string objname = objlist[sid].first;
