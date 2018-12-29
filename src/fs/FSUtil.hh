@@ -6,6 +6,7 @@
 #include "../common/Config.hh"
 #include "../inc/include.hh"
 //#include "Hadoop20.hh"
+#include "QFS.hh"
 
 using namespace std;
 

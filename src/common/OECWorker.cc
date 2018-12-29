@@ -14,9 +14,9 @@ OECWorker::OECWorker(Config* conf) : _conf(conf) {
   _underfs = FSUtil::createFS(_conf->_fsType, _conf->_fsFactory[_conf->_fsType], _conf);
 
   // tune performance
-  FSObjOutputStream* tuneobjout = new FSObjOutputStream(_conf, "/tmp/tuneoecout", _underfs, 0);
+  FSObjOutputStream* tuneobjout = new FSObjOutputStream(_conf, "/tmptuneoecout", _underfs, 0);
   delete tuneobjout;
-  FSObjInputStream* tuneobjin = new FSObjInputStream(_conf, "/tmp/tuneoecout", _underfs);
+  FSObjInputStream* tuneobjin = new FSObjInputStream(_conf, "/tmptuneoecout", _underfs);
   delete tuneobjin;
 }
 

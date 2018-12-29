@@ -22,6 +22,7 @@
 #include <hiredis/hiredis.h>
 
 #include <stdio.h>
+#include <fcntl.h>
 
 #define MAX_COMMAND_LEN 4096
 

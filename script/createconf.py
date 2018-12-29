@@ -37,7 +37,6 @@ cluster=[
 "192.168.10.55",
 "192.168.10.56",
 "192.168.10.57",
-#"192.168.10.58",
 "192.168.10.59",
 "192.168.10.60",
 "192.168.10.61",
@@ -57,7 +56,6 @@ networkMap={
 "192.168.10.55":"/rack1",
 "192.168.10.56":"/rack1",
 "192.168.10.57":"/rack1",
-#"192.168.10.58":"/rack1",
 "192.168.10.59":"/rack1",
 "192.168.10.60":"/rack1",
 "192.168.10.61":"/rack1",
@@ -115,6 +113,8 @@ for node in cluster:
     line="<value><fstype>hadoop3</fstype><param>192.168.10.51,12345</param></value>\n"
     attr.append(line)
     line="<value><fstype>hadoop20</fstype><param>192.168.10.51,12345</param></value>\n"
+    attr.append(line)
+    line="<value><fstype>qfs</fstype><param>192.168.10.51,20000</param></value>\n"
     attr.append(line)
     line="</attribute>\n"
     attr.append(line)

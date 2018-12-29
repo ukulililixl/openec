@@ -10,13 +10,13 @@ FSObjOutputStream::FSObjOutputStream(Config* conf, string objname, UnderFS* fs, 
   _finish = false;
   _objsize = 0;
 
-  // connect to hdfs3
+  // connect to DSS
   struct timeval time1, time2;
   gettimeofday(&time1, NULL);
   _underfs = fs;
   _underfile = _underfs->openFile(objname, "write");
   if (!_underfile) {
-    cout << "ERROR::FSObjOutputStream fail to connect to hdfs!" << endl;
+    cout << "ERROR::FSObjOutputStream fail to connect to DSS!" << endl;
     exit(-1);
   }
   gettimeofday(&time2, NULL);

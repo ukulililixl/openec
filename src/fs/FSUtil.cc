@@ -8,6 +8,9 @@ UnderFS* FSUtil::createFS(string type, vector<string> param, Config* conf) {
 //  } else if (type == "hadoop20") {
 //    cout << "hadoop20" << endl;
 //    toret = new Hadoop20(param, conf);
+  } else if (type == "qfs") {
+    cout << "qfs" << endl;
+    toret = new QFS(param, conf);
   } else {
     cout << "unrecognized FS type!" << endl;
     toret = new Hadoop3(param, conf);
