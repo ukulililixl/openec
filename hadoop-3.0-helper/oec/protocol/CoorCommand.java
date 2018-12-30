@@ -46,7 +46,6 @@ public class CoorCommand {
   // for type 1
   String requestIp;
   int numOfReplicas;
-//  int objIdx;
 
   // for type 6
 
