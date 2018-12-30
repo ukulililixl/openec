@@ -17,7 +17,7 @@ QFSFile* QFS::openFile(string filename, string mode) {
   int fd;
   if (mode == "read") {
     cout << "QFS::openFile " << filename << " for read" << endl;
-    if ((fd = _fs->Open(filename.c_str(), O_RDWR)) < 0) {
+    if ((fd = _fs->Open(filename.c_str(), O_RDONLY)) < 0) {
       cout << "QFS::openFile error!" << endl;
     } else {
       cout << "QFS::openFile.fd: " << fd << endl;
