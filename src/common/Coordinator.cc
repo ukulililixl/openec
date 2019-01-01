@@ -482,9 +482,9 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   // stripeplaced records the objnames that have been stored in this stripe
   vector<int> stripeplaced;
  
-  cout << "Coordinator::offlineEnc.encode stripe " << stripename << ", objlist: ";
-  for (int i=0; i<stripelist.size(); i++) cout << stripelist[i] << " ";
-  cout << endl;
+//  cout << "Coordinator::offlineEnc.encode stripe " << stripename << ", objlist: ";
+//  for (int i=0; i<stripelist.size(); i++) cout << stripelist[i] << " ";
+//  cout << endl;
 
   // maximum obj size in current stripe
   int basesizeMB = ecpool->getBasesize();
@@ -528,13 +528,13 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   ecpool->unlock();
 
   // debug info
-  for (auto item: objlist) {
-    int sid = item.first;
-    pair<string, unsigned int> pair = item.second;
-    string objname = pair.first;
-    unsigned int ip = pair.second;
-    cout << "stripe physical info: idx: " << sid << ", objname: " << objname << ", ip: " << RedisUtil::ip2Str(ip) << endl;
-  }
+//  for (auto item: objlist) {
+//    int sid = item.first;
+//    pair<string, unsigned int> pair = item.second;
+//    string objname = pair.first;
+//    unsigned int ip = pair.second;
+//    cout << "stripe physical info: idx: " << sid << ", objname: " << objname << ", ip: " << RedisUtil::ip2Str(ip) << endl;
+//  }
   
   // 4. topological sorting
   vector<int> sortedList = ecdag->toposort();
@@ -554,9 +554,9 @@ void Coordinator::offlineEnc(CoorCommand* coorCmd) {
   ecdag->optimize2(opt, cid2ip, _conf->_ip2Rack, n, k, w, sid2ip, _conf->_agentsIPs, locality);
   ecdag->dump();
 
-  for (auto item: cid2ip) {
-    cout << "cid: " << item.first << ", ip: " << RedisUtil::ip2Str(item.second) << endl;
-  }
+//  for (auto item: cid2ip) {
+//    cout << "cid: " << item.first << ", ip: " << RedisUtil::ip2Str(item.second) << endl;
+//  }
 
   // 6. parse for oec
   unordered_map<int, AGCommand*> agCmds = ecdag->parseForOEC(cid2ip, stripename, n, k, w, pktnum, objlist);

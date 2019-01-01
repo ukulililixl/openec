@@ -368,15 +368,16 @@ void ECDAG::Opt1() {
     if (curCluster->getOpt() == -1) {
       vector<int> childs = curCluster->getChilds();
       vector<int> parents = curCluster->getParents();
+      srand((unsigned)time(0));
+      int randomidx = rand() % childs.size();
       if (parents.size() == 1) {
         // addConstraint? 
-        BindY(parents[0], childs[0]);
+        BindY(parents[0], childs[randomidx]);
       } else if (parents.size() > 1) {
         int bindnodeid = BindX(parents);
-        srand((unsigned)time(0)); 
-        int randomidx = rand() % childs.size();
         BindY(bindnodeid, childs[randomidx]);
       }
+      curCluster->setOpt(1);
     }
   }
 }
