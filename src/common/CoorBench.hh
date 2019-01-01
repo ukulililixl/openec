@@ -12,6 +12,10 @@ class CoorBench {
     Config* _conf;
     int _id;
     int _number;
+
+    redisContext* _localCtx;
+    redisContext* _coorCtx;
+    int _replyid;
   public:
     CoorBench(Config* conf, int id, int number);
     void close();

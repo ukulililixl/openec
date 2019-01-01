@@ -13,7 +13,8 @@ UnderFS* FSUtil::createFS(string type, vector<string> param, Config* conf) {
     toret = new QFS(param, conf);
   } else {
     cout << "unrecognized FS type!" << endl;
-    toret = new Hadoop3(param, conf);
+//    toret = new Hadoop3(param, conf);
+    toret = NULL;
   }
 
   return toret;

@@ -30,41 +30,41 @@ BASEMB=int(BASE)/1048576
 BASEMB=str(BASEMB)
 
 cluster=[
-"192.168.10.51",
-"192.168.10.52",
-"192.168.10.53",
-"192.168.10.54",
-"192.168.10.55",
-"192.168.10.56",
-"192.168.10.57",
-"192.168.10.59",
-"192.168.10.60",
-"192.168.10.61",
-"192.168.10.62",
-"192.168.10.63",
-"192.168.10.64",
-"192.168.10.65",
-"192.168.10.67",
-"192.168.10.69",
+"192.168.10.21",
+"192.168.10.22",
+"192.168.10.23",
+"192.168.10.24",
+"192.168.10.25",
+"192.168.10.26",
+"192.168.10.27",
+"192.168.10.28",
+"192.168.10.29",
+"192.168.10.30",
+"192.168.10.31",
+"192.168.10.32",
+"192.168.10.33",
+"192.168.10.47",
+"192.168.10.48",
+"192.168.10.49",
 ]
 
 networkMap={
-"192.168.10.51":"/rack1", 
-"192.168.10.52":"/rack1",
-"192.168.10.53":"/rack1",
-"192.168.10.54":"/rack1",
-"192.168.10.55":"/rack1",
-"192.168.10.56":"/rack1",
-"192.168.10.57":"/rack1",
-"192.168.10.59":"/rack1",
-"192.168.10.60":"/rack1",
-"192.168.10.61":"/rack1",
-"192.168.10.62":"/rack1",
-"192.168.10.63":"/rack1",
-"192.168.10.64":"/rack1",
-"192.168.10.65":"/rack1",
-"192.168.10.67":"/rack1",
-"192.168.10.69":"/rack1",
+"192.168.10.21":"/rack1",
+"192.168.10.22":"/rack1",
+"192.168.10.23":"/rack1",
+"192.168.10.24":"/rack1",
+"192.168.10.25":"/rack1",
+"192.168.10.26":"/rack1",
+"192.168.10.27":"/rack1",
+"192.168.10.28":"/rack1",
+"192.168.10.29":"/rack1",
+"192.168.10.30":"/rack1",
+"192.168.10.31":"/rack1",
+"192.168.10.32":"/rack1",
+"192.168.10.33":"/rack1",
+"192.168.10.47":"/rack1",
+"192.168.10.48":"/rack1",
+"192.168.10.49":"/rack1",
 }
 
 for node in cluster:
@@ -74,14 +74,14 @@ for node in cluster:
     line="<setting>\n"
     attr.append(line)
 
-    line="<attribute><name>coor.address</name><value>192.168.10.51</value></attribute>\n"
+    line="<attribute><name>coor.address</name><value>192.168.10.33</value></attribute>\n"
     attr.append(line)
 
     line="<attribute><name>agents.address</name>\n"
     attr.append(line)
 
     for slave in cluster:
-        if (slave == "192.168.10.51"):
+        if (slave == "192.168.10.33"):
              continue
         rack=networkMap[slave]
         line="<value>"+rack+"/"+slave+"</value>\n"
@@ -110,11 +110,11 @@ for node in cluster:
 
     line="<attribute><name>fs.factory</name>\n"
     attr.append(line)
-    line="<value><fstype>hadoop3</fstype><param>192.168.10.51,12345</param></value>\n"
+    line="<value><fstype>hadoop3</fstype><param>192.168.10.33,12345</param></value>\n"
     attr.append(line)
-    line="<value><fstype>hadoop20</fstype><param>192.168.10.51,12345</param></value>\n"
+    line="<value><fstype>hadoop20</fstype><param>192.168.10.33,12345</param></value>\n"
     attr.append(line)
-    line="<value><fstype>qfs</fstype><param>192.168.10.51,20000</param></value>\n"
+    line="<value><fstype>qfs</fstype><param>192.168.10.33,20000</param></value>\n"
     attr.append(line)
     line="</attribute>\n"
     attr.append(line)
@@ -153,13 +153,9 @@ for node in cluster:
     attr.append(line)
     line="<value><id>rs_3_2</id><class>RSCONV</class><n>3</n><k>2</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
     attr.append(line)
-    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
-    attr.append(line)
     line="<value><id>rs_9_6_bindx</id><class>RSBINDX</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>0</opt></value>\n"
     attr.append(line)
     line="<value><id>rs_9_6_opt0</id><class>RSCONV</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>0</opt></value>\n"
-    attr.append(line)
-    line="<value><id>rs_12_8</id><class>RSCONV</class><n>12</n><k>8</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
     attr.append(line)
     line="<value><id>waslrc_6_2_2</id><class>WASLRC</class><n>10</n><k>6</k><w>1</w><locality>false</locality><opt>-1</opt><param>2,2</param></value>\n"
     attr.append(line)
@@ -179,6 +175,18 @@ for node in cluster:
 #    attr.append(line)
 #    line="<value><id>clay_6_4</id><class>CLAY</class><n>6</n><k>4</k><cps>8</cps><locality>false</locality></value>\n"
 #    attr.append(line)
+
+    line="<value><id>rs_6_4</id><class>RSCONV</class><n>6</n><k>4</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
+    attr.append(line)
+
+    line="<value><id>rs_9_6</id><class>RSCONV</class><n>9</n><k>6</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
+    attr.append(line)
+
+    line="<value><id>rs_12_8</id><class>RSCONV</class><n>12</n><k>8</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
+    attr.append(line)
+
+    line="<value><id>rs_14_10</id><class>RSCONV</class><n>14</n><k>10</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n"
+    attr.append(line)
 
     line="<value><id>rs_6_4_opt-1</id><class>RSCONV</class><n>6</n><k>4</k><w>1</w><locality>false</locality><opt>-1</opt></value>\n" 
     attr.append(line)
@@ -319,7 +327,7 @@ for node in cluster:
 
 
 # send conf to coordinator
-coor="192.168.10.51"
+coor="192.168.10.33"
 filename="./sysSetting.xml_"+coor
 cmd="scp "+filename+" "+coor+":/home/xiaolu/OpenEC/OpenEC-v3.0/conf/sysSetting.xml"
 os.system(cmd)

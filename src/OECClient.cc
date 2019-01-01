@@ -143,6 +143,7 @@ int main(int argc, char** argv) {
     string confpath("./conf/sysSetting.xml");
     Config* conf = new Config(confpath);
     CoorBench* benchClient = new CoorBench(conf, id, number);
+    benchClient->close();
 
     delete benchClient;
     delete conf;
