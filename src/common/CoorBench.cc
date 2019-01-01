@@ -17,7 +17,7 @@ CoorBench::CoorBench(Config* conf, int benchid, int number) {
     coorCmd->buildType12(12, _conf->_localIp, benchname);
     coorCmd->sendTo(_coorCtx);
 
-    if (i > 1) {
+    if (i >= 0) {
       string benchname = "bench:"+to_string(_id)+":"+to_string(_replyid++);
       string key="benchfinish:"+benchname;
       rReply = (redisReply*)redisCommand(localCtx, "blpop %s 0", key.c_str());
