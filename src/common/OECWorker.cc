@@ -476,6 +476,7 @@ void OECWorker::computeWorker(FSObjInputStream** readStreams,
                               int ecn,
                               int eck,
                               int ecw) {
+  cout << "OECWorker::computeWorker.stripenum: " << stripenum << endl;
   // In this method, we read available data from readStreams, whose stripeidx is in idlist
   // Then we perform compute task one by on in computeTasks for each stripe.
   // Finally, we put original eck data pkts in writeQueue
@@ -483,6 +484,7 @@ void OECWorker::computeWorker(FSObjInputStream** readStreams,
   for (int i=0; i<ecn; i++) curStripe[i] = NULL; 
   int splitsize = _conf->_pktSize / ecw;
   for (int stripeid = 0; stripeid < stripenum; stripeid++) {
+    //cout << "computeWorker::stripeid: " << stripeid << endl;
     unordered_map<int, char*> bufMap;
     // read from readStreams
     for (int i=0; i<idlist.size(); i++) {
@@ -580,6 +582,7 @@ void OECWorker::computeWorker(FSObjInputStream** readStreams,
     if (curStripe[i] != NULL) delete curStripe[i];
   }
   if (curStripe) free(curStripe);
+  cout << "OECWorker::computeWorker finishes" << endl;
 }
 
 void OECWorker::computeWorker(vector<ECTask*> computeTasks,
@@ -1817,7 +1820,8 @@ void OECWorker::readOnline(string filename, int filesizeMB, int ecn, int eck, in
     thread cacheThread = thread([=]{cacheWorker(writeQueue, filename, pktnum, 1);});
 
     // 2.1 computeThread
-    thread computeThread = thread([=]{computeWorker(readStreams, loadidx, writeQueue, computeTasks, pktnum, ecn, eck, ecw);});
+    int stripenum = pktnum/eck;
+    thread computeThread = thread([=]{computeWorker(readStreams, loadidx, writeQueue, computeTasks, stripenum, ecn, eck, ecw);});
 
     // join
     for (int i=0; i<loadn; i++) {
