@@ -21,7 +21,17 @@ QFSFile* QFS::openFile(string filename, string mode) {
       cout << "QFS::openFile error!" << endl;
     } else {
       cout << "QFS::openFile.fd: " << fd << endl;
-      toret = new QFSFile(filename, fd);
+      // try to read 1 byte?
+      int tmpres;
+      int res = _fs->Read(fd, (char*)&tmpres, 4);
+      if (res != 4) {
+        cout << "QFS::openFile error!" << endl; 
+        _fs->Close(fd);
+      } else {
+        // reset offset
+        _fs->Seek(fd, 0);
+        toret = new QFSFile(filename, fd);
+      }
     }
   } else {
     cout << "QFS::openFile " << filename << " for write" << endl;

@@ -1733,18 +1733,6 @@ void OECWorker::readOnline(string filename, int filesizeMB, int ecn, int eck, in
     // delete
     delete writeQueue;
     // version 1 end
-
-//    // version 2 start: multi caching thread
-//    int pktnum = filesizeMB / eck * 1048576 / _conf->_pktSize;
-//    vector<thread> cacheThreads = vector<thread>(eck);
-//    for (int i=0; i<eck; i++) {
-//      cacheThreads[i] = thread([=]{cacheWorker(objstreams[i]->getQueue(), filename, i, eck, pktnum, 1);});
-//    }
-//    
-//    // join
-//    for (int i=0; i<eck; i++) readThreads[i].join();
-//    for (int i=0; i<eck; i++) cacheThreads[i].join();
-//    // version 2 end 
   } else {
     cout << "OECWorker::readOnline.need repair" << endl;
     // need recovery
