@@ -10,6 +10,7 @@ QFS::QFS(vector<string> params, Config* conf) {
 }
 
 QFS::~QFS() {
+  delete _fs;
 }
 
 QFSFile* QFS::openFile(string filename, string mode) {
