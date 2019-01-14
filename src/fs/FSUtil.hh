@@ -1,12 +1,21 @@
 #ifndef _FSUTIL_HH_
 #define _FSUTIL_HH_
 
+#ifdef HDFSRAID
 #include "Hadoop20.hh"
+#endif
+
+#ifdef HDFS3
 #include "Hadoop3.hh"
+#endif
+
+#ifdef QFS
+#include "QFS.hh"
+#endif
+
 #include "UnderFS.hh"
 #include "../common/Config.hh"
 #include "../inc/include.hh"
-#include "QFS.hh"
 
 using namespace std;
 
