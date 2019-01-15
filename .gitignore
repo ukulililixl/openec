@@ -38,3 +38,5 @@ src/fs/CMakeFiles/*
 coor_output
 
 backup/*
+
+hdfs3-integration/*.jar
