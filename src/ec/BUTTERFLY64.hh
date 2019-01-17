@@ -24,7 +24,8 @@ class BUTTERFLY64: public ECBase {
     void generate_encoding_matrix();
     void dump_matrix(int* matrix, int row, int col);
   public:
-    BUTTERFLY64(int n, int k, int cps, bool locality, int opt, vector<string> param);
+//    BUTTERFLY64(int n, int k, int cps, bool locality, int opt, vector<string> param);
+    BUTTERFLY64(int n, int k, int cps, int opt, vector<string> param);
     ECDAG* Encode();
     ECDAG* Decode(vector<int> from, vector<int> to);
     void Place(vector<vector<int>>& group);

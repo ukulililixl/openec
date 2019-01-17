@@ -9,8 +9,8 @@
 using namespace std;
 
 void usage() {
-  cout << "usage: ./OECClient write inputfile filename ecid online sizeinMB" << endl;
-  cout << "       ./OECClient write inputfile filename ecpool offline sizeinMB" << endl;
+  cout << "usage: ./OECClient write inputfile saveas ecid online sizeinMB" << endl;
+  cout << "       ./OECClient write inputfile saveas poolid offline sizeinMB" << endl;
   cout << "       ./OECClient read filename saveas" << endl;
   cout << "       ./OECClient startEncode" << endl;
   cout << "       ./OECClient startRepair" << endl;

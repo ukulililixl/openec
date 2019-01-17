@@ -3883,8 +3883,8 @@ public class BlockManager implements BlockStatsMXBean {
         }
         this.corruptObj2Blks.remove(filename);
         // send report to OEC that filename has been repaired successfully
-        String oecCoorAddr = conf.get("oec.coordinator.addr");
-        String localAddr = conf.get("oec.local.addr");
+        String oecCoorAddr = conf.get("oec.controller.addr");
+        String localAddr = conf.get("oec.controller.addr");
         System.out.println("send repaired " + filename + " to " + oecCoorAddr);
         CoorCommand coorCmd = new CoorCommand();
         coorCmd.buildType11(11, localAddr, filename);
@@ -4639,7 +4639,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   public void repairByOEC() {
     System.out.println("BlockManager::repairByOEC");
-    String oecCoorAddr = conf.get("oec.coordinator.addr");
+    String oecCoorAddr = conf.get("oec.controller.addr");
     String localAddr = conf.get("oec.local.addr");
     int max = 10;
     Integer one = new Integer(1);

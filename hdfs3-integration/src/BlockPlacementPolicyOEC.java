@@ -49,7 +49,7 @@ public class BlockPlacementPolicyOEC extends BlockPlacementPolicyDefault {
     super.initialize(conf, stats, clusterMap, host2datanodeMap);
     sendJedisPoolConfig = new JedisPoolConfig();
     sendJedisPoolConfig.setMaxTotal(1);
-    sendJedisPool = new JedisPool(sendJedisPoolConfig, conf.get("oec.coordinator.addr"));
+    sendJedisPool = new JedisPool(sendJedisPoolConfig, conf.get("oec.controller.addr"));
     localJedisPoolConfig = new JedisPoolConfig();
     localJedisPoolConfig.setMaxTotal(1);
     localJedisPool = new JedisPool(localJedisPoolConfig, "127.0.0.1");
@@ -83,7 +83,7 @@ public class BlockPlacementPolicyOEC extends BlockPlacementPolicyDefault {
     if (linkOEC) {
       // now send request to OpenEC to get locs
       if (locs == null) {
-        String oecCoorAddr = conf.get("oec.coordinator.addr");
+        String oecCoorAddr = conf.get("oec.controller.addr");
         CoorCommand coorCmd = new CoorCommand();
         coorCmd.buildType1(1, writerIp, objname, numOfReplicas);
         coorCmd.sendTo(sendJedisPool);
@@ -115,55 +115,5 @@ public class BlockPlacementPolicyOEC extends BlockPlacementPolicyDefault {
     }
 
     return toret;
-//
-//    String objname = src;
-//    String loc = null;
-//    String[] locs = new String[numOfReplicas];
-//
-//    if (objname.contains("io_control")) {
-//      // control file for mapreduce job;
-//      System.out.println("XL::BlockPlacementPolicyOEC.chooseTarget.objname = " + objname);
-//    } else if (objname.contains("oecobj")) {
-//      // data obj file
-//      // 0. first check whether there is previous block in this file
-//      if (obj2Loc.containsKey(objname)) {
-//        System.out.println("XL::BlockPlacementPolicyOEC.chooseTarget.oecobj has been assigned a loc");
-//        // previous blocks has requested for location before
-//        loc = obj2Loc.get(objname);
-//      }
-//    } else if (objname.contains("placetest")) {
-//      // delete the tail before send request
-////      objname = objname.substring(0, objname.indexOf("."));
-//    }
-//
-//    // check whether use oec to get the location
-//    boolean linkOEC = conf.getBoolean("link.oec", false);
-//    if (linkOEC) {
-//      // now send request to OpenEC to get a location
-//      String oecCoorAddr = conf.get("oec.coordinator.addr");
-//      long time1 = System.currentTimeMillis();
-//      if (loc == null) {
-//        System.out.println("XL::BlockPlacementPolicyOEC.chooseTarget.send command to OpenEC Coordinator");
-//        CoorCommand coorCmd = new CoorCommand();
-////        coorCmd.buildType1(1, writerIp, objname, numOfReplicas);
-//        coorCmd.buildType1(1, writerIp, objname, 3);
-//        coorCmd.sendTo(sendJedisPool);
-//        loc = coorCmd.waitForLocation(localJedisPool);
-//      }
-//      long time2 = System.currentTimeMillis();
-//      System.out.println("XL::BlockPlacementPolicyOEC.get loc " + loc + " from OEC in " + (time2-time1) + " millisecond");
-//      DatanodeDescriptor nodedes = (DatanodeDescriptor)clusterMap.getLocByIp(loc);
-//      if (nodedes != null) System.out.println("XL::BlockPlacementPolicyOEC.get loc success!");
-//      toret[0] = nodedes.chooseStorage4Block(StorageType.DISK, blocksize);
-//    } else {
-//      // get location from network topology
-//      long time1 = System.currentTimeMillis();
-//      DatanodeDescriptor randomdes = (DatanodeDescriptor)clusterMap.getLocRandom();
-//      long time2 = System.currentTimeMillis();
-//      System.out.println("XL::BlockPlacementPolicyOEC.get loc from NetworkTopology in " + (time2 - time1) + " millisecond");
-//      toret[0] = randomdes.chooseStorage4Block(StorageType.DISK, blocksize);
-//    }
-//    
-//    return toret;
   }
 }

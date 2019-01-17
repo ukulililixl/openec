@@ -1,11 +1,12 @@
 #include "BUTTERFLY64.hh"
 
-BUTTERFLY64::BUTTERFLY64(int n, int k, int w, bool locality, int opt, vector<string> param) {
+//BUTTERFLY64::BUTTERFLY64(int n, int k, int w, bool locality, int opt, vector<string> param) {
+BUTTERFLY64::BUTTERFLY64(int n, int k, int w, int opt, vector<string> param) {
   cout << "BUTTERRFLY64" << endl;
   _n = n;
   _k = k;
   _w = w;
-  _locality = locality;
+//  _locality = locality;
   _opt = opt;
 
   _m = _n - _k;

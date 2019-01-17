@@ -9,7 +9,7 @@ Config::Config(std::string& filepath) {
        element=element->NextSiblingElement("attribute")){
      XMLElement* ele = element->FirstChildElement("name");
      std::string attName = ele -> GetText();
-     if (attName == "coor.address") {
+     if (attName == "controller.address") {
        _coorIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
      } else if (attName == "agents.address") {
        for (ele = ele -> NextSiblingElement("value"); ele != NULL; ele = ele -> NextSiblingElement("value")) {
@@ -35,7 +35,7 @@ Config::Config(std::string& filepath) {
 //       cout << "repairIp = " << RedisUtil::ip2Str(_repairIp) << endl;
     } else if (attName == "oec.agent.thread.num") {
       _agWorkerThreadNum = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-    } else if (attName == "oec.coor.thread.num") {
+    } else if (attName == "oec.controller.thread.num") {
       _coorThreadNum = std::stoi(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "oec.cmddist.thread.num") {
       _distThreadNum = std::stoi(ele -> NextSiblingElement("value") -> GetText());
@@ -45,7 +45,7 @@ Config::Config(std::string& filepath) {
       _localIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "packet.size") {
       _pktSize = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-    } else if (attName == "underline.fs.type") {
+    } else if (attName == "underlying.fs.type") {
 //      if (ele -> NextSiblingElement("value") -> GetText() == std::string("HDFS3")) {
 //        _fsType = HDFS3;
 //      } else if (ele -> NextSiblingElement("value") -> GetText() == std::string("HDFS2")) {
@@ -114,8 +114,8 @@ Config::Config(std::string& filepath) {
             curval!=NULL;
             curval = curval->NextSiblingElement("value")) {
          XMLElement* curele = curval;
-         // id
-         curele = curele->FirstChildElement("id");
+         // ecid
+         curele = curele->FirstChildElement("ecid");
          if (!curele) {
            cout << "wrong configuration for ec.policy!" << endl;
            exit(1);
@@ -149,15 +149,15 @@ Config::Config(std::string& filepath) {
            exit(1);
          }
          int w = std::stoi(curele->GetText());
-         // locality
-         curele = curele->NextSiblingElement("locality") ;
-         if (!curele) {
-           cout << "wrong configuration for ec.policy!" << endl;
-           exit(1);
-         }
-         bool locality=false;
-         std::string localitystr = curele->GetText();
-         if (localitystr == "true") locality=true;
+//         // locality
+//         curele = curele->NextSiblingElement("locality") ;
+//         if (!curele) {
+//           cout << "wrong configuration for ec.policy!" << endl;
+//           exit(1);
+//         }
+//         bool locality=false;
+//         std::string localitystr = curele->GetText();
+//         if (localitystr == "true") locality=true;
          // opt level
          int optlevel = -1; // by default we enable Bind as optimization
          if (curele->NextSiblingElement("opt")) {
@@ -179,7 +179,8 @@ Config::Config(std::string& filepath) {
            }
            param.push_back(paramtext.substr(start));
          }
-         ECPolicy* ecpolicy = new ECPolicy(id, classname, n, k, w, locality, optlevel, param);
+//         ECPolicy* ecpolicy = new ECPolicy(id, classname, n, k, w, locality, optlevel, param);
+         ECPolicy* ecpolicy = new ECPolicy(id, classname, n, k, w, optlevel, param);
          _ecPolicyMap.insert(make_pair(id, ecpolicy));
        }
     } else if (attName == "offline.pool") {

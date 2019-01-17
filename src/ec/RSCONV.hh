@@ -20,7 +20,8 @@ class RSCONV : public ECBase {
     void generate_matrix(int* matrix, int rows, int cols, int w);  // This w is for galois field, which is different from our sub-packetization level _w
 
   public:
-    RSCONV(int n, int k, int w, bool locality, int opt, vector<string> param);
+//    RSCONV(int n, int k, int w, bool locality, int opt, vector<string> param);
+    RSCONV(int n, int k, int w, int opt, vector<string> param);
  
     ECDAG* Encode();
     ECDAG* Decode(vector<int> from, vector<int> to);

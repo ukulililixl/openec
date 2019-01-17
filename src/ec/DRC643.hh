@@ -23,7 +23,8 @@ class DRC643 : public ECBase {
     void generate_encoding_matrix();
 
   public:
-    DRC643(int n, int k, int cps, bool locality, int opt, vector<string> param);
+//    DRC643(int n, int k, int cps, bool locality, int opt, vector<string> param);
+    DRC643(int n, int k, int cps, int opt, vector<string> param);
     ECDAG* Encode();
     ECDAG* Decode(vector<int> from, vector<int> to);
     void Place(vector<vector<int>>& group);

@@ -1,10 +1,11 @@
 #include "DRC643.hh"
 
-DRC643::DRC643(int n, int k, int w, bool locality, int opt, vector<string> param) {
+//DRC643::DRC643(int n, int k, int w, bool locality, int opt, vector<string> param) {
+DRC643::DRC643(int n, int k, int w, int opt, vector<string> param) {
   _n = n;
   _k = k;
   _w = w;
-  _locality = locality;
+  _locality = true;
   _opt = opt;
 
   // param[0] = group num

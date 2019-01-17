@@ -1,10 +1,11 @@
 #include "RSCONV.hh"
 
-RSCONV::RSCONV(int n, int k, int w, bool locality, int opt, vector<string> param) {
+//RSCONV::RSCONV(int n, int k, int w, bool locality, int opt, vector<string> param) {
+RSCONV::RSCONV(int n, int k, int w, int opt, vector<string> param) {
   _n = n;
   _k = k;
   _w = w;
-  _locality = locality;
+//  _locality = locality;
   _opt = opt;
 
   _m = _n - _k;

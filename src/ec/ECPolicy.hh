@@ -22,12 +22,13 @@ class ECPolicy {
     int _n;
     int _k;
     int _w;
-    bool _locality;
+    bool _locality = false;
     int _opt;
 
     vector<string> _param;
   public:
-    ECPolicy(string id, string classname, int n, int k, int w, bool locality, int opt, vector<string> param);
+//    ECPolicy(string id, string classname, int n, int k, int w, bool locality, int opt, vector<string> param);
+    ECPolicy(string id, string classname, int n, int k, int w, int opt, vector<string> param);
     ECBase* createECClass();
     string getPolicyId();
     int getN();

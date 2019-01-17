@@ -16,4 +16,15 @@ add_library(libqfs_qcdio SHARED IMPORTED)
 set_property(TARGET libqfs_qcdio PROPERTY IMPORTED_LOCATION "$ENV{QFS_HOME}/build/release/lib/libqfs_qcdio.so")
 add_library(libqfs_qcrs SHARED IMPORTED)
 set_property(TARGET libqfs_qcrs PROPERTY IMPORTED_LOCATION "$ENV{QFS_HOME}/build/release/lib/libqfs_qcrs.so")
-target_link_libraries(fs hdfs jvm libqfs_client libqfs_access libqfs_common libqfs_io libqfs_qcdio libqfs_qcrs)
+
+if (${FS_TYPE} MATCHES "HDFS3")
+    target_link_libraries(fs hdfs jvm)
+endif(${FS_TYPE} MATCHES "HDFS3")
+
+if (${FS_TYPE} MATCHES "HDFSRAID")
+    target_link_libraries(fs hdfs jvm)
+endif(${FS_TYPE} MATCHES "HDFSRAID")
+
+if (${FS_TYPE} MATCHES "QFS")
+    target_link_libraries(fs libqfs_client libqfs_access libqfs_common libqfs_io libqfs_qcdio libqfs_qcrs)
+endif(${FS_TYPE} MATCHES "QFS")
