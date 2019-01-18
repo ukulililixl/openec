@@ -16,9 +16,6 @@ poolStore
 
 conf/
 
-hadoop-3.0-helper/*.jar
-hadoop-3.0-helper/oec/protocol/*.class
-
 script/sysSetting.xml*
 
 src/CMakeFiles/*
@@ -40,3 +37,4 @@ coor_output
 backup/*
 
 hdfs3-integration/*.jar
+hdfs3-integration/oec/protocol/*.class
