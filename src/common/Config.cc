@@ -9,9 +9,9 @@ Config::Config(std::string& filepath) {
        element=element->NextSiblingElement("attribute")){
      XMLElement* ele = element->FirstChildElement("name");
      std::string attName = ele -> GetText();
-     if (attName == "controller.address") {
+     if (attName == "controller.addr") {
        _coorIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
-     } else if (attName == "agents.address") {
+     } else if (attName == "agents.addr") {
        for (ele = ele -> NextSiblingElement("value"); ele != NULL; ele = ele -> NextSiblingElement("value")) {
          std::string networkloc = ele -> GetText();
          std::string tmpstring = networkloc.substr(1);
@@ -30,7 +30,7 @@ Config::Config(std::string& filepath) {
            _rack2Ips.insert(make_pair(rack, curRack));
          }
        }
-//     } else if (attName == "repair.address") {
+//     } else if (attName == "repair.addr") {
 //       _repairIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
 //       cout << "repairIp = " << RedisUtil::ip2Str(_repairIp) << endl;
     } else if (attName == "oec.agent.thread.num") {
@@ -41,7 +41,7 @@ Config::Config(std::string& filepath) {
       _distThreadNum = std::stoi(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "ec.concurrent.num") {
       _ec_concurrent = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-    } else if (attName == "local.address") {
+    } else if (attName == "local.addr") {
       _localIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "packet.size") {
       _pktSize = std::stoi(ele -> NextSiblingElement("value") -> GetText());
