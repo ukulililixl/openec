@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+<property><name>dfs.namenode.http-address</name><value>192.168.10.33:20000</value></property>
+<property><name>dfs.datanode.address</name><value>0.0.0.0:30000</value></property>
+<property><name>dfs.datanode.http.address</name><value>0.0.0.0:30001</value></property>
+<property><name>dfs.datanode.ipc.address</name><value>0.0.0.0:30002</value></property>
+<property><name>dfs.blockreport.intervalMsec</name><value>10</value></property>
+<property><name>dfs.datanode.dns.interface</name><value>eth1</value></property>
+<property><name>dfs.namenode.datanode.registration.ip-hostname-check</name><value>false</value></property>
+<property><name>dfs.datanode.directoryscan.interval</name><value>10s</value></property>
+<property><name>dfs.replication</name><value>1</value></property>
+<property><name>dfs.blocksize</name><value>67108864</value></property>
+<property><name>dfs.client.max.block.acquire.failures</name><value>0</value></property>
+<property><name>dfs.namenode.fs-limits.min-block-size</name><value>1024</value></property>
+<property><name>dfs.client-write-packet-size</name><value>131072</value></property>
+<property><name>enable.recovery</name><value>3</value></property>
+<property><name>dfs.block.replicator.classname</name><value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyOEC</value></property>
+<property><name>link.oec</name><value>6</value></property>
+<property><name>oec.controller.addr</name><value>192.168.10.33</value></property>
+<property><name>oec.local.addr</name><value>192.168.10.33</value></property>
+<property><name>oec.pktsize</name><value>131072</value></property>
+<property><name>io.file.buffer.size</name><value>131072</value></property>
+<property><name>placement.avoidlocal</name><value>OPENEC</value></property>
+</configuration>
