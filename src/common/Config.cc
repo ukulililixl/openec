@@ -66,7 +66,7 @@ Config::Config(std::string& filepath) {
       if (avoidlocal == "true") _avoid_local = true;
       else _avoid_local = false;
     } else if (attName == "dss.parameter") {
-      std::string paramtext = curele->NextSiblingElement("value")->GetText();
+      std::string paramtext = ele->NextSiblingElement("value")->GetText();
       int start = 0;
       int end = 0;
       
