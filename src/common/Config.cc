@@ -45,36 +45,37 @@ Config::Config(std::string& filepath) {
       _localIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "packet.size") {
       _pktSize = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-    } else if (attName == "underlying.fs.type") {
-//      if (ele -> NextSiblingElement("value") -> GetText() == std::string("HDFS3")) {
-//        _fsType = HDFS3;
-//      } else if (ele -> NextSiblingElement("value") -> GetText() == std::string("HDFS2")) {
-//        _fsType = HDFS2;
-//      }
+    } else if (attName == "dss.type") {
       _fsType = ele->NextSiblingElement("value")->GetText();
-//     } else if (attName == "underline.fs.address") {
-//       std::string addr = ele -> NextSiblingElement("value") -> GetText();
-//       int pos = addr.find(':');
-//       _fsIp = addr.substr(0, pos);
-//       _fsPort = atoi(addr.substr(pos+1).c_str());
-     } else if (attName == "control.policy") {
-       _control_policy = ele -> NextSiblingElement("value") -> GetText();
-     } else if (attName == "data.policy") {
-       _data_policy = ele -> NextSiblingElement("value") -> GetText();
-     } else if (attName == "encode.scheduling") {
-       _encode_scheduling = ele -> NextSiblingElement("value") -> GetText();
-     } else if (attName == "encode.policy") {
-       _encode_policy = ele -> NextSiblingElement("value") -> GetText();
-     } else if (attName == "repair.scheduling") {
-       _repair_scheduling = ele -> NextSiblingElement("value") -> GetText();
-     } else if (attName == "repair.policy") {
-       _repair_policy = ele -> NextSiblingElement("value") -> GetText();
-     } else if (attName == "repair.threshold") {
-       _repair_threshold = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-     } else if (attName == "placetest.avoidlocal") {
-       std::string avoidlocal = ele->NextSiblingElement("value")->GetText();
-       if (avoidlocal == "true") _avoid_local = true;
-       else _avoid_local = false;
+    } else if (attName == "control.policy") {
+      _control_policy = ele -> NextSiblingElement("value") -> GetText();
+    } else if (attName == "data.policy") {
+      _data_policy = ele -> NextSiblingElement("value") -> GetText();
+    } else if (attName == "encode.scheduling") {
+      _encode_scheduling = ele -> NextSiblingElement("value") -> GetText();
+    } else if (attName == "encode.policy") {
+      _encode_policy = ele -> NextSiblingElement("value") -> GetText();
+    } else if (attName == "repair.scheduling") {
+      _repair_scheduling = ele -> NextSiblingElement("value") -> GetText();
+    } else if (attName == "repair.policy") {
+      _repair_policy = ele -> NextSiblingElement("value") -> GetText();
+    } else if (attName == "repair.threshold") {
+      _repair_threshold = std::stoi(ele -> NextSiblingElement("value") -> GetText());
+    } else if (attName == "placetest.avoidlocal") {
+      std::string avoidlocal = ele->NextSiblingElement("value")->GetText();
+      if (avoidlocal == "true") _avoid_local = true;
+      else _avoid_local = false;
+    } else if (attName == "dss.parameter") {
+      std::string paramtext = curele->NextSiblingElement("value")->GetText();
+      int start = 0;
+      int end = 0;
+      
+      while ((end = paramtext.find(",", start)) != -1) {
+        std::string curparam = paramtext.substr(start, end);
+        _fsParam.push_back(curparam);
+        start = end + 1;
+      }
+      _fsParam.push_back(paramtext.substr(start));
     } else if (attName == "fs.factory") {
       for (XMLElement* curval = ele->NextSiblingElement("value");
            curval!=NULL;
@@ -105,9 +106,6 @@ Config::Config(std::string& filepath) {
         }
         param.push_back(paramtext.substr(start));
         _fsFactory.insert(make_pair(fstype, param));
-//        cout << "fstype: " << fstype << ", param: ";
-//        for (int i=0; i<param.size(); i++) cout << param[i] << " ";
-//        cout << endl;
       }
      } else if (attName == "ec.policy") {
        for (XMLElement* curval = ele->NextSiblingElement("value");
@@ -220,6 +218,8 @@ Config::Config(std::string& filepath) {
 //      _offlineECMap.insert(make_pair(poolname, ecid));
      }
    }
+
+   _fsFactory.insert(make_pair(_fsType, _fsParam));
 }
 
 Config::~Config() {

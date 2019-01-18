@@ -35,6 +35,7 @@ class Config {
 
     // fstype
     std::string _fsType;
+    std::string _fsParam;
     std::unordered_map<string, std::vector<string>> _fsFactory;
 
 //    std::string _fsIp;
