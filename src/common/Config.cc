@@ -41,7 +41,7 @@ Config::Config(std::string& filepath) {
       _distThreadNum = std::stoi(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "ec.concurrent.num") {
       _ec_concurrent = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-    } else if (attName == "local.ip.address") {
+    } else if (attName == "local.address") {
       _localIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "packet.size") {
       _pktSize = std::stoi(ele -> NextSiblingElement("value") -> GetText());
