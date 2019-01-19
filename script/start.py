@@ -19,10 +19,10 @@ res=concactstr.split("<attribute>")
 slavelist=[]
 fstype=""
 for attr in res:
-    if attr.find("underline.fs.type") != -1:
+    if attr.find("dss.type") != -1:
        attrtmp=attr.split("<value>")[1]
        fstype=attrtmp.split("</value>")[0]
-    if attr.find("agents.address") != -1:
+    if attr.find("agents.addr") != -1:
         valuestart=attr.find("<value>")
 	valueend=attr.find("</attribute>")
 	attrtmp=attr[valuestart:valueend]
