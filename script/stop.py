@@ -17,7 +17,7 @@ res=concactstr.split("<attribute>")
 
 slavelist=[]
 for attr in res:
-    if attr.find("agents.address") != -1:
+    if attr.find("agents.addr") != -1:
         valuestart=attr.find("<value>")
 	valueend=attr.find("</attribute>")
 	attrtmp=attr[valuestart:valueend]
