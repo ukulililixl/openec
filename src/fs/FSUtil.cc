@@ -2,13 +2,13 @@
 
 UnderFS* FSUtil::createFS(string type, vector<string> param, Config* conf) { 
   UnderFS* toret;
-  if (type == "hadoop3") {
-    cout << "hadoop3" << endl;
+  if (type == "hdfs3") {
+    cout << "hdfs3" << endl;
     #ifdef HDFS3
     toret = new Hadoop3(param, conf);
     #endif
-  } else if (type == "hadoop20") {
-    cout << "hadoop20" << endl;
+  } else if (type == "hdfsraid") {
+    cout << "hdfsraid" << endl;
     #ifdef HDFSRAID
     toret = new Hadoop20(param, conf);
     #endif
@@ -26,13 +26,13 @@ UnderFS* FSUtil::createFS(string type, vector<string> param, Config* conf) {
 }
 
 void FSUtil::deleteFS(string type, UnderFS* fshandler) {
-  if (type == "hadoop3") {
-    cout << "hadoop3" << endl;
+  if (type == "hdfs3") {
+    cout << "hdfs3" << endl;
     #ifdef HDFS3
     delete (Hadoop3*)fshandler;
     #endif
-  } else if (type == "hadoop20") {
-    cout << "hadoop20" << endl;
+  } else if (type == "hdfsraid") {
+    cout << "hdfsraid" << endl;
     #ifdef HDFSRAID
     delete (Hadoop20*)fshandler;
     #endif
