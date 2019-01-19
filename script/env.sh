@@ -1,13 +1,13 @@
 #!/bin/bash
 # usage: ./env.sh fstype
-#     fstype: hdfs3
+#     fstype: HDFS3
 
 FSTYPE=$1
 echo "evn.sh fstyp: "$FSTYPE
 
-if [ "$FSTYPE" = "hdfs3" ]; then
+if [ "$FSTYPE" = "HDFS3" ]; then
   export CLASSPATH=`hadoop classpath --glob`
-elif [ "$FSTYPE" = "hdfsraid" ]; then
+elif [ "$FSTYPE" = "HDFSRAID" ]; then
   export CLASSPATH=$JAVA_HOME/lib
   export CLASSPATH=${CLASSPATH}:${HADOOP_HOME}/conf
   export CLASSPATH=${CLASSPATH}:${JAVA_HOME}/lib/tools.jar
