@@ -42,9 +42,9 @@ class Config {
 //    int _fsPort;
 
     // placepolicy
-    std::string _control_policy;
-    std::string _data_policy;
-    bool _avoid_local;
+    std::string _control_policy = "random";
+    std::string _data_policy = "random";
+    bool _avoid_local = false;
 
     // ecpolicymap
     std::unordered_map<std::string, ECPolicy*> _ecPolicyMap;
@@ -54,11 +54,11 @@ class Config {
     std::unordered_map<string, int> _offlineECBase;
 
     // ec scheduling
-    std::string _encode_scheduling;  // normal, delay
-    std::string _encode_policy;      // random, balance
-    std::string _repair_scheduling;  // normal, delay, threshold
-    std::string _repair_policy;      // random, balance
-    int _repair_threshold;
+    std::string _encode_scheduling = "normal";  // normal, delay
+    std::string _encode_policy = "random";      // random, balance
+    std::string _repair_scheduling = "normal";  // normal, delay, threshold
+    std::string _repair_policy = "random";      // random, balance
+    int _repair_threshold = 10;
     int _ec_concurrent; // concurrent stripe num
 };
 #endif

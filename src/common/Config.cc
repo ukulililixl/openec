@@ -30,9 +30,6 @@ Config::Config(std::string& filepath) {
            _rack2Ips.insert(make_pair(rack, curRack));
          }
        }
-//     } else if (attName == "repair.addr") {
-//       _repairIp = inet_addr(ele -> NextSiblingElement("value") -> GetText());
-//       cout << "repairIp = " << RedisUtil::ip2Str(_repairIp) << endl;
     } else if (attName == "oec.agent.thread.num") {
       _agWorkerThreadNum = std::stoi(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "oec.controller.thread.num") {
@@ -47,24 +44,24 @@ Config::Config(std::string& filepath) {
       _pktSize = std::stoi(ele -> NextSiblingElement("value") -> GetText());
     } else if (attName == "dss.type") {
       _fsType = ele->NextSiblingElement("value")->GetText();
-    } else if (attName == "control.policy") {
-      _control_policy = ele -> NextSiblingElement("value") -> GetText();
-    } else if (attName == "data.policy") {
-      _data_policy = ele -> NextSiblingElement("value") -> GetText();
-    } else if (attName == "encode.scheduling") {
-      _encode_scheduling = ele -> NextSiblingElement("value") -> GetText();
-    } else if (attName == "encode.policy") {
-      _encode_policy = ele -> NextSiblingElement("value") -> GetText();
-    } else if (attName == "repair.scheduling") {
-      _repair_scheduling = ele -> NextSiblingElement("value") -> GetText();
-    } else if (attName == "repair.policy") {
-      _repair_policy = ele -> NextSiblingElement("value") -> GetText();
-    } else if (attName == "repair.threshold") {
-      _repair_threshold = std::stoi(ele -> NextSiblingElement("value") -> GetText());
-    } else if (attName == "placetest.avoidlocal") {
-      std::string avoidlocal = ele->NextSiblingElement("value")->GetText();
-      if (avoidlocal == "true") _avoid_local = true;
-      else _avoid_local = false;
+//    } else if (attName == "control.policy") {
+//      _control_policy = ele -> NextSiblingElement("value") -> GetText();
+//    } else if (attName == "data.policy") {
+//      _data_policy = ele -> NextSiblingElement("value") -> GetText();
+//    } else if (attName == "encode.scheduling") {
+//      _encode_scheduling = ele -> NextSiblingElement("value") -> GetText();
+//    } else if (attName == "encode.policy") {
+//      _encode_policy = ele -> NextSiblingElement("value") -> GetText();
+//    } else if (attName == "repair.scheduling") {
+//      _repair_scheduling = ele -> NextSiblingElement("value") -> GetText();
+//    } else if (attName == "repair.policy") {
+//      _repair_policy = ele -> NextSiblingElement("value") -> GetText();
+//    } else if (attName == "repair.threshold") {
+//      _repair_threshold = std::stoi(ele -> NextSiblingElement("value") -> GetText());
+//    } else if (attName == "placetest.avoidlocal") {
+//      std::string avoidlocal = ele->NextSiblingElement("value")->GetText();
+//      if (avoidlocal == "true") _avoid_local = true;
+//      else _avoid_local = false;
     } else if (attName == "dss.parameter") {
       std::string paramtext = ele->NextSiblingElement("value")->GetText();
       int start = 0;
@@ -177,7 +174,6 @@ Config::Config(std::string& filepath) {
            }
            param.push_back(paramtext.substr(start));
          }
-//         ECPolicy* ecpolicy = new ECPolicy(id, classname, n, k, w, locality, optlevel, param);
          ECPolicy* ecpolicy = new ECPolicy(id, classname, n, k, w, optlevel, param);
          _ecPolicyMap.insert(make_pair(id, ecpolicy));
        }

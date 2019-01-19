@@ -1,7 +1,7 @@
 #include "Hadoop3.hh"
 
 Hadoop3::Hadoop3(vector<string> params, Config* conf) {
-//  cout << "hadoop3 constructor!" << endl;
+  cout << "hadoop3 constructor!" << endl;
   _ip = params[0];
   _port = atoi(params[1].c_str());
   _fs = hdfsConnect(_ip.c_str(), _port);

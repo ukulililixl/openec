@@ -3,7 +3,7 @@
 #     fstype: hdfs3
 
 FSTYPE=$1
-echo $FSTYPE
+echo "evn.sh fstyp: "$FSTYPE
 
 if [ "$FSTYPE" = "hdfs3" ]; then
   export CLASSPATH=`hadoop classpath --glob`
