@@ -1,7 +1,7 @@
 # usage:
 #     python createconf.py pktsize control data avoidLocal repair
 #         1. pktsize(131072)
-#	  2. fstype(hdfs3/hdfsraid)
+#	  2. fstype(HDFS3/HDFSRAID)
 #	  3. offline base (1048576)
 
 
