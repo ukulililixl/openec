@@ -1,0 +1,510 @@
+\documentclass[letterpaper,12pt]{article}
+
+\usepackage{times}
+\usepackage{graphicx,color}
+\usepackage{amsmath,amssymb,verbatim}
+\usepackage{ulem}
+\usepackage{hyperref}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{makecell}
+\usepackage{xspace}
+\usepackage{url}
+
+\setlength{\hoffset}{0in}
+\setlength{\voffset}{0in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{0in}
+\setlength{\topmargin}{0in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{9in}
+\setlength{\marginparsep}{0pt}
+\setlength{\marginparwidth}{0pt}
+\setlength{\parskip}{9pt}
+\setlength{\parindent}{0pt}
+
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+\newcommand{\openec}{{\sf\small OpenEC}\xspace}
+\renewcommand{\ttdefault}{cmtt}
+
+\title{{\bf OpenEC User Guide}}
+\author{ADSLab @ CUHK}
+\date{Release: Feb 2019\\}
+
+\begin{document}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\tableofcontents
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% introduction
+
+\section{Preparation}
+\label{sec:installation}
+
+\subsection{Requirement}
+
+\begin{itemize}
+
+\item System: Ubuntu 14.04
+
+\item Username: openec
+
+\item Redis
+	
+\item Third party library: ISA-L, gf-complete
+
+\end{itemize}
+
+\openec now supports running atop HDFS3, HDFS-RAID and QFS. We need to deploy
+one DSS among the three to try out \openec. (We can choose any one section
+from \S\ref{sec:hdfs3}, \S\ref{sec:hdfsraid} and \S\ref{sec:qfs} for a reference
+to deploy DSS and skip the other two.)
+
+\section{OpenEC with HDFS3}
+\label{sec:hdfs3}
+
+In this section, we explain how to deploy \openec with HDFS3.
+
+\subsection{Prerequisite}
+
+Please install java8 in your system and set the environment variable {\tt JAVA\_HOME} in
+\path{~/.bashrc}. More prerequisites are illustrated in detail in {\sl BUILDING.txt}
+in the source code of Hadoop-3.0.0.
+
+\subsection{Install HDFS3 with OpenEC integrations}
+Please download {\bf hadoop-3.0.0-src.tar.gz} (we provided a copy on our project website)
+to the home directory of user {\sl openec} and extract source code from the tarball.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt tar -zxvf hadoop-3.0.0-src.tar.gz} 
+}%
+}
+\end{center}
+
+We now configure system variables for HDFS3. It is recommended to include the following
+configuration in your \path{~/.bashrc}.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+{\tt export HADOOP\_SRC\_DIR=/home/openec/hadoop-3.0.0-src} \\
+{\tt export HADOOP\_HOME=\${HADOOP\_SRC\_DIR}/hadoop-dist/target/hadoop-3.0.0} \\
+{\tt export PATH=\${HADOOP\_HOME}/bin:\${HADOOP\_HOME}/sbin:\${PATH}} \\
+{\tt export HADOOP\_CLASSPATH=\${JAVA\_HOME}/lib/tools.jar:\${HADOOP\_CLASSPATH}} \\
+{\tt export CLASSPATH=\$JAVA\_HOME/lib:\$CLASSPATH} \\
+{\tt export LD\_LIBRARY\_PATH=\$HADOOP\_HOME/lib/native:\${JAVA\_HOME}/jre/lib/\\amd64/server/:/usr/local/lib:\$LD\_LIBRARY\_PATH}
+}% 
+}
+\end{center}
+
+We download {\bf OpenEC-v1.0.tar.gz} from our project website to the home directory of user {\sl openec}
+and extract source code from the tarball. Now we can install integrations into HDFS3 by running
+the script {\sl install.sh}, which will also compile the modified source code of HDFS3.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt tar -zxvf OpenEC-v1.0.tar.gz} \\
+\$ {\tt cd OpenEC-v1.0/hdfs3-integration} \\
+\$ {\tt ./install.sh}
+}% 
+}
+\end{center}
+
+We now compile the source code of \openec. Please run the following commands.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt cd OpenEC-v1.0} \\
+\$ {\tt cmake . -DFS\_TYPE:STRING=HDFS3} \\
+\$ {\tt make}
+}% 
+}
+\end{center}
+
+\subsection{Example Architecture}
+
+Table~\ref{tab:hdfs3arch} shows an example architecture for our HDFS3 integration.
+Basically, \openec controller runs in the same node as the NameNode of HDFS3.
+And each HDFS3 DataNode co-locates with an \openec agent. Please distribute
+the working directory (\path{~/hadoop-3.0.0-src} and \path{~/OpenEC-v1.0}) to all 
+the nodes.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+IP & HDFS3 & OpenEC \\
+\hline
+\hline
+192.168.0.1 & NameNode & Controller \\
+\hline
+192.168.0.2 & DataNode & Agent \\
+\hline
+192.168.0.3 & DataNode & Agent \\
+\hline
+192.168.0.4 & DataNode & Agent \\
+\hline
+192.168.0.5 & DataNode & Agent \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{Example architecture for HDFS3 integration}
+\label{tab:hdfs3arch}
+\end{table}
+
+\subsection{HDFS3 Configuration}
+
+We provide sample configuration files under \path{OpenEC-v1.0/hdfs3-integration/conf} for
+HDFS3. Table~\ref{tab:hadoopenvhdfs3}, Table~\ref{tab:coresitehdfs3}, Table~\ref{tab:hdfssitehdfs3}
+and Table~\ref{tab:workershdfs3} explain some fields that we need in detail. Please configure
+your HDFS3 based on these samples.
+
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+JAVA\_HOME & - & Path to java installation \\
+\hline
+HADOOP\_CLASSPATH & \${HADOOP\_HOME/oeclib/*:\$JAVA\_HOME/lib*} & OpenEC and java libraries. \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{hadoop-env.sh of HDFS3}
+\label{tab:hadoopenvhdfs3}
+\end{table}
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+fs.defaultFS & hdfs://192.168.0.1:9000 & NameNode configuration. \\
+\hline
+hadoop.tmp.dir & \makecell[l]{/home/openec/hadoop-3.0.0-src/hadoop-dist/\\target/hadoop-3.0.0} & Base directory for hdfs3 temporary directories.\\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{core-site.xml of HDFS3}
+\label{tab:coresitehdfs3}
+\end{table}
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+dfs.replication & 1 & Replication factor of HDFS. \\
+\hline
+dfs.blocksize & 1048576 & The size of a block in bytes. \\
+\hline
+dfs.block.replicator.classname & \makecell[l]{org.apache.hadoop.hdfs.server.\\blockmanagement.BlockPlacementPolicyOEC} & \openec placement class. \\
+\hline
+link.oec & true & Run HDFS3 with \openec. \\
+\hline
+oec.controller.addr & 192.168.0.1 & IP address of \openec controller. \\
+\hline
+oec.local.addr & - & IP address of a node itself. \\
+\hline
+oec.pktsize & 131072 & The size of a packet in \openec. \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{hdfs-site.xml of HDFS3}
+\label{tab:hdfssitehdfs3}
+\end{table}
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|}
+\hline
+Field  \\
+\hline
+\hline
+192.168.0.2\\
+\hline
+192.168.0.3\\
+\hline
+192.168.0.4\\
+\hline
+192.168.0.5\\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{workers of HDFS3}
+\label{tab:workershdfs3}
+\end{table}
+
+
+To start HDFS3, we can run the following command in NameNode.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt hdfs namenode -format} \\
+\$ {\tt start-dfs.sh}
+}% 
+}
+\end{center}
+
+\subsection{OpenEC Configuration}
+
+We also provide sample configuration file for \openec under \path{OpenEC-v1.0/conf}.
+Table~\ref{tab:sysSetting} explains the default configuration provided in our sample.
+Table~\ref{tab:ecpolicy} and Table~\ref{tab:offlinepool} show the configuration of an
+erasure code and an offline encoding pool.
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+controller.address & 192.168.0.1 & IP address of controller. \\
+\hline
+agents.address & \makecell[l]{/default/192.168.0.2 \\ /default/192.168.0.3 \\ /default/192.168.0.4 \\ /default/192.168.0.5} & \makecell[l]{A list of IP addresses of all agents, in the form of {\sl zone/IP}, \\where {\sl zone} denotes the zone (e.g. rack or datacenter).} \\
+\hline
+local.address & - & IP address of a node itself. \\ 
+\hline
+packet.size & 131072 & The size of a packet. \\
+\hline
+dss.type & hdfs3 & Type of DSS. \\
+\hline
+dss.parameter & 172.16.83.132,9000 & IP and port of NameNode for HDFS3. \\
+\hline
+ec.policy & & Table~\ref{tab:ecpolicy}\\
+\hline
+offline.pool & & Table~\ref{tab:offlinepool}\\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{sysSetting.xml for \openec}
+\label{tab:sysSetting}
+\end{table}
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+ecid & rs\_4\_3 & Unique id for an erasure code. \\
+\hline
+class & RSCONV & Class name of erasure code implementation. \\
+\hline
+n & 4 & Parameter N for the erasure code. \\ 
+\hline
+k & 3 & Parameter K for the erasure code. \\
+\hline
+w & 1 & Parameter W for the erasure code. \\
+\hline
+opt & -1 & \makecell[l]{Optimization level for \openec. Four levels of optimization is provided \\by \openec, including -1, 0, 1, 2. -1: no optimization is enabled. \\0: BindX is enabled. 1: BindX and BindY are enabled. 2: Hierarchial \\awareness is enabled.} \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{ec.policy configuration}
+\label{tab:ecpolicy}
+\end{table}
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+poolid & rs\_4\_3\_pool & Unique id for an offline encoding pool. \\
+\hline
+ecid & rs\_4\_3 & Erasure code that is applied for the pool. \\
+\hline
+base & 1 & Block size (in MiB) for the pool, which is no larger than the block size in HDFS3. \\ 
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{offline.pool configuration}
+\label{tab:offlinepool}
+\end{table}
+
+To start \openec, we can run the following command in controller:
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt cd OpenEC-v1.0} \\
+\$ {\tt python script/start.py}
+}% 
+}
+\end{center}
+
+\section{OpenEC with HDFS-RAID}
+\label{sec:hdfsraid}
+
+\section{OpenEC with QFS}
+\label{sec:qfs}
+
+\section{Basic Operations}
+
+\openec supports four basic operations, including {\sl write}, {\sl read}, {\sl normal read} and
+{\sl full-node recovery}. We now show how to perform these basic operations. 
+
+\subsection{Write}
+
+OECClient supports two mode to write a file into DSS, including writing a file with online encoding
+enabled on the writing path and writing a file into an offline encoding pool, in which a coding group
+is organized and encoded offline.
+
+We show the usage and command line example to write a file (called {\sl input}) of 
+size 3\,MiB and store it as {\sl /testfile1} with online encoding enabled. The erasure code 
+for online encoding is {\sl rs\_4\_3}, which is configured in sysSetting.xml.
+
+Usage:
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+{\tt ./OECClient write [inputfile] [saveas] [ecid] online [sizeinMB]}
+}% 
+}
+\end{center}
+
+Example:
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt ./OECClient write input /testfile1 rs\_4\_3 online 3} 
+}% 
+}
+\end{center}
+
+We now show how to apply offline encoding. We first write the file into our offline encoding pool.
+The example command line in the following box shows that we write the file ({\sl input}) and store
+it as {\sl /testfile2}. The offline encoding pool is {\sl rs\_4\_3\_pool}, which is configured in sysSetting.xml.
+
+Usage:
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+{\tt ./OECClient write [inputfile] [saveas] [poolid] offline [sizeinMB]} 
+}% 
+}
+\end{center}
+
+Example:
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt ./OECClient write input /testfile2 rs\_4\_3\_pool offline 3} 
+}% 
+}
+\end{center}
+
+We then run the following command to instruct \openec start offline encoding.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt ./OECClient startEncode} 
+}% 
+}
+\end{center}
+
+When offline encoding for a coding group finishes, we can check the log of controller ({\sl coor\_output}).
+The following line denotes that the offline encoding for a coding group finishes, where {\sl xxxxxx} denotes
+the name of the coding group. Note that the name of a coding group is assigned by \openec.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+{\tt offlineEnc for xxxxxx finishes} 
+}% 
+}
+\end{center}
+
+
+\subsection{Read}
+
+We run OECClient to read a file, including normal read and degraded read. 
+The difference between normal read and degraded read is that for degraded read, we
+can delete physical blocks in DSS before we run the following command.
+
+Usage:
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+{\tt ./OECClient read [filename] [saveas]} 
+}% 
+}
+\end{center}
+
+Example:
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt ./OECClient read /testfile1 output1} \\
+\$ {\tt ./OECClient read /testfile2 output2} 
+}% 
+}
+\end{center}
+
+\subsection{Recovery}
+
+For recovery, we can delete physical blocks in DSS and then run the following command to instruct \openec 
+to start to repair lost blocks.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt ./OECClient startRepair} 
+}% 
+}
+\end{center}
+
+We can see the following information in the log of controller, which denotes that \openec finishes repairing a block.
+Note that {\sl xxxxxx} is corresponding block name in \openec.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+{\tt repair for xxxxxx finishes} 
+}% 
+}
+\end{center}
+
+\section{EC Design in OpenEC}
+
+\end{document}
