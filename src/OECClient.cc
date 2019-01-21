@@ -69,15 +69,15 @@ void write(string inputname, string filename, string ecidpool, string encodemode
    outstream->close();
    gettimeofday(&time4, NULL);
  
-   cout << "OECClient::create OECOutputStream: " << RedisUtil::duration(time1, time2)<< endl;
-   cout << "OECClient::write all data into redis: " << RedisUtil::duration(time2, time3) << endl;
-   cout << "OECClient::wait for ack: " << RedisUtil::duration(time3, time4) << endl;
+//   cout << "OECClient::create OECOutputStream: " << RedisUtil::duration(time1, time2)<< endl;
+//   cout << "OECClient::write all data into redis: " << RedisUtil::duration(time2, time3) << endl;
+//   cout << "OECClient::wait for ack: " << RedisUtil::duration(time3, time4) << endl;
    cout << "OECClient::write.overall.duration: " << RedisUtil::duration(time1, time4) << endl;
    struct timeval close1, close2;
    gettimeofday(&close1, NULL);
    fclose(inputfile);
    gettimeofday(&close2, NULL);
-   cout << "OECClient::overall.write.close inputfile: " << RedisUtil::duration(close1, close2) << endl;
+//   cout << "OECClient::overall.write.close inputfile: " << RedisUtil::duration(close1, close2) << endl;
    delete outstream;
    delete conf;
 }

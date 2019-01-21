@@ -54,12 +54,12 @@ void OECOutputStream::close() {
   }
  
   gettimeofday(&time2, NULL);
-  cout << "OECOutputStream.close.wait for all reply time = " << RedisUtil::duration(time1, time2) << endl; 
+//  cout << "OECOutputStream.close.wait for all reply time = " << RedisUtil::duration(time1, time2) << endl; 
  
   // wait for finish
   string wkey = "writefinish:"+_filename;
   rReply = (redisReply*)redisCommand(_localCtx, "blpop %s 0", wkey.c_str());
   freeReplyObject(rReply);
   gettimeofday(&time3, NULL);
-  cout << "OECOutputStream.close.wait for finish flag time = " << RedisUtil::duration(time2, time3) << endl;
+//  cout << "OECOutputStream.close.wait for finish flag time = " << RedisUtil::duration(time2, time3) << endl;
 }
