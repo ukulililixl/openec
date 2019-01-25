@@ -18,6 +18,7 @@ cp commons-pool2-2.4.2.jar $HADOOP_SRC_DIR/lib
 cp commons-pool2-2.4.2-javadoc.jar $HADOOP_SRC_DIR/lib
 cp jedis-3.0.0-SNAPSHOT.jar $HADOOP_SRC_DIR/lib
 cp oec-fs-protocol.jar $HADOOP_SRC_DIR/lib
+cp hadoop-0.20-raid.jar $HADOOP_SRC_DIR/lib
 
 # 3. copy openec modifications to hadoop src
 cp src/HadoopPipes.cc $HADOOP_SRC_DIR/src/c++/pipes/impl/HadoopPipes.cc
