@@ -1,11 +1,13 @@
 #!/bin/bash
 
 HADOOP_SRC_DIR=/home/xiaolu/OpenEC/hadoop-20-openec/
+OECINTEG=`pwd`
+OECLIB=$OECINTEG/../lib
 
-# 0. download third party libraries from our website here
-# wget commons-pool2-2.4.2.jar
-# wget commons-pool2-2.4.2-javadoc.jar
-# wget jedis-3.0.0-SNAPSHOT.jar
+echo $OECLIB
+
+# 0. prepare lib
+cp $OECLIB/* ./
 
 # 1. compile java version of openec command
 javac -cp .:./commons-pool2-2.4.2.jar:./commons-pool2-2.4.2-javadoc.jar:./jedis-3.0.0-SNAPSHOT.jar oec/protocol/AGCommand.java oec/protocol/CoorCommand.java
