@@ -1,0 +1,562 @@
+<configuration>
+<policy name = "ncsgroup0">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest0"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup1">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest1"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup2">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest2"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup3">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest3"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup4">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest4"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup5">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest5"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup6">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest6"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup7">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest7"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup8">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest8"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup9">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest9"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup10">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest10"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup11">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest11"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup12">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest12"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup13">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest13"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup14">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest14"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup15">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest15"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup16">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest16"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup17">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest17"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup18">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest18"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup19">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest19"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup20">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest20"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup21">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest21"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup22">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest22"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup23">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest23"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup24">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest24"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup25">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest25"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup26">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest26"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup27">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest27"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup28">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest28"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup29">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest29"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup30">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest30"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup31">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest31"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup32">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest32"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup33">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest33"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup34">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest34"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup35">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest35"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup36">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest36"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup37">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest37"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup38">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest38"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup39">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/raidTest39"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup40">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery0"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup41">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery1"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup42">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery2"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup43">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery3"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup44">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery4"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup45">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery5"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup46">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery6"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup47">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery7"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup48">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery8"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup49">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery9"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup50">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery10"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup51">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery11"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup52">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery12"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup53">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery13"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup54">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery14"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup55">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery15"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup56">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery16"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup57">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery17"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup58">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery18"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup59">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery19"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup60">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery20"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup61">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery21"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup62">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery22"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup63">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery23"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup64">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery24"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup65">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery25"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup66">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery26"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup67">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery27"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup68">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery28"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup69">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery29"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup70">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery30"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup71">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery31"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup72">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery32"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup73">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery33"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup74">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery34"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup75">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery35"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup76">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery36"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup77">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery37"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup78">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery38"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+<policy name = "ncsgroup79">
+<srcPath prefix="hdfs://192.168.10.33:9000/user/xiaolu/recovery39"></srcPath>
+<property><name>targetReplication</name><value>1</value></property>
+<property><name>metaReplication</name><value>1</value></property>
+<property><name>modTimePeriod</name><value>0</value></property>
+<CodecId>rs</CodecId>
+</policy>
+</configuration>
