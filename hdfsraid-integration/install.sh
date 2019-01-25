@@ -42,6 +42,7 @@ cp src/build.xml $HADOOP_SRC_DIR/
 cd $HADOOP_SRC_DIR
 ant -Dversion=0.20 -Dcompile.native=true -Dcompile.c++=true -Dlibhdfs=true compile-c++-libhdfs clean jar bin-package
 
+mkdir -p ${HADOOP_SRC_DIR}/lib/native
 cp ${HADOOP_SRC_DIR}/build/hadoop-0.20/lib/hadoop-0.20-raid.jar ${HADOOP_SRC_DIR}/lib/native/
 cp ${HADOOP_SRC_DIR}/build/native/Linux-amd64-64/lib/libhadoop.* ${HADOOP_SRC_DIR}/lib/native/
 cp ${HADOOP_SRC_DIR}/build/c++/Linux-amd64-64/lib/* ${HADOOP_SRC_DIR}/lib/native/
