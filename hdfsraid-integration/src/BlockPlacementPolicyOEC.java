@@ -76,7 +76,8 @@ public class BlockPlacementPolicyOEC extends BlockPlacementPolicyRaid {
     localJedisPoolConfig.setMaxTotal(1);
     localJedisPool = new JedisPool(localJedisPoolConfig, "127.0.0.1");
     stripeInfo = new HashMap<String, LinkedList<DatanodeDescriptor>>();
-    this.repairIp = conf.get("repair.ip", "192.168.10.21");
+//    this.repairIp = conf.get("repair.ip", "192.168.10.21");
+    this.repairIp = "127.0.0.1";
   }
 
 //  @Override
