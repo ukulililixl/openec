@@ -48,18 +48,133 @@
 \section{Preparation}
 \label{sec:installation}
 
-\subsection{Requirement}
+We have tested \openec in Ubuntu 14.04. Please create a user called {\sl openec} and
+install some prerequisite libraries list below.
 
 \begin{itemize}
 
-\item System: Ubuntu 14.04
+\item cmake v3.1 or higher
 
-\item Username: openec
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt sudo apt-get install cmake} 
+}%
+}
+\end{center}
 
-\item Redis
+\item g++ v4.8.4
+
+We need a C++ compiler that supports the C++11 standard.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt sudo apt-get install g++}
+}%
+}
+\end{center}
+
+\item redis v3.2.8 or higher
+
+Download {\bf redis-3.2.8.tar.gz} and install it.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt tar -zxvf redis-3.2.8.tar.gz} \\
+\$ {\tt cd redis-3.2.8} \\
+\$ {\tt make} \\
+\$ {\tt sudo make install}
+}%
+}
+\end{center}
+
+Install redis as a background daemon. You can just use the default settings
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt cd utils} \\
+\$ {\tt sudo ./install\_server.sh}
+}%
+}
+\end{center}
+
+Configure redis to be remotely accessible.
+%
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt sudo service redis\_6379 stop}
+}%
+}
+\end{center}
+
+Edit {\sl /etc/redis/6379.conf}. Find the line with {\em bind 127.0.0.0}
+and modify it to {\em bind 0.0.0.0}, then start redis.
+
+%
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt sudo service redis\_6379 start}
+}%
+}
+\end{center}
+
+\item hiredis
+
+Download {\bf hiredis.tar.gz} and install it.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt tar -zxvf hiredis.tar.gz} \\
+\$ {\tt cd hiredis} \\
+\$ {\tt make} \\
+\$ {\tt sudo make install} 
+}%
+}
+\end{center}
+
+\item gf-complete v1.03
+
+Download {\bf gf-complete.tar.gz} and install it (note that you may need to
+install {\sf autoconf} and {\sf libtool} first).
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt tar -zxvf gf-complete.tar.gz} \\
+\$ {\tt cd gf-complete} \\
+\$ {\tt ./autogen.sh} \\
+\$ {\tt ./configure} \\
+\$ {\tt make} \\
+\$ {\tt sudo make install}
+}%
+}
+\end{center}
+
+\item ISA-L v2.14.0
+
+Download {\bf isa-l-2.14.0.tar.gz} and install it (note that you may need to install
+{\sf yasm} which is required by isa-l first).
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt tar -zxvf isa-l-2.14.0.tar.gz} \\
+\$ {\tt cd isa-l-2.14.0} \\
+\$ {\tt ./autogen.sh} \\
+\$ {\tt ./configure} \\
+\$ {\tt make} \\
+\$ {\tt sudo make install}
+}%
+}
+\end{center}
 	
-\item Third party library: ISA-L, gf-complete
-
 \end{itemize}
 
 \openec now supports running atop HDFS3, HDFS-RAID and QFS. We need to deploy
@@ -74,11 +189,59 @@ In this section, we explain how to deploy \openec with HDFS3.
 
 \subsection{Prerequisite}
 
-Please install java8 in your system and set the environment variable {\tt JAVA\_HOME} in
-\path{~/.bashrc}. More prerequisites are illustrated in detail in {\sl BUILDING.txt}
-in the source code of Hadoop-3.0.0.
+% Please install java8 in your system and set the environment variable {\tt JAVA\_HOME} in
+% \path{~/.bashrc}. More prerequisites are illustrated in detail in {\sl BUILDING.txt}
+% in the source code of Hadoop-3.0.0.
 
-\subsection{Install HDFS3 with OpenEC integrations}
+The following packages need to be first installed.
+
+\begin{itemize}
+
+
+\item maven v3.5.0 or higher
+
+Download {\bf apache-maven-3.5.0-bin.tar.gz}.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt tar -zxvf apache-maven-3.5.0-bin.tar.gz}
+}%
+}
+\end{center}
+
+Set the environment variables {\tt M2\_HOME} and {\tt PATH} (you may need to
+set {\tt MVN\_OPTS} if you are behind a proxy.)
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+{\tt export M2\_HOME=\path{~/apache-maven-3.5.0}} \\
+{\tt export PATH=\$PATH:\$M2\_HOME/bin} 
+}%
+}
+\end{center}
+
+
+
+\item java8
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt sudo add-apt-repository ppa:webupd8team/java} \\
+\$ {\tt sudo apt-get update} \\
+\$ {\tt sudo apt-get install oracle-java8-installer} \\
+\$ {\tt sudo apt-get install oracle-java8-set-default}
+}%
+}
+\end{center}
+
+Set the environment variable {\tt JAVA\_HOME}.
+
+\end{itemize}
+
+\subsection{Install HDFS3 with OpenEC Integrations}
 Please download {\bf hadoop-3.0.0-src.tar.gz} (we provided a copy on our project website)
 to the home directory of user {\sl openec} and extract source code from the tarball.
 
@@ -167,14 +330,15 @@ IP & HDFS3 & OpenEC \\
 
 \subsection{HDFS3 Configuration}
 
-We provide sample configuration files under \path{OpenEC-v1.0/hdfs3-integration/conf} for
-HDFS3. Table~\ref{tab:hadoopenvhdfs3}, Table~\ref{tab:coresitehdfs3}, Table~\ref{tab:hdfssitehdfs3}
-and Table~\ref{tab:workershdfs3} explain some fields that we need in detail. Please configure
-your HDFS3 based on these samples.
+We provide sample configuration files under \path{OpenEC-v1.0/hdfs3-integration/conf} for HDFS3.
+We explain some fields that are related to \openec integrations here and you may leave other fields
+to be the same as our sample configurations. Please configure your HDFS3 based on our samples.
 
+\begin{itemize}
 
-\begin{table}[!t]
-\centering
+\item Hadoop-env.sh:
+
+\begin{center}
 \footnotesize
 \renewcommand{\arraystretch}{1.1}
 \begin{tabular}{|l|l|l|}
@@ -188,12 +352,11 @@ HADOOP\_CLASSPATH & \${HADOOP\_HOME/oeclib/*:\$JAVA\_HOME/lib*} & OpenEC and jav
 \hline
 \end{tabular}
 \vspace{-3pt}
-\caption{hadoop-env.sh of HDFS3}
-\label{tab:hadoopenvhdfs3}
-\end{table}
+\end{center}
 
-\begin{table}[!t]
-\centering
+\item core-site.xml:
+
+\begin{center}
 \footnotesize
 \renewcommand{\arraystretch}{1.1}
 \begin{tabular}{|l|l|l|}
@@ -207,11 +370,11 @@ hadoop.tmp.dir & \makecell[l]{/home/openec/hadoop-3.0.0-src/hadoop-dist/\\target
 \hline
 \end{tabular}
 \vspace{-3pt}
-\caption{core-site.xml of HDFS3}
-\label{tab:coresitehdfs3}
-\end{table}
+\end{center}
 
-\begin{table}[!t]
+\item hdfs-site.xml: Please leave other fields the same as default values in our sample.
+
+\begin{center}
 \centering
 \footnotesize
 \renewcommand{\arraystretch}{1.1}
@@ -224,7 +387,7 @@ dfs.replication & 1 & Replication factor of HDFS. \\
 \hline
 dfs.blocksize & 1048576 & The size of a block in bytes. \\
 \hline
-dfs.block.replicator.classname & \makecell[l]{org.apache.hadoop.hdfs.server.\\blockmanagement.BlockPlacementPolicyOEC} & \openec placement class. \\
+dfs.block.replicator.classname & \makecell[l]{org.apache.hadoop.hdfs.server.\\blockmanagement.\\BlockPlacementPolicyOEC} & \openec placement class. \\
 \hline
 link.oec & true & Run HDFS3 with \openec. \\
 \hline
@@ -236,18 +399,14 @@ oec.pktsize & 131072 & The size of a packet in \openec. \\
 \hline
 \end{tabular}
 \vspace{-3pt}
-\caption{hdfs-site.xml of HDFS3}
-\label{tab:hdfssitehdfs3}
-\end{table}
+\end{center}
 
-\begin{table}[!t]
-\centering
+\item workers:
+
+\begin{center}
 \footnotesize
 \renewcommand{\arraystretch}{1.1}
 \begin{tabular}{|l|}
-\hline
-Field  \\
-\hline
 \hline
 192.168.0.2\\
 \hline
@@ -259,10 +418,9 @@ Field  \\
 \hline
 \end{tabular}
 \vspace{-3pt}
-\caption{workers of HDFS3}
-\label{tab:workershdfs3}
-\end{table}
+\end{center}
 
+\end{itemize}
 
 To start HDFS3, we can run the following command in NameNode.
 
@@ -275,9 +433,271 @@ To start HDFS3, we can run the following command in NameNode.
 }
 \end{center}
 
-\subsection{OpenEC Configuration}
+\section{OpenEC with HDFS-RAID}
+\label{sec:hdfsraid}
 
-We also provide sample configuration file for \openec under \path{OpenEC-v1.0/conf}.
+In this section, we show how to deploy \openec with HDFS-RAID.
+
+\subsection{Prerequisite}
+
+The following packages need first to be installed.
+
+\begin{itemize}
+
+\item ant  
+
+Download {\bf apache-ant-1.9.13-bin.tar.gz}.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt tar -zxvf apache-ant-1.9.13.-bin.tar.gz}
+}%
+}
+\end{center}
+
+Set the environment variables {\tt ANT\_HOME} and {\tt PATH} (you may need to
+set {\tt ANT\_OPTS} if you are behind a proxy.)
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+{\tt export ANT\_HOME=\path{~/apache-ant-1.9.13}} \\
+{\tt export PATH=\$PATH:\$ANT\_HOME/bin}
+}%
+}
+\end{center}
+
+\item java8
+
+If you have installed java8, please skip this step.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt sudo add-apt-repository ppa:webupd8team/java} \\
+\$ {\tt sudo apt-get update} \\
+\$ {\tt sudo apt-get install oracle-java8-installer} \\
+\$ {\tt sudo apt-get install oracle-java8-set-default}
+}%
+}
+\end{center}
+
+Set the environment variable {\tt JAVA\_HOME}.
+
+\end{itemize}
+
+\subsection{Install HDFS-RAID with OpenEC Integrations}
+
+Please download hadoop-20.tar.gz (we provided a copy on our project website).
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+\$ {\tt tar -zxvf hadoop-20.tar.gz}
+}%
+}
+\end{center}
+
+We now configure system variables for HDFS-RAID. It is recommended to include the following
+configuration in your \path{~/.bashrc}.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{400pt}{%
+{\tt export HADOOP\_HOME=/home/openec/hadoop-20} \\
+{\tt export PATH=\$HADOOP\_HOME/bin:\$HADOOP\_HOME/sbin:\$PATH} \\
+{\tt export HADOOP\_CLASSPATH=\${JAVA\_HOME}/lib/tools.jar:\$HADOOP\_CLASSPATH} \\
+{\tt export CLASSPATH=\$JAVA\_HOME/lib:\$CLASSPATH} \\
+{\tt export LD\_LIBRARY\_PATH=\$HADOOP\_HOME/lib/native:\${JAVA\_HOME}/jre/lib/ \\ amd64/server/:/usr/local/lib:\$LD\_LIBRARY\_PATH}
+}%
+}
+\end{center}
+
+We download OpenEC-v1.0.tar.gz from our project website to the home directory of user {\sl openec}
+and extract source code from the tarball. Now we can install integrations into HDFS-RAID by running
+the script install.sh, which will also compile the modified source code of HDFS-RAID.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt tar -zxvf OpenEC-v1.0.tar.gz} \\
+\$ {\tt cd OpenEC-v1.0/hdfs3-integration} \\
+\$ {\tt ./install.sh}
+}% 
+}
+\end{center}
+
+We now compile the source code of \openec. Please run the following commands.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt cd OpenEC-v1.0} \\
+\$ {\tt cmake . -DFS\_TYPE:STRING=HDFSRAID} \\
+\$ {\tt make}
+}% 
+}
+\end{center}
+
+\subsection{Example Architecture}
+
+Table~\ref{tab:hdfsraidarch} shows an example architecture for our HDFS-RAID integration.
+Basically, \openec controller runs in the same node as the NameNode of HDFS-RAID.
+And each HDFS-RAID DataNode co-locates with an \openec agent. Please distribute
+the working directory (\path{~/hadoop-20} and \path{~/OpenEC-v1.0}) to all 
+the nodes.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+IP & HDFS3 & OpenEC \\
+\hline
+\hline
+192.168.0.1 & NameNode & Controller \\
+\hline
+192.168.0.2 & DataNode & Agent \\
+\hline
+192.168.0.3 & DataNode & Agent \\
+\hline
+192.168.0.4 & DataNode & Agent \\
+\hline
+192.168.0.5 & DataNode & Agent \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\caption{Example architecture for HDFS-RAID integration}
+\label{tab:hdfsraidarch}
+\end{table}
+
+\subsection{HDFS-RAID Configuration}
+
+% We provide sample configuration files under \path{OpenEC-v1.0/hdfsraid-integration/conf} for HDFS-RAID.
+% We explain some configuration fields in Table~\ref{tab:hadoopenvhdfsraid}, Table~\ref{tab:coresitehdfsraid}, 
+% Table~\ref{tab:hdfssitehdfsraid}, Table~\ref{tab:mastershdfsraid} and Table~\ref{tab:slaveshdfsraid} in detail, which
+% are related to \openec integrations. Please configure your HDFS-RAID according to these sample configuration files.
+
+
+\begin{itemize}
+
+\item hadoop-env.sh:
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+JAVA\_HOME & - & Path to java installation \\
+\hline
+HADOOP\_CLASSPATH & \${HADOOP\_HOME/oeclib/*:\$JAVA\_HOME/lib*} & OpenEC and java libraries. \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\end{center}
+
+\item core-site.xml: 
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+fs.default.name & hdfs://192.168.0.1:9000 & NameNode configuration. \\
+\hline
+hadoop.tmp.dir & \makecell[l]{/home/openec/hadoop-20/tmp} & Base directory for HDFS-RAID temporary directories.\\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\end{center}
+
+\item hdfs-site.xml:
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|l|}
+\hline
+Field & Default & Description \\
+\hline
+\hline
+dfs.http.address & 192.168.0.1:50070 & HTTP address of NameNode \\
+\hline
+dfs.replication & 1 & Replication factor of HDFS-RAID. \\
+\hline
+dfs.block.size & 1048576 & The size of a block in bytes. \\
+\hline
+dfs.block.replicator.classname & \makecell[l]{org.apache.hadoop.hdfs.server.\\namenode.BlockPlacementPolicyOEC} & \openec placement class. \\
+\hline
+link.oec & true & Run HDFS-RAID with \openec. \\
+\hline
+oec.controller.addr & 192.168.0.1 & IP address of \openec controller. \\
+\hline
+oec.local.addr & - & IP address of a node itself. \\
+\hline
+oec.pktsize & 131072 & The size of a packet in \openec. \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\end{center}
+
+\item masters:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|}
+\hline
+192.168.0.1 \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\end{center}
+
+\item slaves:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|}
+\hline
+192.168.0.2 \\
+\hline
+192.168.0.3 \\
+\hline
+192.168.0.4 \\
+\hline
+192.168.0.5 \\
+\hline
+\end{tabular}
+\vspace{-3pt}
+\end{center}
+
+\end{itemize}
+
+To start HDFS-RAID, we can run the following command in NameNode.
+
+\begin{center}
+\noindent\fbox{%
+\parbox{420pt}{%
+\$ {\tt hadoop namenode -format} \\
+\$ {\tt start-dfs.sh}
+}% 
+}
+\end{center}
+
+\section{OpenEC with QFS}
+\label{sec:qfs}
+
+\section{OpenEC Configuration}
+
+We provide sample configuration file for \openec under \path{OpenEC-v1.0/conf}.
 Table~\ref{tab:sysSetting} explains the default configuration provided in our sample.
 Table~\ref{tab:ecpolicy} and Table~\ref{tab:offlinepool} show the configuration of an
 erasure code and an offline encoding pool.
@@ -299,9 +719,9 @@ local.address & - & IP address of a node itself. \\
 \hline
 packet.size & 131072 & The size of a packet. \\
 \hline
-dss.type & hdfs3 & Type of DSS. \\
+dss.type & HDFS3 & \makecell[l]{Type of DSS. Please choose from {\sl HDFS3}, {\sl HDFSRAID} and {\sl QFS}}. \\
 \hline
-dss.parameter & 172.16.83.132,9000 & IP and port of NameNode for HDFS3. \\
+dss.parameter & 192.168.0.1,9000 & IP and port of DSS for client access. \\
 \hline
 ec.policy & & Table~\ref{tab:ecpolicy}\\
 \hline
@@ -371,12 +791,6 @@ To start \openec, we can run the following command in controller:
 }% 
 }
 \end{center}
-
-\section{OpenEC with HDFS-RAID}
-\label{sec:hdfsraid}
-
-\section{OpenEC with QFS}
-\label{sec:qfs}
 
 \section{Basic Operations}
 
