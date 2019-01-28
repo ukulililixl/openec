@@ -1,0 +1,90 @@
+#
+# $Id$
+#
+# Created 2006
+# Author: Sriram Rao (Kosmix Corp)
+#
+# Copyright 2008-2012,2016 Quantcast Corporation. All rights reserved.
+# Copyright 2006 Kosmix Corp.
+#
+# This file is part of Kosmos File System (KFS).
+#
+# Licensed under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+#
+
+# Take all the .cc files and build a library out of them
+set (lib_src
+    BufferedLogWriter.cc
+    hsieh_hash.cc
+    MsgLogger.cc
+    Properties.cc
+    CoorCommand.cc
+    time.cc
+    kfsatomic.cc
+    MemLock.cc
+    RequestParser.cc
+    rusage.cc
+    nofilelimit.cc
+    kfserrno.cc
+    kfsdecls.cc
+)
+
+# for the version file
+set (VERSION_CC ${CMAKE_CURRENT_SOURCE_DIR}/Version.cc)
+set_source_files_properties(${VERSION_CC} PROPERTIES GENERATED ON)
+
+#
+# Build both static/dynamic libraries.  Force the linking of all apps
+# with a statically linked library.  Since kfsCommon is the symbol
+# used everywhere, associate that symbol with the STATIC library.
+#
+
+string (REPLACE ";" "," Boost_LIBRARIES_STR "${Boost_LIBRARIES}")
+add_custom_target (
+    version ALL COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/buildversgit.sh
+        --generate
+        --build-type ${CMAKE_BUILD_TYPE}
+        --source-dir ${CMAKE_SOURCE_DIR}
+        --outfile ${VERSION_CC}
+        --extra "boost:"
+        --extra "${Boost_INCLUDE_DIRS}"
+        --extra "${Boost_LIBRARIES_STR}"
+        --extra "source dir:"
+        --extra "${CMAKE_SOURCE_DIR}"
+    VERBATIM
+)
+
+add_library (kfsCommon-shared SHARED ${lib_src} ${VERSION_CC})
+add_library (kfsCommon STATIC ${lib_src} ${VERSION_CC})
+add_dependencies (kfsCommon
+    version
+    qcdio
+)
+add_dependencies (kfsCommon-shared
+    version
+    qcdio-shared
+)
+set_target_properties (kfsCommon PROPERTIES OUTPUT_NAME "qfs_common")
+set_target_properties (kfsCommon-shared PROPERTIES OUTPUT_NAME "qfs_common")
+set_target_properties (kfsCommon PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties (kfsCommon-shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+
+target_link_libraries (kfsCommon qcdio hiredis)
+target_link_libraries (kfsCommon-shared qcdio-shared hiredis)
+
+install (TARGETS kfsCommon-shared kfsCommon
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib/static)
+
+install (FILES kfstypes.h kfsdecls.h DESTINATION include/kfs/common)
