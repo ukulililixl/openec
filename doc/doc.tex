@@ -1163,4 +1163,31 @@ Note that {\sl xxxxxx} is corresponding block name in \openec.
 
 \section{EC Design in OpenEC}
 
+We now introduce how to design a new erasure code in \openec. Here is the base class of erasure code 
+implementations in \openec. New erasure code needs to extend this base class and provides implementations
+for {\sl Encode}, {\sl Decode} and {\sl Place} methods. We provide several erasure codes implementations
+under \path{OpenEC-v1.0/src/ec}. Please refer to our sample implementations there.
+
+
+\begin{center}
+\noindent\fbox{%
+\parbox{480pt}{%
+{\tt class ECBase \{ } \\
+{\tt public: } \\
+{\tt    int \_n, \_k, \_w; } \\
+{\tt    int \_opt; } \\
+{\tt    		} \\
+{\tt    ECBase(); } \\
+{\tt    ECBase(int n, int k, int w, bool locality, int opt, vector<string> param); }\\
+{\tt 			}\\    
+{\tt    virtual ECDAG* Encode() = 0; }\\
+{\tt    virtual ECDAG* Decode(vector<int> from, vector<int> to) = 0; }\\
+{\tt    virtual void Place(vector<vector<int>>\& group) = 0; } \\
+{\tt \}; }
+}% 
+}
+
+\end{center}
+
 \end{document}
+
