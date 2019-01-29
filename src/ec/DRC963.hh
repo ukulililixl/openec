@@ -19,6 +19,7 @@ class DRC963 : public ECBase {
     int _enc_chunk_num;
     int _total_chunk_num;
     int _enc_matrix[DRC963_MAX * DRC963_MAX];
+    bool _locality;
 
     void generate_encoding_matrix();
   public:

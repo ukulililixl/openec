@@ -3,5 +3,5 @@
 ECBase::ECBase(){
 }
 
-ECBase::ECBase(int n, int k, int w, bool locality, int opt, vector<string> param) {
+ECBase::ECBase(int n, int k, int w, int opt, vector<string> param) {
 }
