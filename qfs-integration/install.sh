@@ -15,5 +15,4 @@ cp src/CMakeLists.txt $QFS_SRC_DIR/src/cc/common/CMakeLists.txt
 
 # 2. compile
 cd $QFS_SRC_DIR
-cmake .
 make

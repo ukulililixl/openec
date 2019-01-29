@@ -25,10 +25,11 @@ Hadoop20File* Hadoop20::openFile(string filename, string mode) {
   if (mode == "read") {
     cout << "Hadoop20::openFile " << filename << " for read" << endl;
     underfile = hdfsOpenFile(_fs, filename.c_str(), O_RDONLY, _conf->_pktSize, 0, 0);
-    if (!underfile) {
+    if (underfile) {
       // try to read 1 byte
       int tmpres;
-      int res = hdfsPread(_fs, underfile, 0, (void*)&tmpres, 1);
+      int res = hdfsRead(_fs, underfile, (void*)&tmpres, 1);
+      cout << "Hadoop20::openFile.try to read 1 byte, res: " << res << endl;
       if (res < 1) underfile = NULL;
       else hdfsSeek(_fs, underfile, 0);
     }

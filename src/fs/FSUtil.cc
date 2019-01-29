@@ -14,8 +14,8 @@ UnderFS* FSUtil::createFS(string type, vector<string> param, Config* conf) {
     #endif
   } else if (type == "QFS") {
     #ifdef QFS
-    cout << "FSUtil::QFS" << endl;
-    toret = new QFS(param, conf);
+    cout << "FSUtil::QuantcastFS" << endl;
+    toret = new QuantcastFS(param, conf);
     #endif
   } else {
     cout << "unrecognized FS type!" << endl;
@@ -38,8 +38,8 @@ void FSUtil::deleteFS(string type, UnderFS* fshandler) {
     #endif
   } else if (type == "QFS") {
     #ifdef QFS
-    cout << "FSUtil::QFS" << endl;
-    delete (QFS*)fshandler;
+    cout << "FSUtil::QuantcastFS" << endl;
+    delete (QuantcastFS*)fshandler;
     #endif
   }
 }

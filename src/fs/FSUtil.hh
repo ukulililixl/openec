@@ -10,7 +10,7 @@
 #endif
 
 #ifdef QFS
-#include "QFS.hh"
+#include "QuantcastFS.hh"
 #endif
 
 #include "UnderFS.hh"

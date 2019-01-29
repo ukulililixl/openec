@@ -1,4 +1,4 @@
-#include "QFS.hh"
+#include "QFSFile.hh"
 
 QFSFile::QFSFile(string objname, int fd) {
   _objname = objname;

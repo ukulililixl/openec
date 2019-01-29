@@ -1,5 +1,5 @@
-#ifndef _QFS_HH_
-#define _QFS_HH_
+#ifndef _QUANTCASTFS_HH_
+#define _QUANTCASTFS_HH_
 
 #include "QFSFile.hh"
 #include "UnderFS.hh"
@@ -11,14 +11,14 @@
 
 using namespace std;
 
-class QFS : public UnderFS {
+class QuantcastFS : public UnderFS {
   private:
     string _ip;
     int _port;
     KFS::KfsClient* _fs;
   public:
-    QFS(vector<string> params, Config* conf);
-    ~QFS();
+    QuantcastFS(vector<string> params, Config* conf);
+    ~QuantcastFS();
     QFSFile* openFile(string filename, string mode);
     void writeFile(UnderFile* file, char* buffer, int len);
     void flushFile(UnderFile* file);
