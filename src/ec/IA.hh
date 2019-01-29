@@ -26,7 +26,6 @@ class IA : public ECBase {
     void generate_decoding_matrix(int rBlkIdx);
     void square_cauchy_matrix(int *des, int size);
   public:
-//    IA(int n, int k, int w, bool locality, int opt, vector<string> param);
     IA(int n, int k, int w, int opt, vector<string> param);
     ECDAG* Encode();
     ECDAG* Decode(vector<int> from, vector<int> to);

@@ -16,7 +16,6 @@ class WASLRC : public ECBase {
 
     void generate_matrix(int* matrix, int k, int l, int r, int w);
   public:
-//    WASLRC(int n, int k, int cps, bool locality, int opt, vector<string> param);
     WASLRC(int n, int k, int cps, int opt, vector<string> param);
 
     ECDAG* Encode();

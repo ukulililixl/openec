@@ -1,6 +1,5 @@
 #include "DRC643.hh"
 
-//DRC643::DRC643(int n, int k, int w, bool locality, int opt, vector<string> param) {
 DRC643::DRC643(int n, int k, int w, int opt, vector<string> param) {
   _n = n;
   _k = k;
@@ -8,7 +7,6 @@ DRC643::DRC643(int n, int k, int w, int opt, vector<string> param) {
   _locality = true;
   _opt = opt;
 
-  // param[0] = group num
   _r = atoi(param[0].c_str());
   _m = _n - _k;
   _nr = _n / _r;

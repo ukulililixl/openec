@@ -1,11 +1,9 @@
 #include "WASLRC.hh"
 
-//WASLRC::WASLRC(int n, int k, int w, bool locality, int opt, vector<string> param) {
 WASLRC::WASLRC(int n, int k, int w, int opt, vector<string> param) {
   _n = n;
   _k = k;
   _w = w;
-//  _locality = locality;
   _opt = opt;
   // there should be two other parameters in param
   // 0. l (local parity num)

@@ -1,6 +1,5 @@
 #include "DRC963.hh"
 
-//DRC963::DRC963(int n, int k, int w, bool locality, int opt, vector<string> param) {
 DRC963::DRC963(int n, int k, int w, int opt, vector<string> param) {
   _n = n;
   _k = k;
