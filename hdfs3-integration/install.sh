@@ -2,11 +2,8 @@
 
 HADOOP_SRC_DIR=/home/openec/hadoop-3.0.0-src
 
-
-# 0. download third party libraries from our website here
-# wget commons-pool2-2.4.2.jar
-# wget commons-pool2-2.4.2-javadoc.jar
-# wget jedis-3.0.0-SNAPSHOT.jar
+# 0. cp third party libraries
+cp ../lib/* ./
 
 # 1. compile java version of openec command
 javac -cp .:./commons-pool2-2.4.2.jar:./commons-pool2-2.4.2-javadoc.jar:./jedis-3.0.0-SNAPSHOT.jar oec/protocol/AGCommand.java oec/protocol/CoorCommand.java
@@ -34,19 +31,19 @@ cp src/hdfs.c  $HADOOP_SRC_DIR/hadoop-hdfs-project/hadoop-hdfs-native-client/src
 cp src/DFSInputStream.java $HADOOP_SRC/DIR/hadoop-hdfs-project/hadoop-hdfs-client/src/main/java/org/apache/hadoop/hdfs/
 cp src/pom.xml $HADOOP_SRC_DIR/
 
-## 4. prepare pom for hadoop-hdfs-client package
-#oecprotopath=${HADOOP_SRC_DIR}/oeclib/oec-fs-protocol.jar
-#dependencyoec="<dependency>\n<groupId>oec.protocol</groupId>\n<artifactId>oec</artifactId>\n<version>1.0.0-SNAPSHOT</version>\n<scope>system</scope>\n<systemPath>${oecprotopath}</systemPath>\n</dependency>\n"
-#pomfile=${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs-client/pom.xml
-#sed -i "/<dependencies>/a ${dependencyoec}" $pomfile
-#
-#redisclipath=${HADOOP_SRC_DIR}/oeclib/jedis-3.0.0-SNAPSHOT.jar
-#dependencyredis="<dependency>\n<groupId>redis.clients</groupId>\n<artifactId>jedis</artifactId>\n<version>3.0.0-SNAPSHOT</version>\n<scope>system</scope>\n<systemPath>${redisclipath}</systemPath>\n</dependency>\n"
-#sed -i "/<dependencies>/a ${dependencyredis}" $pomfile
-#
-#commonpath=${HADOOP_SRC_DIR}/oeclib/commons-pool2-2.4.2.jar
-#dependencycommon="<dependency>\n<groupId>org.apache.commons</groupId>\n<artifactId>commons-pool2</artifactId>\n<version>2.4.2</version>\n<scope>system</scope>\n<systemPath>${commonpath}</systemPath>\n</dependency>\n"
-#sed -i "/<dependencies>/a ${dependencycommon}" $pomfile
+# 4. prepare pom for hadoop-hdfs-client package
+oecprotopath=${HADOOP_SRC_DIR}/oeclib/oec-fs-protocol.jar
+dependencyoec="<dependency>\n<groupId>oec.protocol</groupId>\n<artifactId>oec</artifactId>\n<version>1.0.0-SNAPSHOT</version>\n<scope>system</scope>\n<systemPath>${oecprotopath}</systemPath>\n</dependency>\n"
+pomfile=${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs-client/pom.xml
+sed -i "/<dependencies>/a ${dependencyoec}" $pomfile
+
+redisclipath=${HADOOP_SRC_DIR}/oeclib/jedis-3.0.0-SNAPSHOT.jar
+dependencyredis="<dependency>\n<groupId>redis.clients</groupId>\n<artifactId>jedis</artifactId>\n<version>3.0.0-SNAPSHOT</version>\n<scope>system</scope>\n<systemPath>${redisclipath}</systemPath>\n</dependency>\n"
+sed -i "/<dependencies>/a ${dependencyredis}" $pomfile
+
+commonpath=${HADOOP_SRC_DIR}/oeclib/commons-pool2-2.4.2.jar
+dependencycommon="<dependency>\n<groupId>org.apache.commons</groupId>\n<artifactId>commons-pool2</artifactId>\n<version>2.4.2</version>\n<scope>system</scope>\n<systemPath>${commonpath}</systemPath>\n</dependency>\n"
+sed -i "/<dependencies>/a ${dependencycommon}" $pomfile
 
 # 4. compile source code
 cd $HADOOP_SRC_DIR

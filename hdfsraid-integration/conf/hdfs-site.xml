@@ -1,27 +1,13 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
-<!--property><name>dfs.http.address</name><value>192.168.10.33:50070</value></property>
-<property><name>dfs.datanode.dns.interface</name><value>eth1</value></property>
-<property><name>dfs.namenode.handler.count</name><value>40</value></property-->
-<property><name>repair.ip</name><value>192.168.10.21</value></property>
+<property><name>dfs.http.address</name><value>192.168.0.1:50070</value></property>
 <property><name>dfs.replication</name><value>1</value></property>
-<property><name>dfs.block.size</name><value>67108864</value></property>
+<property><name>dfs.block.size</name><value>1048576</value></property>
 <property><name>io.file.buffer.size</name><value>131072</value></property>
-<property><name>test.io.file.buffer.size</name><value>131072</value></property>
-<!--property><name>iotest.stream</name><value>HDFSEC</value></property>
-<property><name>test.io.ec.k</name><value>6</value></property>
-<property><name>test.io.ec.m</name><value>3</value></property>
-<property><name>test.io.ec.mode</name><value>offline</value></property>
-<property><name>test.io.filesize.mb</name><value>384</value></property>
-<property><name>test.io.ec.id</name><value>rs_9_6</value></property-->
-<property><name>placement.avoidlocal</name><value>false</value></property>
-<property><name>test.io.control.policy</name><value>random</value></property>
-<property><name>test.io.data.policy</name><value>random</value></property>
-<property><name>enable.recovery</name><value>true</value></property>
-<property><name>link.oec</name><value>false</value></property>
-<property><name>oec.coordinator.addr</name><value>192.168.10.33</value></property>
-<property><name>oec.local.addr</name><value>192.168.10.22</value></property>
+<property><name>link.oec</name><value>true</value></property>
+<property><name>oec.coordinator.addr</name><value>192.168.0.1</value></property>
+<property><name>oec.local.addr</name><value>-</value></property>
 <property><name>oec.pktsize</name><value>131072</value></property>
 <property><name>dfs.block.replicator.classname</name><value>org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyOEC</value></property>
 <property><name>hdfs.raid.parity.initial.repl</name><value>1</value></property>
@@ -30,11 +16,11 @@
 <property><name>raid.mod.time.period</name><value>0</value></property>
 <property><name>dfs.safemode.threshold.pct</name><value>0</value></property>
 <property><name>raid.blockfix.classname</name><value>org.apache.hadoop.raid.DistBlockIntegrityMonitor</value></property>
-<property><name>raid.config.file</name><value>/home/xiaolu/OpenEC/hadoop-20-openec/conf/raid.xml</value></property>
+<property><name>raid.config.file</name><value>/home/openec/hadoop-20/conf/raid.xml</value></property>
 <property><name>hdfs.raid.stripe.store.class</name><value>org.apache.hadoop.raid.DBStripeStore</value></property>
-<property><name>hdfs.raid.local.stripe.dir</name><value>/home/xiaolu/OpenEC/hadoop-20-openec/stripeStore</value></property>
+<property><name>hdfs.raid.local.stripe.dir</name><value>/home/openec/hadoop-20/stripeStore</value></property>
 <property><name>raid.classname</name><value>org.apache.hadoop.raid.DistRaidNode</value></property>
-<property><name>hdfs.raid.user.dir.prefix</name><value>/user/xiaolu</value></property>
+<property><name>hdfs.raid.user.dir.prefix</name><value>/user/openec</value></property>
 <property><name>dfs.blockreport.intervalMsec</name><value>1</value></property>
-<property><name>raid.codecs.json</name><value>[{"id" : "rs","parity_dir" : "/rs","stripe_length" : 6,"parity_length" : 3,"priority" : 100,"erasure_code" : "org.apache.hadoop.raid.JerasureCode","description" : "js code","simulate_block_fix": false,"dir_raid" : false}]</value></property>
+<property><name>raid.codecs.json</name><value>[{"id" : "rs","parity_dir" : "/rs","stripe_length" : 3,"parity_length" : 1,"priority" : 100,"erasure_code" : "org.apache.hadoop.raid.JerasureCode","description" : "js code","simulate_block_fix": false,"dir_raid" : false}]</value></property>
 </configuration>

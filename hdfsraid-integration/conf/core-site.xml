@@ -5,8 +5,6 @@
 
 <configuration>
 <property><name>fs.default.name</name><value>hdfs://192.168.0.1:9000</value></property>
-<property><name>topology.script.file.name</name><value>/home/openec/hadoop-20-openec/rackAware.sh</value></property>
-<property><name>fs.hdfs.impl</name><value>org.apache.hadoop.hdfs.DistributedRaidFileSystem</value></property>
-<property><name>hadoop.tmp.dir</name><value>/home/openec/hadoop-20-openec/tmp</value></property>
-<property><name>raid.server.address</name><value>192.168.0.1:60000</value></property>
+<property><name>topology.script.file.name</name><value>/home/openec/hadoop-20/conf/rackAware.sh</value></property>
+<property><name>hadoop.tmp.dir</name><value>/home/openec/hadoop-20/tmp</value></property>
 </configuration>

@@ -17,6 +17,6 @@
 <!-- Put site-specific property overrides in this file. -->
 
 <configuration>
-<property><name>fs.defaultFS</name><value>hdfs://192.168.10.33:12345</value></property>
-<property><name>hadoop.tmp.dir</name><value>/home/xiaolu/OpenEC/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0</value></property>
+<property><name>fs.defaultFS</name><value>hdfs://192.168.0.1:9000</value></property>
+<property><name>hadoop.tmp.dir</name><value>/home/openec/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0</value></property>
 </configuration>

@@ -51,7 +51,7 @@
 
 # The java implementation to use. By default, this environment
 # variable is REQUIRED on ALL platforms except OS X!
-export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_144
+export JAVA_HOME=/usr/lib/jvm/java-8-oracle
 
 # Location of Hadoop.  By default, Hadoop will attempt to determine
 # this location based upon its execution path.
@@ -139,7 +139,7 @@ export HADOOP_CLIENT_OPTS="-Xmx4096m $HADOOP_CLIENT_OPTS"
 # export HADOOP_CLASSPATH="/some/cool/path/on/your/machine"
 
 # Xiaolu comment here
-export HADOOP_CLASSPATH="/home/xiaolu/OpenEC/hadoop-3.0.0-src/oeclib/*:$JAVA_HOME/lib/*:"
+export HADOOP_CLASSPATH="/home/openec/hadoop-3.0.0-src/oeclib/*:$JAVA_HOME/lib/*:"
 
 # Should HADOOP_CLASSPATH be first in the official CLASSPATH?
 # export HADOOP_USER_CLASSPATH_FIRST="yes"

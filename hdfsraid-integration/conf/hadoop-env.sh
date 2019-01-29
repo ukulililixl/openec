@@ -10,7 +10,7 @@ if [[ "$IS_HADOOP_ENV_ALREADY_SOURCED" != "true" ]]; then
   # remote nodes.
 
   # The java implementation to use.  Required.
-  export JAVA_HOME=
+  export JAVA_HOME=/usr/lib/jvm/java-8-oracle
 
   # Extra Java CLASSPATH elements.  Optional.
   # export HADOOP_CLASSPATH=
