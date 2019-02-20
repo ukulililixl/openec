@@ -29,7 +29,7 @@
 \newcommand{\openec}{{\sf\small OpenEC}\xspace}
 \renewcommand{\ttdefault}{cmtt}
 
-\title{{\bf OpenEC v1.0 User Guide}}
+\title{{\bf OpenEC v1.0.0 User Guide}}
 \author{ADSLab @ CUHK}
 \date{Release: Feb 2019\\}
 
@@ -279,7 +279,7 @@ include the following configuration in \path{~/.bashrc}.
 }
 \end{center}
 
-Download {\bf OpenEC-v1.0.tar.gz} from our project website and extract the
+Download {\bf openec-v1.0.0.tar.gz} from our project website and extract the
 source code to {\tt /home/openec}.  We can install the patch of \openec into
 HDFS-3 by simply running the script {\sl install.sh}.  The script will also
 compile the modified source code of HDFS-3.
@@ -287,8 +287,8 @@ compile the modified source code of HDFS-3.
 \begin{center}
 \noindent\fbox{%
 \parbox{420pt}{%
-\$ {\tt tar -zxvf OpenEC-v1.0.tar.gz} \\
-\$ {\tt cd OpenEC-v1.0/hdfs3-integration} \\
+\$ {\tt tar -zxvf openec-v1.0.0.tar.gz} \\
+\$ {\tt cd openec-v1.0.0/hdfs3-integration} \\
 \$ {\tt ./install.sh}
 }% 
 }
@@ -299,7 +299,7 @@ Please run the following commands to compile \openec for HDFS-3.
 \begin{center}
 \noindent\fbox{%
 \parbox{420pt}{%
-\$ {\tt cd OpenEC-v1.0} \\
+\$ {\tt cd openec-v1.0.0} \\
 \$ {\tt cmake . -DFS\_TYPE:STRING=HDFS3} \\
 \$ {\tt make}
 }% 
@@ -312,7 +312,7 @@ Table~\ref{tab:hdfs3arch} shows an example architecture for our HDFS-3
 integration.  The \openec controller runs in the same node as the HDFS-3
 NameNode.  Each HDFS-3 DataNode is co-located with an \openec agent. Please
 distribute the working directories (\path{~/hadoop-3.0.0-src} and
-\path{~/OpenEC-v1.0}) to all the nodes in the testbed. 
+\path{~/openec-v1.0.0}) to all the nodes in the testbed. 
 
 \begin{table}[h]
 \centering
@@ -342,7 +342,7 @@ IP & HDFS3 & OpenEC \\
 \subsection{HDFS-3 Configuration}
 
 We provide sample configuration files under
-\path{OpenEC-v1.0/hdfs3-integration/conf} for HDFS-3.  Here, we show some
+\path{openec-v1.0.0/hdfs3-integration/conf} for HDFS-3.  Here, we show some
 of the fields related to the integration of \openec.  You may leave other
 fields to be the same as our sample configurations. You can copy our sample
 configuration files to \path{HADOOP_HOME/etc/hadoop} and configure your
@@ -527,7 +527,7 @@ include the following configuration in \path{~/.bashrc}.
 }
 \end{center}
 
-Download {\bf OpenEC-v1.0.tar.gz} from our project website and extract the
+Download {\bf openec-v1.0.0.tar.gz} from our project website and extract the
 source code to {\tt /home/openec}.  We can install the patch of \openec into
 HDFS-RAID by simply running the script {\sl install.sh}.  The script will also
 compile the modified source code of HDFS-RAID.
@@ -535,8 +535,8 @@ compile the modified source code of HDFS-RAID.
 \begin{center}
 \noindent\fbox{%
 \parbox{420pt}{%
-\$ {\tt tar -zxvf OpenEC-v1.0.tar.gz} \\
-\$ {\tt cd OpenEC-v1.0/hdfs3-integration} \\
+\$ {\tt tar -zxvf openec-v1.0.0.tar.gz} \\
+\$ {\tt cd openec-v1.0.0/hdfs3-integration} \\
 \$ {\tt ./install.sh}
 }% 
 }
@@ -547,7 +547,7 @@ We now compile the source code of \openec. Please run the following commands.
 \begin{center}
 \noindent\fbox{%
 \parbox{420pt}{%
-\$ {\tt cd OpenEC-v1.0} \\
+\$ {\tt cd openec-v1.0.0} \\
 \$ {\tt cmake . -DFS\_TYPE:STRING=HDFSRAID} \\
 \$ {\tt make}
 }% 
@@ -560,7 +560,7 @@ Table~\ref{tab:hdfsraidarch} shows an example architecture for our HDFS-RAID
 integration.  The \openec controller runs in the same node as the HDFS-RAID
 NameNode.  Each HDFS-RAID DataNode is co-located with an \openec agent. Please
 distribute the working directories (\path{~/hadoop-20} and
-\path{~/OpenEC-v1.0}) to all the nodes in the testbed.
+\path{~/openec-v1.0.0}) to all the nodes in the testbed.
 
 \begin{table}[h]
 \centering
@@ -590,7 +590,7 @@ IP & HDFS-RAID & OpenEC \\
 \subsection{HDFS-RAID Configuration}
 
 We provide sample configuration files 
-under \path{OpenEC-v1.0/hdfsraid-integration/conf} for HDFS-RAID. 
+under \path{openec-v1.0.0/hdfsraid-integration/conf} for HDFS-RAID. 
 Here, we show some of the fields in detail. You may leave other fields to be
 the same as our sample configurations.  You can copy our sample configuration
 files to \path{HADOOP_HOME/conf} and configure your HDFS-RAID there. Please
@@ -804,7 +804,7 @@ the following configuration in \path{~/.bashrc}.
 }
 \end{center}
 
-Download {\bf OpenEC-v1.0.tar.gz} from our project website and extract the
+Download {\bf openec-v1.0.0.tar.gz} from our project website and extract the
 source code to {\tt /home/openec}.  We can install the patch of \openec into
 QFS by simply running the script {\sl install.sh}.  The script will also
 compile the modified source code of QFS.
@@ -812,8 +812,8 @@ compile the modified source code of QFS.
 \begin{center}
 \noindent\fbox{%
 \parbox{420pt}{%
-\$ {\tt tar -zxvf OpenEC-v1.0.tar.gz} \\
-\$ {\tt cd OpenEC-v1.0/qfs-integration} \\
+\$ {\tt tar -zxvf openec-v1.0.0.tar.gz} \\
+\$ {\tt cd openec-v1.0.0/qfs-integration} \\
 \$ {\tt ./install.sh}
 }% 
 }
@@ -824,7 +824,7 @@ We now compile the source code of OpenEC. Please run the following commands.
 \begin{center}
 \noindent\fbox{%
 \parbox{420pt}{%
-\$ {\tt cd OpenEC-v1.0} \\
+\$ {\tt cd openec-v1.0.0} \\
 \$ {\tt cmake . -DFS\_TYPE:STRING=QFS} \\
 \$ {\tt make}
 }% 
@@ -836,7 +836,7 @@ We now compile the source code of OpenEC. Please run the following commands.
 Table~\ref{tab:qfsarch} shows an example architecture for our QFS integration.
 The \openec controller runs in the same node as the QFS metaserver.
 Each QFS chunkserver is co-located with an \openec agent. Please distribute
-the working directories (\path{~/qfs} and \path{~/OpenEC-v1.0}) to all 
+the working directories (\path{~/qfs} and \path{~/openec-v1.0.0}) to all 
 the nodes in the testbed.
 
 \begin{table}[h]
@@ -955,7 +955,7 @@ To start each chunkserver, please run the following command:
 \section{OpenEC Configuration}
 
 We provide sample configuration files for \openec under
-\path{OpenEC-v1.0/conf}.  Table~\ref{tab:sysSetting} explains the default
+\path{openec-v1.0.0/conf}.  Table~\ref{tab:sysSetting} explains the default
 configuration in our sample.  Table~\ref{tab:ecpolicy} and
 Table~\ref{tab:offlinepool} show the configuration of an erasure code and an
 offline encoding pool, respectively.
@@ -1047,7 +1047,7 @@ To start \openec, we run the following command in controller:
 \begin{center}
 \noindent\fbox{%
 \parbox{420pt}{%
-\$ {\tt cd OpenEC-v1.0} \\
+\$ {\tt cd openec-v1.0.0} \\
 \$ {\tt python script/start.py}
 }% 
 }
@@ -1201,7 +1201,7 @@ We introduce how to design a new erasure code in \openec. The following shows
 the base class of an erasure code implementation in \openec. To add a new
 erasure code, we need to extend this base class and provide the
 implementations for {\sl Encode}, {\sl Decode} and {\sl Place} methods. We
-provide several erasure code implementations under \path{OpenEC-v1.0/src/ec}.
+provide several erasure code implementations under \path{openec-v1.0.0/src/ec}.
 Please refer to our sample implementations there.
 
 \begin{center}
