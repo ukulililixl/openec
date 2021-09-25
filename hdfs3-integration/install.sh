@@ -28,7 +28,7 @@ cp src/LowRedundancyBlocks.java $HADOOP_SRC_DIR/hadoop-hdfs-project/hadoop-hdfs/
 cp src/NameNodeRpcServer.java $HADOOP_SRC_DIR/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/
 cp src/NetworkTopology.java $HADOOP_SRC_DIR/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/net/
 cp src/hdfs.c  $HADOOP_SRC_DIR/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs/hdfs.c
-cp src/DFSInputStream.java $HADOOP_SRC/DIR/hadoop-hdfs-project/hadoop-hdfs-client/src/main/java/org/apache/hadoop/hdfs/
+cp src/DFSInputStream.java $HADOOP_SRC_DIR/hadoop-hdfs-project/hadoop-hdfs-client/src/main/java/org/apache/hadoop/hdfs/
 cp src/pom.xml $HADOOP_SRC_DIR/
 
 # 4. prepare pom for hadoop-hdfs-client package
