@@ -9,7 +9,7 @@ cp ../lib/* ./
 javac -cp .:./commons-pool2-2.4.2.jar:./commons-pool2-2.4.2-javadoc.jar:./jedis-3.0.0-SNAPSHOT.jar oec/protocol/AGCommand.java oec/protocol/CoorCommand.java
 jar cf oec-fs-protocol.jar oec/protocol/AGCommand.class oec/protocol/CoorCommand.class
 
-# 2. copy libraries to hadoop src 
+# 2. copy libraries to hadoop src
 mkdir -p $HADOOP_SRC_DIR/oeclib
 cp commons-pool2-2.4.2.jar $HADOOP_SRC_DIR/oeclib
 cp commons-pool2-2.4.2-javadoc.jar $HADOOP_SRC_DIR/oeclib
